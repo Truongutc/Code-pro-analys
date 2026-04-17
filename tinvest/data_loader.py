@@ -192,7 +192,7 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 # ── Column name aliases accepted in input CSV ──────────────────────────────────
 _COLUMN_ALIASES = {
-    "date":   ["date", "time", "datetime", "ngay", "ngày", "trading_date", "dtyyyymmdd"],
+    "date":   ["date", "time", "datetime", "ngay", "ngày", "trading_date", "dtyyyymmdd", "dtyyyymm", "date_time"],
     "open":   ["open", "mo_cua", "mở_cửa", "open_price"],
     "high":   ["high", "cao_nhat", "cao_nhất", "high_price"],
     "low":    ["low", "thap_nhat", "thấp_nhất", "low_price"],

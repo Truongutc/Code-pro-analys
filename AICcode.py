@@ -14,6 +14,15 @@ import tkinter as tk
 import logging
 logger = logging.getLogger(__name__)
 
+class GuiLogHandler(logging.Handler):
+    """Custom logging handler to redirect logs to the TinvestApp text_output."""
+    def __init__(self, log_func):
+        super().__init__()
+        self.log_func = log_func
+    def emit(self, record):
+        msg = self.format(record)
+        self.log_func(msg)
+
 
 from tkinter import filedialog, messagebox
 
@@ -31,6 +40,9 @@ import pandas as pd
 
 
 import threading
+
+
+from pathlib import Path
 
 
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
@@ -660,15 +672,23 @@ class TinvestApp:
 
 
             for f in files:
-
-
                 try:
-
-
-                    dfs.append(pd.read_csv(f))
-
-
-                except: pass
+                    df_raw = pd.read_csv(f)
+                    
+                    # Normalize columns IMMEDIATELY so headers like <Ticker> are recognized
+                    df_norm = _normalize_columns(df_raw)
+                    
+                    # Ticker inference from filename if column is missing after normalization
+                    if "Ticker" not in df_norm.columns:
+                        path_obj = Path(f)
+                        potential_ticker = path_obj.stem.upper().split('_')[0].split(' ')[0]
+                        if len(potential_ticker) == 3 and potential_ticker.isalnum():
+                            df_norm["Ticker"] = potential_ticker
+                            self.log_sync(f"   + Nhận diện mã '{potential_ticker}' từ tên file: {path_obj.name}")
+                    
+                    dfs.append(df_norm)
+                except Exception as e:
+                    self.log_sync(f"   ! Lỗi đọc/chuẩn hóa file {os.path.basename(f)}: {e}")
 
 
             
@@ -677,7 +697,7 @@ class TinvestApp:
             if not dfs:
 
 
-                self.log_sync("Lỗi: Không đọc được file nào hợp lệ.")
+                self.log_sync("❌ Lỗi: Không đọc được dữ liệu hợp lệ từ các file đã chọn.")
 
 
                 return
@@ -686,7 +706,7 @@ class TinvestApp:
                 
 
 
-            self.log_sync("[2/4] Đang chuẩn hóa & Lưu vào Storage (CSV-First)...")
+            self.log_sync("[2/4] Đang chuẩn hóa & Lưu vào Storage (Parquet-SSoT)...")
 
 
             raw_full = pd.concat(dfs, ignore_index=True)
@@ -698,27 +718,25 @@ class TinvestApp:
             
 
 
+            self.log_sync("[2/4] Đang gộp dữ liệu & Lọc mã (3 ký tự & 30 ngày)...")
+            df_full = pd.concat(dfs, ignore_index=True)
+            
             affected_tickers = set()
-
-
-            if "Ticker" in df_norm.columns:
-
-
-                grouped = df_norm.groupby("Ticker")
-
-
+            skipped_3char = 0
+            skipped_old = 0
+            
+            if "Ticker" in df_full.columns:
+                grouped = df_full.groupby("Ticker")
                 for ticker_val, group in grouped:
 
 
                     t = str(ticker_val).upper().strip()
 
 
+                    # 1. Bộ lọc nghiêm ngặt 3 ký tự (trừ các chỉ số tiêu chuẩn)
                     is_idx = ("VNINDEX" in t) or ("HNX" in t) or ("HAINDEX" in t)
-
-
                     if not (len(t) == 3 and t.isalnum()) and not is_idx:
-
-
+                        skipped_3char += 1
                         continue
 
 
@@ -729,56 +747,35 @@ class TinvestApp:
 
 
                     try:
-
-
                         clean_sub = _clean_dataframe(sub_df, ticker=t)
-
-
-                        # Sync with CSV priority
-
-
+                        
+                        # 2. Bộ lọc mã đã hủy niêm yết/ngừng giao dịch (30 ngày gần nhất)
+                        last_date = clean_sub['Date'].max()
+                        if (datetime.now() - last_date).days > 30 and not is_idx:
+                            skipped_old += 1
+                            continue
+                            
+                        # Sync with Storage (Parquet-SSoT)
                         t_min = self.storage.sync_prices(t, clean_sub, source='CSV')
-
-
                         if t_min is not None:
-
-
                             affected_tickers.add(t)
-
-
-                    except: pass
+                    except Exception:
+                        pass
 
 
             
 
+
+            if skipped_3char > 0 or skipped_old > 0:
+                self.log_sync(f"   [*] Đã lọc bỏ: {skipped_3char} mã sai định dạng, {skipped_old} mã ngừng giao dịch/hủy niêm yết.")
 
             if not affected_tickers:
-
-
-                self.log_sync("Không có thay đổi dữ liệu nào được ghi nhận.")
-
-
+                self.log_sync("ℹ️ Tất cả mã hợp lệ đã có sẵn trong bộ nhớ và ổ cứng.")
                 return
 
-
-
-
-
-            self.log_sync(f"[3/4] Đã cập nhật {len(affected_tickers)} mã. Đang tính toán chỉ bá✅..")
-
-
+            self.log_sync(f"[3/4] Đã chuẩn bị {len(affected_tickers)} mã. Đang tính toán chỉ báo...")
             self._sync_and_recompute_affected(list(affected_tickers))
-
-
-            
-
-
-            self.log_sync(f"\n✅ HOÀN TẤT NẠP DỮ LIỆU CSV!")
-
-
-            
-
-
+            self.log_sync(f"\n✅ HOÀN TẤT NẠP DỮ LIỆU!")
         except Exception as e:
 
 
@@ -1043,13 +1040,13 @@ class TinvestApp:
                         elif status == "LIMITED":
 
 
-                             self.lbl_session.config(text="🌐 URL: Lỗi (Bị Cắt 200 mã)", fg="#D32F2F")
+                             self.lbl_session.config(text="🌐 URL: Hoạt Động (Cưỡng Bức)", fg="#FBC02D")
 
 
                              self.log_sync("❌ CẢNH BÁO: URL Bị Chặn. Chỉ lấy được tối đa 200 mã!")
 
 
-                             messagebox.showerror("Bị Chặn 200 Mã", "❌ URL hoặc Cookie này đã bị vô hiệu hóa kỹ thuật Bypass.\nDữ liệu tải về sẽ bị thiếu hụt!\n\nVui lòng làm theo hướng dẫn:\n1. Sang tab [Network] chọn lại kích thước hiển thị 50 mã/trang.\n2. Bấm lật trang 2 và Copy lại mã cURL mới nhất.")
+                             # messagebox.showerror("Bị Chặn 200 Mã", "❌ URL hoặc Cookie này đã bị vô hiệu hóa kỹ thuật Bypass.\nDữ liệu tải về sẽ bị thiếu hụt!\n\nVui lòng làm theo hướng dẫn:\n1. Sang tab [Network] chọn lại kích thước hiển thị 50 mã/trang.\n2. Bấm lật trang 2 và Copy lại mã cURL mới nhất.")
 
 
                         elif status == "NO_DATA":
@@ -1557,23 +1554,7 @@ class TinvestApp:
 
 
             if not affected_tickers:
-
-
-                self.log_sync("\n✅ Dữ liệu đã được cập nhật mới nhất (SSoT).")
-
-
-                self.log_sync("Gợi ý: Hãy bấm '📂 Load Dữ liệu Cũ' để nạp kết quả phân tích.")
-
-
                 return
-
-
-
-
-
-            self.log_sync(f"\n✅ HOÀN TẤT NẠP DỮ LIỆU! Đã đồng bộ {len(affected_tickers)} mã.")
-
-
             self.log_sync("--- ĐANG TÍNH TOÁN LẠI CHỈ BÁO VÀ SCANNER (0ms) ---")
 
 
