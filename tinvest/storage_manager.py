@@ -222,17 +222,21 @@ class StorageManager:
         return counts
 
     def save_active_registry(self, tickers: list):
-        """Save a list of currently active market tickers to a whitelist file."""
+        """Merge a list of tickers into the active market registry (Sticky mode)."""
         import json
         path = self.base_dir / "active_tickers.json"
         
+        existing = self.get_active_registry() or set()
+        
         # Luon bao gom cac index quan trong
-        core_indices = ["VNINDEX", "HNX-INDEX", "UPCOM-INDEX", "VN30", "HNX30"]
-        unique_tickers = sorted(list(set(tickers) | set(core_indices)))
+        core_indices = {"VNINDEX", "HNX-INDEX", "UPCOM-INDEX", "VN30", "HNX30"}
+        
+        # Merge existing + new + core
+        unique_tickers = sorted(list(existing | set(tickers) | core_indices))
         
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(unique_tickers, f, ensure_ascii=False, indent=2)
-        logger.info(f"Saved {len(unique_tickers)} tickers to active registry.")
+        logger.info(f"Updated Registry (Sticky): Now contains {len(unique_tickers)} tickers.")
 
     def get_active_registry(self):
         """Load the whitelist of active tickers. Returns None if no registry exists."""
@@ -302,3 +306,44 @@ class StorageManager:
                     df.to_parquet(p, index=False)
             except Exception as e:
                 logger.error(f"Error deleting dates from indicator {p.name}: {e}")
+    def identify_delisted_tickers(self, days_threshold=10):
+        """
+        Identify tickers that haven't had any trading volume for the last X sessions.
+        Returns a set of tickers to be removed from the active registry.
+        """
+        delisted = []
+        registry = self.get_active_registry()
+        if not registry: return []
+        
+        for ticker in registry:
+            # Skip indices
+            if ticker in ["VNINDEX", "HNX-INDEX", "UPCOM-INDEX", "VN30", "HNX30"]:
+                continue
+                
+            p_path = self._get_price_path(ticker)
+            if not p_path.exists(): continue
+            
+            try:
+                # Read last X rows of Volume
+                df = pd.read_parquet(p_path, columns=['Volume'])
+                if len(df) < days_threshold: 
+                    continue # Not enough data to judge yet
+                
+                last_vol = df['Volume'].tail(days_threshold)
+                # If all recent volumes are 0, consider it delisted/stagnant
+                if (last_vol == 0).all():
+                    delisted.append(ticker)
+            except: continue
+            
+        return delisted
+
+    def remove_from_registry(self, tickers_to_remove):
+        """Update active_tickers.json by removing delisted tickers."""
+        if not tickers_to_remove: return
+        
+        registry = self.get_active_registry()
+        if not registry: return
+        
+        new_registry = sorted(list(registry - set(tickers_to_remove)))
+        self.save_active_registry(new_registry)
+        logger.info(f"Removed {len(tickers_to_remove)} delisted tickers from registry.")

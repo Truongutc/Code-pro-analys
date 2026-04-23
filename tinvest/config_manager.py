@@ -1,7 +1,10 @@
 import json
 import os
 import re
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 class ConfigManager:
     def __init__(self, config_path="config.json"):
@@ -84,18 +87,17 @@ class ConfigManager:
         """
         if not text: return False
         
-        # Cleanup input (remove helper markers if present)
+        # Cleanup input (remove helper markers and line continuations)
         text = re.sub(r'---.*---', '', text).strip()
+        # Handle both Windows (^) and Linux (\) line continuations
+        text = text.replace('\\\n', ' ').replace('\\\r\n', ' ').replace('^\n', ' ')
         
-        # 1. Handle Multi-cURL paste: Pick the right one
+        # 1. Handle Multi-cURL paste: Pick the right one (Prioritize Data Paging)
         target_text = text
         if "curl" in text.lower():
-            # Split by 'curl ' but handle the first one
             chunks = re.split(r'curl\s+', text, flags=re.IGNORECASE)
             chunks = [c.strip() for c in chunks if c.strip()]
-            
-            # Prioritize Vietstock Data Paging or StockList
-            priority_keywords = ["KQGDThongKeGiaPaging", "GetTemplateByName", "stocklist", "finance.vietstock.vn"]
+            priority_keywords = ["KQGDThongKeGiaPaging", "KQGDThongKeGiaStockPaging", "stocklist", "finance.vietstock.vn"]
             
             best_chunk = ""
             for kw in priority_keywords:
@@ -107,14 +109,13 @@ class ConfigManager:
             
             target_text = "curl " + (best_chunk or chunks[0])
 
-        # Detect if we are processing a cURL command
         is_curl = "curl" in target_text.lower()[:50]
         if is_curl:
             target_text = self._sanitize_curl(target_text)
         
         updates = {
             "cookies": {},
-            "headers": {}, 
+            "headers": {}, # We'll populate this with tracked headers
             "vietstock_api_url": None,
             "payload_token": "",
             "bypass_pageSize": None
@@ -127,13 +128,20 @@ class ConfigManager:
 
         # 2. Extract Data from cURL
         if is_curl:
-            # A. Extract URL from curl
+            # A. Extract URL
             url_match = re.search(r"curl\s+['\"]?(https?://[^'\"]+)['\"]?", target_text, re.IGNORECASE)
-            # B. Extract Headers (Cookie)
+            if url_match:
+                updates["vietstock_api_url"] = url_match.group(1)
+
+            # B. Extract Headers (Robust regex for single/double quotes)
             raw_headers = re.findall(r"(?:-H|--header)\s+(?:'([^']+)'|\"((?:\\\\\"|[^\"])+)\")", target_text, re.IGNORECASE)
+            if not raw_headers:
+                 # Fallback for simpler formats
+                 raw_headers = re.findall(r"-H\s+['\"]([^'\"]+)['\"]", target_text, re.IGNORECASE)
+
             for h_tuple in raw_headers:
-                h = h_tuple[0] or h_tuple[1]
-                if ":" in h:
+                h = h_tuple if isinstance(h_tuple, str) else (h_tuple[0] or h_tuple[1])
+                if h and ":" in h:
                     k, v = h.split(":", 1)
                     k, v = k.strip(), v.strip()
                     if k.lower() == "cookie":
@@ -148,96 +156,40 @@ class ConfigManager:
                 params = data_val.split("&")
                 for p in params:
                     if "=" in p:
-                        tk_key, tv_val = p.split("=", 1)
-                        tk_key, tv_val = tk_key.strip(), tv_val.strip()
-                        if tk_key == "__RequestVerificationToken":
-                            updates["payload_token"] = tv_val
-                        elif tk_key.lower() == "pagesize":
-                            try:
-                                updates["bypass_pageSize"] = int(tv_val)
-                                logger.info(f"Extracted pageSize from cURL: {tv_val}")
-                            except: pass
+                         t_parts = p.split("=", 1)
+                         tk_key, tv_val = t_parts[0].strip(), t_parts[1].strip()
+                         if tk_key == "__RequestVerificationToken":
+                             updates["payload_token"] = tv_val
+                         elif tk_key.lower() == "pagesize":
+                             try: updates["bypass_pageSize"] = int(tv_val)
+                             except: pass
         else:
-            # Format 2: Universal Multi-line / Raw Header Parser
-            # We use a state-machine approach to handle alternating lines (Key \n Value)
+            # Format 2: Universal Multi-line Parser (Browsers, URLs, etc.)
             lines = [l.strip() for l in target_text.split("\n") if l.strip()]
-            
-            # List of keys we are looking for in multi-line format
-            header_keys = {k.lower() for k in self._get_tracked_header_list()}
-            payload_keys = {"__requestverificationtoken", "pagesize", "catid", "page", "date"}
-            
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-                line_lower = line.lower().rstrip(":")
-                
-                # Format 3: Tab-Separated (Application Tab Copy)
-                if "\t" in line:
-                    parts = [p.strip() for p in line.split("\t") if p.strip()]
-                    if len(parts) >= 2:
-                        k_tab, v_tab = parts[0], parts[1]
-                        self._extract_header_field(k_tab, v_tab, updates)
-                        # Special case for payload token in cookie list
-                        if k_tab == "__RequestVerificationToken":
-                             updates["payload_token"] = v_tab
-                    i += 1
-                    continue
-
-                # Format 2 (Continued): Alternating lines or Colon-separated
+            for line in lines:
                 if ":" in line and not line.startswith("http"):
                     k, v = line.split(":", 1)
                     self._extract_header_field(k.strip(), v.strip(), updates)
-                elif line_lower in header_keys or line_lower == "cookie":
-                    # Key on this line, Value might be on NEXT line
-                    k = line.strip()
-                    if i + 1 < len(lines):
-                        v = lines[i+1]
-                        # If next line looks like another key, then this was a key-only or malformed
-                        if v.lower().rstrip(":") not in header_keys and v.lower() != "cookie":
-                            self._extract_header_field(k, v, updates)
-                            i += 1 # Skip value line
-                elif line_lower in payload_keys:
-                    # Payload param on this line
-                    pk = line.strip()
-                    if i + 1 < len(lines):
-                        pv = lines[i+1]
-                        if pk == "__RequestVerificationToken":
-                            updates["payload_token"] = pv
-                        elif pk.lower() == "pagesize":
-                            try: updates["bypass_pageSize"] = int(pv)
-                            except: pass
-                        i += 1 # Skip value line
-                i += 1
-            
-            # Format 4: Lone Token Detection
-            if not updates["payload_token"] and not updates["cookies"] and not updates["headers"]:
-                clean_input = target_text.strip()
-                if len(clean_input) > 30 and " " not in clean_input and "\n" not in clean_input:
-                    updates["payload_token"] = clean_input
-                    logger.info("Detected lone string as payload_token.")
+                elif line.startswith("http"):
+                    token_match = re.search(r"__RequestVerificationToken[=:\s]+([A-Za-z0-9._-]{50,})", line)
+                    if token_match:
+                        updates["payload_token"] = token_match.group(1).split("&")[0].strip(";")
 
         # D. Dual-token synchronization:
-        # DO NOT overwrite payload_token with cookie_token if they are both found!
-        # Vietstock often requires them to be different but valid for the same session.
         if not updates["payload_token"]:
-             # Fallback: if only cookie has token, use it
              if "__RequestVerificationToken" in updates["cookies"]:
                  updates["payload_token"] = updates["cookies"]["__RequestVerificationToken"]
 
         # Commit updates
         updated = False
-        
         if updates["vietstock_api_url"]:
             self.set("vietstock_api_url", updates["vietstock_api_url"])
             updated = True
 
         if updates["cookies"]:
-            # If we found NEW cookies, we replace the whole cookie dict to avoid mixing old/new sessions
+            # If we found NEW cookies, we replace the whole cookie dict to avoid mixing sessions
             self.set("cookies", updates["cookies"])
             updated = True
-        elif is_curl and not updates["cookies"]:
-            # If it was a curl paste but no cookies found (unlikely), something is wrong.
-            pass
             
         if updates["payload_token"]:
             self.set("payload_token", updates["payload_token"])
@@ -249,25 +201,10 @@ class ConfigManager:
 
         if updates["headers"]:
              current_headers = self.config.get("headers", {})
-             # Normalize keys before updating
              new_headers = {}
              
-             # If this is a NEW cURL paste, we should clear old session state entirely
-             # to avoid mixing cookies or fingerprints from different sessions.
-             if is_curl:
-                 # WIPE cookies - always use exactly what's in the cURL
-                 self.config["cookies"] = {}
-                 
-                 # CLEAR tracked headers
-                 keys_to_clear = [k for k in current_headers.keys() if self._is_tracked_header(k)]
-                 for k in keys_to_clear:
-                     del current_headers[k]
-                 
-                 # CLEAR old tokens
-                 self.config["payload_token"] = ""
-
              for k, v in updates["headers"].items():
-                 # Filter out restricted headers that requests handles itself
+                 # Filter out restricted headers
                  if k.lower() not in ["content-length", "host", "connection"]:
                      new_headers[k] = v
              
@@ -308,12 +245,18 @@ class ConfigManager:
             logger.info(f"[*] Đã nhận diện Cookie: {k}")
 
     def refresh_token(self):
-        """Force a fresh token acquisition using Selenium."""
-        from tinvest.token_refresher import fetch_fresh_token
-        result = fetch_fresh_token()
-        if result:
-            self.config = self._load() # Reload from disk
-            return True
+        """Force a fresh token acquisition using Selenium with error handling."""
+        try:
+            from tinvest.token_refresher import fetch_fresh_token
+            result = fetch_fresh_token()
+            if result:
+                self.config = self._load() # Reload from disk
+                return True
+        except ImportError:
+            logger.error("❌ Lỗi: Thiếu thư viện 'selenium' hoặc 'webdriver-manager'.")
+            logger.error("Vui lòng cài đặt bằng lệnh: pip install selenium webdriver-manager")
+        except Exception as e:
+            logger.error(f"❌ Lỗi không xác định khi làm mới token: {e}")
         return False
 
     def _parse_cookie_str(self, cookie_str):

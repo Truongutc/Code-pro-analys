@@ -188,6 +188,28 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                          (out['Spread'] < out['Avg_Spread_20'] * 0.8) & \
                          (out['Close'] > out['Low'] + 0.4 * out['Spread'])
 
+    # ── 12. Heatmap Engine (AFL Logic Confluence) ──────────────────────────
+    try:
+        from .heatmap_engine import calculate_heatmap_matrix
+        hm_df = calculate_heatmap_matrix(out)
+        # Prefix with HM_ to avoid conflicts and identify clearly in cache
+        for col in hm_df.columns:
+            out[f"HM_{col}"] = hm_df[col].values
+    except Exception as e:
+        logger.error(f"Error enriching with Heatmap signals: {e}")
+
+    # ── 13. Elliott Wave System (AFL Logic) ────────────────────────────────
+    try:
+        from .elliott_engine import calculate_elliott_wave_system
+        ew_df = calculate_elliott_wave_system(out)
+        for col in ew_df.columns:
+            out[col] = ew_df[col].values
+        
+        # Thêm màu nến theo phong cách AFL Elliott
+        out['AFL_CandleColor'] = np.where(out['Close'] >= out['Open'], '#98FB98', '#FFC0CB') # PaleGreen / Pink
+    except Exception as e:
+        logger.error(f"Error enriching with Elliott signals: {e}")
+
     return out
 
 # ── Column name aliases accepted in input CSV ──────────────────────────────────

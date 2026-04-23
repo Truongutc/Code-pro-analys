@@ -87,10 +87,43 @@ class VietstockClient:
         return False
 
     def check_session_status(self, date_str=None):
-        """Force return VALID to allow the user to proceed without being blocked by the probe."""
-        logger.info("[*] Chế độ Cưỡng bức: Bỏ qua kiểm tra trạng thái, lao thẳng vào nạp dữ liệu.")
-        self.session_limited = False
-        return "VALID"
+        """Perform a small probe to check if the session is currently limited."""
+        if not date_str:
+            now = datetime.now()
+            date_str = now.strftime("%Y-%m-%d")
+            # Weekend handling
+            if now.weekday() == 5: date_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+            elif now.weekday() == 6: date_str = (now - timedelta(days=2)).strftime("%Y-%m-%d")
+            
+        try:
+            # OPTIMIZED PROBE: Request exactly 201 items.
+            # If server returns 200 or less, it's suspiciously limited.
+            raw = self._fetch_page(1, date_str, page=1, page_size=201)
+            if not raw or not isinstance(raw, list) or len(raw) < 3:
+                return "ERROR"
+            
+            stocks = raw[2]
+            if not stocks: return "NO_DATA"
+            
+            # If we requested 201 but got exactly 200 or 50 or something smaller, it's LIMITED
+            if len(stocks) <= 200:
+                self.session_limited = True
+                
+                # TEST BYPASS: Explicitly try to fetch a different page
+                bypass_size = self.config_mgr.get("bypass_pageSize") or 50
+                if bypass_size >= 200: bypass_size = 50
+                
+                # Try fetching page 2 with bypass size
+                test_raw = self._fetch_page(1, date_str, page=2, page_size=bypass_size)
+                if test_raw and isinstance(test_raw, list) and len(test_raw) >= 3 and test_raw[2]:
+                     return "LIMITED_BYPASSED" # Bypass works!
+                else:
+                     return "LIMITED" # TRULY BLOCKED.
+            
+            self.session_limited = False
+            return "VALID"
+        except Exception:
+            return "ERROR"
 
     def get_token(self):
         """Fetch __RequestVerificationToken from Vietstock landing page."""
@@ -160,10 +193,18 @@ class VietstockClient:
             logger.info(f"[<] Response: {response.status_code}")
 
             if response.status_code == 200:
-                content_preview = response.content[:200].decode('utf-8', errors='ignore').strip()
-                if "<!DOCTYPE html>" in content_preview.upper() or "<HTML" in content_preview.upper():
+                # Better HTML detection
+                content_type = response.headers.get("Content-Type", "")
+                is_html = "text/html" in content_type.lower()
+                
+                if not is_html:
+                    # Double check content for HTML tags if content-type is misleading
+                    content_preview = response.content[:200].decode('utf-8', errors='ignore').upper()
+                    if "<!DOCTYPE HTML>" in content_preview or "<HTML" in content_preview:
+                        is_html = True
+
+                if is_html:
                     logger.warning("⚠️ Nhận được trang HTML thay vì JSON. Vietstock có thể đang chặn yêu cầu hoặc Token hết hạn.")
-                    logger.debug(f"Response Body Preview: {response.text[:500]}")
                     
                     if "/Error/Index" in response.text:
                          logger.error("❌ Vietstock trả về trang lỗi hệ thống (/Error/Index). Vui lòng dán lại cURL mới.")
@@ -182,13 +223,14 @@ class VietstockClient:
                     # Log error details if still failing
                     logger.error("❌ Không thể kết nối API dù đã thử làm mới. Xem debug_api_error.html để biết chi tiết.")
                     with open("debug_api_error.html", "w", encoding="utf-8") as f:
-                        f.write(f"URL: {self.stats_api_url}\nStatus: {response.status_code}\n\n{response.text}")
+                        f.write(f"URL: {self.api_url}\nStatus: {response.status_code}\n\n{response.text}")
                     return None
                 
                 try:
+                    # Decode using utf-8-sig to handle possible BOM
                     return json.loads(response.content.decode('utf-8-sig'))
-                except json.JSONDecodeError:
-                    logger.error(f"❌ Lỗi định dạng JSON. Phản hồi bắt đầu bằng: {content_preview}")
+                except json.JSONDecodeError as je:
+                    logger.error(f"❌ Lỗi định dạng JSON: {je}. Phản hồi bắt đầu bằng: {response.text[:100]}")
                     return None
             else:
                 logger.error(f"❌ API trả về lỗi HTTP {response.status_code}")
@@ -214,21 +256,10 @@ class VietstockClient:
         total_vol = sum(int(s.get('M_TotalVol', 0)) for s in samples)
         if total_vol == 0: return False
         
-        # Check if all OHLC are equal (market hasn't moved / invalid)
-        stagnant = 0
-        for s in samples:
-            o = float(s.get('OpenPrice', 0))
-            h = float(s.get('HighestPrice', 0))
-            l = float(s.get('LowestPrice', 0))
-            c = float(s.get('ClosePrice', 0))
-            if o > 0 and o == h == l == c:
-                stagnant += 1
-        
-        if stagnant == len(samples): return False
         return True
 
     def fetch_market_day(self, cat_id, date_str):
-        """Fetch all stocks for a market category using stable pagination logic."""
+        """Fetch all stocks for a market category with automatic 200-limit bypass."""
         # Safety: Use pageSize=200 which is the most stable authenticated limit.
         default_size = 200
         
@@ -243,10 +274,12 @@ class VietstockClient:
             return [], False
 
         all_stocks = []
-        all_stocks.extend(raw_p1[2])
+        stocks_p1 = raw_p1[2]
         
-        # 2. Extract total pages - Only loop if we didn't get enough in page 1
-        # (With pageSize=2000, we should almost always get everything in page 1)
+        # 2. Check for the limit restriction (Vietstock Blocking)
+        # If the number of stocks returned is magically exactly 200, 50, or any small number
+        # when we know the market is likely bigger, we trigger bypass.
+        # We also check if 'TotalPages' indicated by Vietstock is > 1.
         total_pages = 1
         try:
             if len(raw_p1) >= 4:
@@ -254,18 +287,60 @@ class VietstockClient:
                 if isinstance(tp, list): total_pages = int(tp[0])
                 else: total_pages = int(tp)
         except: total_pages = 1
+
+        is_suspiciously_small = (len(stocks_p1) <= 200 and total_pages > 1) or (len(stocks_p1) in [200, 50, 100])
         
-        if len(all_stocks) < 100 and total_pages > 1: # Safety check for very small markets
-             logger.info(f"[+] Vietstock báo cáo có {total_pages} trang dữ liệu. Đang tải tiếp...")
-             for p in range(2, total_pages + 1):
-                 p_raw = self._fetch_page(cat_id, date_str, page=p, page_size=default_size)
-                 if p_raw and len(p_raw) >= 3:
-                     all_stocks.extend(p_raw[2])
-                 else: break
-                 
-        # Final limit check
-        is_limited = (len(all_stocks) == 200 and total_pages == 1)
-        return all_stocks, is_limited
+        if is_suspiciously_small:
+            logger.warning(f"⚠️ Phát hiện Vietstock có dấu hiệu chặn giới hạn ({len(stocks_p1)} mã). Kích hoạt chế độ Auto-Bypass (paging nhỏ)...")
+            
+            # BYPASS STRATEGY: Use small pageSize (e.g. 50) to crawl multiple pages
+            bypass_size = self.config_mgr.get("bypass_pageSize") or 50
+            if not bypass_size or bypass_size >= 200: 
+                bypass_size = 50 # Default safe value
+                
+            all_stocks = []
+            # We iterate up to 40 pages to catch ~2000 symbols max
+            for p in range(1, 41):
+                p_raw = self._fetch_page(cat_id, date_str, page=p, page_size=bypass_size)
+                if p_raw and isinstance(p_raw, list) and len(p_raw) >= 3:
+                    p_stocks = p_raw[2]
+                    if not p_stocks: break # End of data
+                    
+                    # Merge unique tickers
+                    existing = {s.get('StockCode') for s in all_stocks}
+                    for s in p_stocks:
+                        if s.get('StockCode') not in existing:
+                            all_stocks.append(s)
+                    
+                    if len(p_stocks) < bypass_size: break # Last page
+                else:
+                    break
+                time.sleep(0.3) # Avoid spamming
+            
+            is_limited = (len(all_stocks) == 200) # If still 200, bypass failed
+            return all_stocks, is_limited
+        else:
+            # Full data received in page 1
+            all_stocks.extend(stocks_p1)
+            
+            total_pages = 1
+            try:
+                if len(raw_p1) >= 4:
+                    tp = raw_p1[3]
+                    if isinstance(tp, list): total_pages = int(tp[0])
+                    else: total_pages = int(tp)
+            except: total_pages = 1
+            
+            if len(all_stocks) < 100 and total_pages > 1: # Safety check for very small markets
+                 logger.info(f"[+] Vietstock báo cáo có {total_pages} trang dữ liệu. Đang tải tiếp...")
+                 for p in range(2, total_pages + 1):
+                     p_raw = self._fetch_page(cat_id, date_str, page=p, page_size=default_size)
+                     if p_raw and len(p_raw) >= 3:
+                         all_stocks.extend(p_raw[2])
+                     else: break
+                     time.sleep(0.3)
+                     
+            return all_stocks, False
 
     def fetch_index_day(self, ticker, cat_id, stock_id, date_str):
         """Fetch index data for a given date."""
@@ -288,7 +363,8 @@ class VietstockClient:
         try:
             response = self.session.post(self.index_api_url, data=payload)
             if response.status_code == 200:
-                data = response.json()
+                # Handle possible BOM in index API response too
+                data = json.loads(response.content.decode('utf-8-sig'))
                 if data and isinstance(data, list) and len(data) >= 2:
                     records = data[1]
                     formatted = []
@@ -317,8 +393,13 @@ class VietstockClient:
         if not last_date:
             last_date = now - timedelta(days=365)
         
+        # If last_date is today (e.g. from a previous partial run), 
+        # we still want to re-check today to ensure full data
         missing = []
         curr = (last_date + timedelta(days=1)).date()
+        if curr > effective_today:
+             return [effective_today.strftime("%Y-%m-%d")]
+
         while curr <= effective_today:
             if curr.weekday() < 5:
                 missing.append(curr.strftime("%Y-%m-%d"))
@@ -339,14 +420,20 @@ class VietstockClient:
                 'ClosePrice': 'Close',
                 'M_TotalVol': 'Volume'
             })
+            
+            # Numeric conversion for prices and volume
+            for col in ['Open', 'High', 'Low', 'Close', 'Volume', 'MarketCap', 'TotalVal']:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            
             # Convert prices to thousands ONLY for stocks. 
             # Indices like VNINDEX/HNX-INDEX are already in the correct unit.
-            is_index = df['Ticker'].iloc[0] in ['VNINDEX', 'HNX-INDEX'] if not df.empty else False
-            
-            if not is_index:
-                for col in ['Open', 'High', 'Low', 'Close']:
-                    if col in df.columns:
-                        df[col] = df[col] / 1000.0
+            if not df.empty:
+                is_index = df['Ticker'].iloc[0] in ['VNINDEX', 'HNX-INDEX']
+                if not is_index:
+                    for col in ['Open', 'High', 'Low', 'Close']:
+                        if col in df.columns:
+                            df[col] = df[col] / 1000.0
             
             def parse_ms_date(d):
                 if not isinstance(d, str): return d
@@ -357,6 +444,7 @@ class VietstockClient:
                 return d
             df['Date'] = df['Date'].apply(parse_ms_date)
 
-        required = ['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Volume']
+        # Preserve MarketCap for integrity checks in AICcode.py
+        required = ['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'MarketCap', 'TotalVal']
         df = df[[c for c in required if c in df.columns]]
         return df

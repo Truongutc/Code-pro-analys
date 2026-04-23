@@ -12,6 +12,7 @@ Giao diện người dùng cho hệ thống phân tích AIC code = AI + cơm!
 
 import tkinter as tk
 import logging
+import numpy as np
 logger = logging.getLogger(__name__)
 
 class GuiLogHandler(logging.Handler):
@@ -401,6 +402,13 @@ class TinvestApp:
         btn_chart.pack(side=tk.LEFT, padx=5)
 
 
+        btn_heatmap = tk.Button(frame_analyze, text="🔥 Heatmap", command=self.run_heatmap_chart, bg="#E91E63", fg="white", font=("Arial", 10, "bold"))
+        btn_heatmap.pack(side=tk.LEFT, padx=5)
+
+        btn_elliott = tk.Button(frame_analyze, text="📊 Elliott Wave", command=self.run_elliott_chart, bg="#FF9800", fg="white", font=("Arial", 10, "bold"))
+        btn_elliott.pack(side=tk.LEFT, padx=5)
+
+
 
 
 
@@ -709,51 +717,36 @@ class TinvestApp:
             self.log_sync("[2/4] Đang chuẩn hóa & Lưu vào Storage (Parquet-SSoT)...")
 
 
-            raw_full = pd.concat(dfs, ignore_index=True)
-
-
-            df_norm = _normalize_columns(raw_full)
-
-
-            
-
-
-            self.log_sync("[2/4] Đang gộp dữ liệu & Lọc mã (3 ký tự & 30 ngày)...")
             df_full = pd.concat(dfs, ignore_index=True)
             
             affected_tickers = set()
+            all_valid_tickers = []
             skipped_3char = 0
             skipped_old = 0
             
             if "Ticker" in df_full.columns:
                 grouped = df_full.groupby("Ticker")
                 for ticker_val, group in grouped:
-
-
                     t = str(ticker_val).upper().strip()
-
-
-                    # 1. Bộ lọc nghiêm ngặt 3 ký tự (trừ các chỉ số tiêu chuẩn)
+                    
+                    # 1. Bộ lọc 3 ký tự
                     is_idx = ("VNINDEX" in t) or ("HNX" in t) or ("HAINDEX" in t)
                     if not (len(t) == 3 and t.isalnum()) and not is_idx:
                         skipped_3char += 1
                         continue
 
-
-                    
-
-
                     sub_df = group.drop(columns=["Ticker"]).copy()
-
-
                     try:
                         clean_sub = _clean_dataframe(sub_df, ticker=t)
                         
-                        # 2. Bộ lọc mã đã hủy niêm yết/ngừng giao dịch (30 ngày gần nhất)
+                        # 2. Bộ lọc 30 ngày (Giữ nguyên theo ý khách hàng)
                         last_date = clean_sub['Date'].max()
                         if (datetime.now() - last_date).days > 30 and not is_idx:
                             skipped_old += 1
                             continue
+                        
+                        # Mã hợp lệ
+                        all_valid_tickers.append(t)
                             
                         # Sync with Storage (Parquet-SSoT)
                         t_min = self.storage.sync_prices(t, clean_sub, source='CSV')
@@ -762,20 +755,24 @@ class TinvestApp:
                     except Exception:
                         pass
 
-
-            
-
-
             if skipped_3char > 0 or skipped_old > 0:
                 self.log_sync(f"   [*] Đã lọc bỏ: {skipped_3char} mã sai định dạng, {skipped_old} mã ngừng giao dịch/hủy niêm yết.")
 
-            if not affected_tickers:
-                self.log_sync("ℹ️ Tất cả mã hợp lệ đã có sẵn trong bộ nhớ và ổ cứng.")
+            if not all_valid_tickers:
+                self.log_sync("ℹ️ Không tìm thấy mã cổ phiếu hợp lệ nào trong file CSV.")
                 return
 
-            self.log_sync(f"[3/4] Đã chuẩn bị {len(affected_tickers)} mã. Đang tính toán chỉ báo...")
-            self._sync_and_recompute_affected(list(affected_tickers))
-            self.log_sync(f"\n✅ HOÀN TẤT NẠP DỮ LIỆU!")
+            # Kích hoạt tất cả các mã hợp lệ tìm thấy vào Registry
+            self.storage.save_active_registry(all_valid_tickers)
+            
+            if not affected_tickers:
+                self.log_sync(f"ℹ️ {len(all_valid_tickers)} mã đã khớp hoàn toàn. Robot đang kiểm tra chỉ báo...")
+                self._sync_and_recompute_affected(all_valid_tickers)
+            else:
+                self.log_sync(f"[3/4] Phát hiện {len(affected_tickers)} mã mới. Đang tính toán...")
+                self._sync_and_recompute_affected(list(affected_tickers))
+
+            self.log_sync(f"\n✅ HOÀN TẤT! Đã nạp và tính toán xong cho {len(all_valid_tickers)} mã cổ phiếu.")
         except Exception as e:
 
 
@@ -1002,15 +999,9 @@ class TinvestApp:
 
 
             success = self.config_mgr.parse_input(raw_text)
-
-
             if success:
-
-
                 self.vs_client.refresh_from_config()
-
-
-                top.destroy() # Close window immediately
+                top.destroy() # Close window
 
 
                 
@@ -1028,37 +1019,21 @@ class TinvestApp:
                     def apply_ui():
 
 
-                        if status in ["VALID", "LIMITED_BYPASSED"]:
-
-
+                        if status == "VALID":
                              self.lbl_session.config(text="🌐 URL: Đang Hoạt Động (Full Mã)", fg="#2E7D32")
-
-
                              self.log_sync("✅ URL hoàn toàn hợp lệ, sẵn sàng tải 100% dữ liệu.")
-
-
+                        elif status == "LIMITED_BYPASSED":
+                             self.lbl_session.config(text="🌐 URL: Bypass OK (Tải Đủ 100% Mã)", fg="#2E7D32")
+                             self.log_sync("✅ URL bị giới hạn nhưng cơ chế Bypass đã sẵn sàng tải đủ 100% dữ liệu.")
                         elif status == "LIMITED":
-
-
-                             self.lbl_session.config(text="🌐 URL: Hoạt Động (Cưỡng Bức)", fg="#FBC02D")
-
-
-                             self.log_sync("❌ CẢNH BÁO: URL Bị Chặn. Chỉ lấy được tối đa 200 mã!")
-
-
-                             # messagebox.showerror("Bị Chặn 200 Mã", "❌ URL hoặc Cookie này đã bị vô hiệu hóa kỹ thuật Bypass.\nDữ liệu tải về sẽ bị thiếu hụt!\n\nVui lòng làm theo hướng dẫn:\n1. Sang tab [Network] chọn lại kích thước hiển thị 50 mã/trang.\n2. Bấm lật trang 2 và Copy lại mã cURL mới nhất.")
-
-
+                             self.lbl_session.config(text="🌐 URL: Bị Giới Hạn (200 Mã)", fg="#FBC02D")
+                             self.log_sync("⚠️ Cảnh báo: URL bị giới hạn 200 mã và cơ chế Bypass không hoạt động.")
                         elif status == "NO_DATA":
-
-
                              self.lbl_session.config(text="🌐 URL: Không có dữ liệu", fg="#F57C00")
-
-
                              self.log_sync("✅ URL kích hoạt thành công (Hôm nay không có dữ liệu giao dịch).")
-
-
                         else:
+                             self.lbl_session.config(text="🌐 URL: Lỗi / Token Hết Hạn", fg="#C62828")
+                             self.log_sync("❌ URL không hoạt động hoặc Token/Cookie đã hết hạn.")
 
 
                              self.lbl_session.config(text="🌐 URL: Mất kết nối", fg="#F57C00")
@@ -1173,10 +1148,19 @@ class TinvestApp:
 
 
             registry = self.storage.get_active_registry()
+            
+            # Rule 2: Kiểm tra hủy niêm yết (10 phiên không giao dịch)
+            if registry:
+                delisted_tickers = self.storage.identify_delisted_tickers(days_threshold=10)
+                if delisted_tickers:
+                    self.log_sync(f"[*] Rule 2: Phát hiện {len(delisted_tickers)} mã không giao dịch 10 phiên (hủy niêm yết/ngừng hoạt động).")
+                    self.storage.remove_from_registry(delisted_tickers)
+                    registry = self.storage.get_active_registry() # Refresh
+            
             all_storage_tickers = tickers # Original list on disk
             if registry:
                 filtered = [t for t in tickers if t in registry]
-                self.log_sync(f"[*] Registry tìm thấy {len(registry)} mã. Lọc bỏ {len(tickers)-len(filtered)} mã cũ/rác.")
+                self.log_sync(f"[*] Registry tìm thấy {len(registry)} mã. Lọc bỏ {len(tickers)-len(filtered)} mã đã hủy niêm yết/rác.")
                 tickers = filtered
             
             total = len(tickers)
@@ -1204,8 +1188,9 @@ class TinvestApp:
 
             # --- FINISH ---
             self._update_breadth_from_cache()
-            self.root.after(0, self.lbl_file.config, {"text": f"Dữ liệu: {len(self.analysis_cache)} mã", "fg": "blue"})
-            self.log_sync(f"✅ Hoàn tất! Đã nạp thành công {len(self.analysis_cache)} mã.")
+            final_count = len(self.analysis_cache)
+            self.root.after(0, self.lbl_file.config, {"text": f"Dữ liệu: {final_count} mã", "fg": "#1A237E"})
+            self.log_sync(f"✅ Hoàn tất! Đã nạp thành công {final_count} mã cổ phiếu vào bộ nhớ.")
             
             # Check for physical cleanup
             if registry and len(all_storage_tickers) > len(tickers) + 50:
@@ -1300,19 +1285,15 @@ class TinvestApp:
                 
 
 
-                # Threshold < 1000 because total stocks HOSE+HNX+UPCOM should be ~1600+
-
-
-                # If it's < 1000, it means at least one exchange was truncated at 200.
-
-
-                bad_dates = [d for d, count in ticker_counts.items() if count > 0 and count < 1000]
+                # Threshold < 1500 because total stocks HOSE+HNX+UPCOM should be ~1600+
+                # If it's < 1500, it means at least one exchange was truncated at 200.
+                bad_dates = [d for d, count in ticker_counts.items() if count > 0 and count < 1500]
 
 
                 if bad_dates:
 
 
-                    self.log_sync(f"⚠️ Phát hiện {len(bad_dates)} ngày bị thiếu mã (< 1000 mã): {', '.join(bad_dates)}")
+                    self.log_sync(f"⚠️ Phát hiện {len(bad_dates)} ngày bị thiếu mã (< 1500 mã): {', '.join(bad_dates)}")
 
 
                     self.log_sync(f"[*] Đang xóa và chuẩn bị nạp lại dữ liệu đầy đủ cho các ngày lỗi...")
@@ -1408,62 +1389,51 @@ class TinvestApp:
                 # Fetch Markets (HOSE=1, HNX=2, UPCOM=3)
 
 
-                for cat_id, cat_name in [(1, "HOSE"), (2, "HNX"), (3, "UPCOM")]:
-
-
+                for cat_id, cat_name in [(1, "HSX"), (2, "HNX"), (3, "UPCOM")]:
                     try:
-
-
-                        self.log_sync(f"   + Đang nạp {cat_name}...")
-
-
+                        self.log_sync(f"   [+] Đang nạp sàn {cat_name}...")
                         raw, is_limited = self.vs_client.fetch_market_day(cat_id, d)
-
-
-                        # Suppressed is_limited bypass log per user request
-
-
+                        
                         if raw:
-
-
                             day_total.extend(raw)
-
-
-                            self.log_sync(f"   ---> Xong {cat_name}: {len(raw)} mã.")
-
+                            self.log_sync(f"   ---> ✅ Đã tải: {len(raw)} mã {cat_name}")
 
                     except Exception as e:
-
-
                         self.log_sync(f"   ! Lỗi {cat_name}: {e}")
 
-
-                
-
-
                 if day_total:
-
-
+                    total_raw = len(day_total)
                     df_day = self.vs_client.format_to_df(day_total)
-
-
-                    total_p1 = len(day_total)
-                    self.log_sync(f"   [DONE] Ngày {d}: Tổng cộng {total_p1} mã.")
+                    final_count = len(df_day)
                     
-                    # Cap nhat Registry neu day la ngay moi nhat va du lieu "sach" (>1000 ma)
-                    if total_p1 > 1000 and d == missing_dates[-1]:
+                    # Rule 3: Kiểm tra số lượng mã tối thiểu (Ngưỡng 1500 mã thô)
+                    if total_raw < 1500:
+                        msg = f"❌ LỖI DỮ LIỆU: Ngày {d} chỉ có {total_raw} mã (Yêu cầu tối thiểu 1500).\nDữ liệu ngày này sẽ bị HỦY BỎ."
+                        self.log_sync(msg)
+                        messagebox.showerror("Dữ liệu thiếu hụt", msg)
+                        continue # Bỏ qua ngày này
+                    
+                    # Rule 1: Kiểm tra tính đúng đắn qua Top 50 vốn hóa (Bluechips)
+                    if 'MarketCap' in df_day.columns:
+                        top50 = df_day.sort_values('MarketCap', ascending=False).head(50)
+                        # Kiểm tra nếu cả 50 mã đều có Open=High=Low=Close (đứng im tuyệt đối)
+                        is_stagnant_top50 = (top50['Open'] == top50['High']) & \
+                                            (top50['Open'] == top50['Low']) & \
+                                            (top50['Open'] == top50['Close'])
+                        
+                        if is_stagnant_top50.all():
+                            msg = f"❌ LỖI HỆ THỐNG: Ngày {d} phát hiện 50 mã Bluechips đều đứng im.\nNghi vấn dữ liệu Vietstock bị lỗi toàn băng. HỦY BỎ ngày này."
+                            self.log_sync(msg)
+                            messagebox.showerror("Lỗi dữ liệu toàn băng", msg)
+                            continue # Bỏ qua ngày này
+
+                    self.log_sync(f"   [DONE] Tổng nạp thô: {total_raw} mã. Kiểm tra toàn vẹn OK.")
+                    
+                    # Cập nhật Registry (Danh sách mã niêm yết) - Bây giờ tính cho cả mã đứng im
+                    if d == missing_dates[-1]:
                         all_tickers = df_day['Ticker'].unique().tolist()
                         self.storage.save_active_registry(all_tickers)
                         self.log_sync(f"   [*] Đã cập nhật Registry: {len(all_tickers)} mã niêm yết.")
-
-
-                    
-
-
-                    if total_p1 < 1000:
-
-
-                        self.log_sync(f"   ! LƯU Ý: Dữ liệu ngày {d} vẫn bị thiếu (Gói Limited).")
 
 
                         
@@ -1554,6 +1524,9 @@ class TinvestApp:
 
 
             if not affected_tickers:
+                self.log_sync("ℹ️ Dữ liệu giá hiện tại đã khớp 100%. Robot đang kiểm tra lại chỉ báo...")
+                current_reg = self.storage.get_active_registry() or []
+                self._sync_and_recompute_affected(list(current_reg))
                 return
             self.log_sync("--- ĐANG TÍNH TOÁN LẠI CHỈ BÁO VÀ SCANNER (0ms) ---")
 
@@ -1757,184 +1730,301 @@ class TinvestApp:
 
 
             self._update_breadth_from_cache()
-
-
             self.root.after(0, self.lbl_file.config, {"text": f"Dữ liệu: {len(self.analysis_cache)} mã", "fg": "blue"})
-
-
             self.log_sync("✅ Cập nhật hoàn tất!")
 
-
-
-
-
         except Exception as e:
-
-
             self.log_sync(f"❌ Lỗi xử lý: {e}")
 
-
-
-
-
     def _update_breadth_from_cache(self):
-
-
         """Recalculate market breadth from analysis_cache."""
-
-
         if len(self.analysis_cache) < 100:
-
-
             return  # Prevent breadth corruption when only a few tickers were updated incrementally
-
-
             
-
-
         breadth_dfs = []
-
-
         for ticker, analysis in self.analysis_cache.items():
-
-
             try:
-
-
                 df_sub = analysis["df"]
-
-
                 temp = pd.DataFrame()
-
-
                 temp['Date'] = df_sub['Date']
-
-
                 temp['Valid'] = 1
-
-
                 temp['>MA10'] = (df_sub['Close'] > df_sub['MA10']).astype(int)
-
-
                 temp['>MA20'] = (df_sub['Close'] > df_sub['MA20']).astype(int)
-
-
                 temp['>MA50'] = (df_sub['Close'] > df_sub['MA50']).astype(int)
-
-
                 breadth_dfs.append(temp)
-
-
             except: pass
-
-
             
-
-
         if breadth_dfs:
-
-
             all_breadth = pd.concat(breadth_dfs)
-
-
             grouped = all_breadth.groupby('Date').sum()
-
-
             valid_counts = grouped['Valid'].replace(0, 1)
-
-
             mb = pd.DataFrame()
-
-
             mb['%MA10'] = (grouped['>MA10'] / valid_counts) * 100
-
-
             mb['%MA20'] = (grouped['>MA20'] / valid_counts) * 100
-
-
             mb['%MA50'] = (grouped['>MA50'] / valid_counts) * 100
-
-
             self.market_breadth = mb.sort_index()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     def run_analyzer(self):
-
-
         if not self.data_dict:   
-
-
             messagebox.showwarning("Cảnh báo", "Vui lòng nạp dữ liệu!")
-
-
             return
-
-
             
-
-
         ticker = self.entry_ticker.get().strip().upper()
-
-
         if not ticker: return
-
-
             
-
-
         df = self.data_dict.get(ticker)
-
-
         if df is None:
-
-
             messagebox.showwarning("Không tìm thấy", f"Mã '{ticker}' không tồn tại hoặc dữ liệu <25 ngày!")
-
-
             return
-
-
             
-
-
         self.log_sync(f"Đang phân tích các tín hiệu của hãng {ticker} (cập nhật mới nhất)...", clear=True)
-
-
         self.root.update()
-
-
         
-
-
         try:
-
-
             from tinvest.analyzer import analyze_stock, format_report
             result = analyze_stock(ticker, df)
             report = format_report(result)
             self.log_sync(f"BÁO CÁO CHI TIẾT MÃ: {ticker}\n" + report, clear=True)
-
-
         except Exception as e:
-
-
             self.log_sync(f"Lỗi phân tích: {str(e)}")
 
+    def run_heatmap_chart(self):
+        ticker = self.entry_ticker.get().strip().upper()
+        if not ticker: return
+        df = self.data_dict.get(ticker)
+        if df is None or len(df) < 20:
+            messagebox.showwarning("Không đủ dữ liệu", f"Mã '{ticker}' cần ít nhất 20 phiên để tính Heatmap.")
+            return
+        
+        self.log_sync(f"Đang khởi tạo Bản đồ nhiệt cho mã {ticker} (1 năm gần nhất)...", clear=True)
+        self.show_heatmap_window(ticker, df)
 
+    def show_heatmap_window(self, ticker, df_full):
+        try:
+            import matplotlib.pyplot as plt
+            import matplotlib.gridspec as gridspec
+            from tinvest.data_loader import enrich_dataframe
+
+            # --- PREPARE DATA (Last 250 bars ~ 1 year) ---
+            count = 250
+            # Comprehensive check for all technical heatmap columns
+            required_cols = [
+                'HM_PFE', 'HM_STC', 'HM_MoneyFlow',
+                'HM_Flower_Open', 'HM_Flower_High', 'HM_Flower_Low', 'HM_Flower_Close',
+                'HM_Band_Hi', 'HM_Band_KH', 'HM_Band_KM', 'HM_Band_KL', 'HM_Band_Lo'
+            ]
+            if not all(col in df_full.columns for col in required_cols):
+                self.log_sync(f"Thiếu cột kỹ thuật cho {ticker}. Đang tính toán lại...", clear=True)
+                df_full = enrich_dataframe(df_full)
+                self.data_dict[ticker] = df_full
+
+            self.log_sync(f"Dữ liệu {ticker} đã sẵn sàng. Đang vẽ biểu đồ...", clear=False)
+            df = df_full.tail(count).copy().reset_index(drop=True)
+            x_idx = np.arange(len(df))
+            dates = df['Date']
+
+            # --- SETUP FIGURE ---
+            plt.style.use('dark_background')
+            fig = plt.figure(figsize=(16, 10))
+            gs = gridspec.GridSpec(2, 1, height_ratios=[2, 1], hspace=0.1)
             
+            ax_hm = fig.add_subplot(gs[0])
+            ax_vni = fig.add_subplot(gs[1], sharex=ax_hm)
+            
+            fig.patch.set_facecolor('black')
+            ax_hm.set_facecolor('#080808')
+            ax_vni.set_facecolor('#080808')
 
+            # --- 1. PLOT HEATMAP (Top Panel - ax_hm) ---
+            # Bands Long
+            if 'HM_Band_Long_Hr' in df.columns and 'HM_Band_Long_Ls' in df.columns:
+                ax_hm.fill_between(x_idx, df['HM_Band_Long_Ls'], df['HM_Band_Long_Hr'], 
+                               color='#1A1A1A', alpha=0.3)
+
+            # Bands Short (Heatmap Clouds)
+            if 'HM_Band_Hi' in df.columns:
+                ax_hm.fill_between(x_idx, df['HM_Band_KH'], df['HM_Band_Hi'], color='#003737', alpha=0.6)
+                ax_hm.fill_between(x_idx, df['HM_Band_KM'], df['HM_Band_KH'], color='#3C0F00', alpha=0.5)
+                ax_hm.fill_between(x_idx, df['HM_Band_KL'], df['HM_Band_KM'], color='#000053', alpha=0.5)
+                ax_hm.fill_between(x_idx, df['HM_Band_Lo'], df['HM_Band_KL'], color='#2B2B59', alpha=0.6)
+
+            # Flower Candlesticks
+            f_o, f_h, f_l, f_c = df['HM_Flower_Open'], df['HM_Flower_High'], df['HM_Flower_Low'], df['HM_Flower_Close']
+            up_f = (f_c >= f_o) & (df['HM_MoneyFlow'] == 1)
+            dn_f = (f_c < f_o) & (df['HM_MoneyFlow'] == -1)
+            neutral_f = ~(up_f | dn_f)
+            
+            ax_hm.vlines(x_idx[up_f], f_l[up_f], f_h[up_f], color='#E0E0E0', linewidth=1)
+            ax_hm.vlines(x_idx[dn_f], f_l[dn_f], f_h[dn_f], color='#E60000', linewidth=1)
+            ax_hm.vlines(x_idx[neutral_f], f_l[neutral_f], f_h[neutral_f], color='#FFD700', linewidth=1)
+            
+            ax_hm.bar(x_idx[up_f], f_c[up_f] - f_o[up_f], bottom=f_o[up_f], color='white', width=0.6, alpha=0.9)
+            ax_hm.bar(x_idx[dn_f], f_o[dn_f] - f_c[dn_f], bottom=f_c[dn_f], color='#E60000', width=0.6, alpha=0.9)
+            ax_hm.bar(x_idx[neutral_f], np.abs(f_c[neutral_f] - f_o[neutral_f]), bottom=np.minimum(f_o[neutral_f], f_c[neutral_f]), 
+                   color='#FFFF00', width=0.6, alpha=0.9)
+
+            ax_hm.set_title(f"BẢN ĐỒ NHIỆT THỊ TRƯỜNG - AIC: {ticker}", fontsize=16, fontweight='bold', color='aqua')
+            ax_hm.set_ylabel("Price", color='white')
+            ax_hm.grid(True, color='#222222', linestyle=':', alpha=0.3)
+            plt.setp(ax_hm.get_xticklabels(), visible=False)
+
+            # --- 2. PLOT NORMAL CANDLES (Bottom Panel - ax_vni) ---
+            # Using the same 'df' as the top panel for consistency
+            v_o, v_h, v_l, v_c = df['Open'], df['High'], df['Low'], df['Close']
+            up_v = v_c >= v_o
+            dn_v = v_c < v_o
+            
+            # Normal Candlesticks (Green/Red)
+            ax_vni.vlines(x_idx, v_l, v_h, color='white', linewidth=0.5, alpha=0.5)
+            ax_vni.bar(x_idx[up_v], v_c[up_v] - v_o[up_v], bottom=v_o[up_v], color='#00E600', width=0.6) # Green
+            ax_vni.bar(x_idx[dn_v], v_o[dn_v] - v_c[dn_v], bottom=v_c[dn_v], color='#FF0000', width=0.6) # Red
+            
+            ax_vni.set_title(f"BIỂU ĐỒ GIÁ (NẾN THƯỜNG) - {ticker}", fontsize=12, color='white', pad=10)
+            ax_vni.set_ylabel("Price", color='white')
+            ax_vni.grid(True, color='#222222', linestyle=':', alpha=0.3)
+
+            # --- 3. FORMATTING ---
+            # Date X-axis labels on bottom plot
+            date_labels = dates.dt.strftime('%d/%m/%y').tolist()
+            import matplotlib.ticker as ticker_lib
+            ax_vni.xaxis.set_major_formatter(ticker_lib.FuncFormatter(lambda x, pos: date_labels[int(round(x))] if 0 <= int(round(x)) < len(date_labels) else ""))
+            ax_vni.xaxis.set_major_locator(ticker_lib.MaxNLocator(10))
+            
+            for axis_obj in [ax_hm, ax_vni]:
+                axis_obj.tick_params(colors='white')
+                for spine in axis_obj.spines.values():
+                    spine.set_color('#333333')
+
+            plt.tight_layout()
+            plt.show()
+        except Exception as e:
+            logger.error(f"Error showing heatmap: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def run_elliott_chart(self):
+        ticker = self.entry_ticker.get().strip().upper()
+        if not ticker: return
+        df = self.data_dict.get(ticker)
+        if df is None or len(df) < 30:
+            messagebox.showwarning("Không đủ dữ liệu", f"Mã '{ticker}' cần ít nhất 30 phiên để phân tích Elliott.")
+            return
+        
+        self.log_sync(f"Đang mở Biểu đồ Elliott Wave cho mã {ticker} (150 phiên gần nhất)...", clear=True)
+        self.show_elliott_window(ticker, df)
+
+    def show_elliott_window(self, ticker, df_full):
+        try:
+            import matplotlib.pyplot as plt
+            import matplotlib.dates as mdates
+            from tinvest.data_loader import enrich_dataframe
+
+            plt.style.use('dark_background')
+
+            # --- ROBUST DATA CHECK (Self-Healing) ---
+            if 'AFL_CandleColor' not in df_full.columns:
+                self.log_sync("Dữ liệu Elliott/AFL bị thiếu. Đang tính toán bổ sung...", clear=True)
+                df_full = enrich_dataframe(df_full)
+                self.data_dict[ticker] = df_full # Update cache
+
+            # 1. Prepare Data (Last 150 bars)
+            count = 150
+            df = df_full.tail(count).copy().reset_index(drop=True)
+            x_idx = np.arange(len(df))
+            
+            # 2. Setup Figure
+            fig, ax = plt.subplots(figsize=(15, 9))
+            fig.patch.set_facecolor('black') 
+            ax.set_facecolor('black')
+            
+            # 3. Plot Candlesticks (AFL Style)
+            candle_colors = df['AFL_CandleColor'].tolist()
+            up = df['Close'] >= df['Open']
+            dn = df['Close'] < df['Open']
+            
+            # Candle bars
+            ax.bar(x_idx[up], df.loc[up, 'Close'] - df.loc[up, 'Open'], bottom=df.loc[up, 'Open'], color='#00E600', width=0.6, alpha=0.9)
+            ax.bar(x_idx[dn], df.loc[dn, 'Open'] - df.loc[dn, 'Close'], bottom=df.loc[dn, 'Close'], color='#E60000', width=0.6, alpha=0.9)
+            ax.vlines(x_idx[up], df.loc[up, 'Low'], df.loc[up, 'High'], color='#00E600', linewidth=1)
+            ax.vlines(x_idx[dn], df.loc[dn, 'Low'], df.loc[dn, 'High'], color='#E60000', linewidth=1)
+
+            # 4. Plot Elliott Waves
+            # Smaller Waves (Yellow)
+            if 'EW_Small_1' in df.columns:
+                ax.plot(x_idx, df['EW_Small_1'], color='#FFFF00', linewidth=2, label='Small Wave 1', alpha=0.8)
+            if 'EW_Small_2' in df.columns:
+                ax.plot(x_idx, df['EW_Small_2'], color='#C3C300', linewidth=2, label='Small Wave 2', alpha=0.8)
+                
+            # Larger Waves (Custom/Blue)
+            if 'EW_Large_1' in df.columns:
+                ax.plot(x_idx, df['EW_Large_1'], color='#43A047', linewidth=2.5, label='Large Wave 1')
+            if 'EW_Large_2' in df.columns:
+                ax.plot(x_idx, df['EW_Large_2'], color='#2196F3', linewidth=2, label='Large Wave 2', linestyle=':')
+
+            # 5. Plot AUTO SEC (Linear Regression Channels)
+            if 'EW_SEC_Mid' in df.columns:
+                slope = df['EW_SEC_Slope'].iloc[-1]
+                sec_color = '#4CAF50' if slope > 0 else '#FF80AB' # Green if Up, Rose if Down
+                ax.plot(x_idx, df['EW_SEC_Mid'], color=sec_color, linewidth=1.5, alpha=0.7, label='SEC Channel')
+                if 'EW_SEC_Upper' in df.columns:
+                    ax.plot(x_idx, df['EW_SEC_Upper'], color=sec_color, linewidth=1, linestyle='--', alpha=0.5)
+                if 'EW_SEC_Lower' in df.columns:
+                    ax.plot(x_idx, df['EW_SEC_Lower'], color=sec_color, linewidth=1, linestyle='--', alpha=0.5)
+
+            # 6. Plot Signals (Arrows/Squares) - PRECISE AFL REPLICATION
+            # --- SMALL WAVE SIGNALS (White/Black Arrows) ---
+            if 'EW_Small_Buy' in df.columns:
+                s_buys = df[df['EW_Small_Buy']]
+                if not s_buys.empty:
+                    ax.plot(s_buys.index, s_buys['Low'] * 0.99, '^', markersize=6, color='white', label='Small Buy')
+            
+            if 'EW_Small_Sell' in df.columns:
+                s_sells = df[df['EW_Small_Sell']]
+                if not s_sells.empty:
+                    ax.plot(s_sells.index, s_sells['High'] * 1.01, 'v', markersize=6, color='black', label='Small Sell')
+
+            # --- MEGA SIGNALS (SEC CHANNEL BREAKOUT/RETURN) ---
+            if 'EW_Strong_Buy' in df.columns:
+                buys = df[df['EW_Strong_Buy']]
+                if not buys.empty:
+                    # Triple layer green markers - Adjusted positions for tightness
+                    ax.plot(buys.index, buys['Low'] * 0.975, 's', markersize=12, color='#004D00', alpha=0.8) # Dark Green
+                    ax.plot(buys.index, buys['Low'] * 0.97, 's', markersize=9, color='#00FF00', alpha=0.9) # Lime Green
+                    ax.plot(buys.index, buys['Low'] * 0.972, '^', markersize=6, color='white')
+            
+            if 'EW_Strong_Sell' in df.columns:
+                sells = df[df['EW_Strong_Sell']]
+                if not sells.empty:
+                    # Triple layer red markers - Adjusted positions for tightness
+                    ax.plot(sells.index, sells['High'] * 1.025, 's', markersize=12, color='#8B0000', alpha=0.8) # Dark Red
+                    ax.plot(sells.index, sells['High'] * 1.03, 's', markersize=9, color='#FF0000', alpha=0.9) # Red
+                    ax.plot(sells.index, sells['High'] * 1.027, 'v', markersize=6, color='white')
+
+
+
+            # 7. Formatting
+            ax.set_title(f"ELLIOTT WAVE SYSTEM: {ticker} (Last 150 Bars)", color='gold', fontsize=18, fontweight='bold', pad=20)
+            ax.set_ylabel("Price", color='white', fontweight='bold')
+            ax.grid(True, color='#222222', linestyle=':', alpha=0.5)
+            
+            # Date X-axis
+            date_labels = df['Date'].dt.strftime('%d/%m/%y').tolist()
+            import matplotlib.ticker as ticker_lib
+            ax.xaxis.set_major_formatter(ticker_lib.FuncFormatter(lambda x, pos: date_labels[int(round(x))] if 0 <= int(round(x)) < len(date_labels) else ""))
+            
+            ax.tick_params(colors='white')
+            for spine in ax.spines.values():
+                spine.set_color('#444444')
+            
+            ax.legend(loc='lower left', facecolor='black', edgecolor='yellow', labelcolor='white', fontsize=8)
+            
+            plt.tight_layout()
+            plt.show()
+
+        except Exception as e:
+            logger.error(f"Error showing Elliott window: {e}")
+            import traceback
+            traceback.print_exc()
 
     def run_advanced_scanner(self, entry_target: str):
 
@@ -2508,8 +2598,11 @@ class TinvestApp:
                 if not logo_found:
                     fig.text(0.5, 0.98, "AIC CODE = AI + CƠM!", ha="center", va="top", fontsize=20, fontweight='bold', color='black')
                 
-                ax1.set_title(f"Technical Analysis Report:", fontsize=12, style='italic', color='#555555', pad=10, loc='center')
-                ax1.text(0.5, 1.12, ticker, transform=ax1.transAxes, fontsize=24, fontweight='bold', color='darkblue', ha='center', va='bottom')
+                # --- Title Formatting ---
+                report_date = df_plot['Date'].iloc[-1].strftime('%d/%m/%Y')
+                full_title = f"Technical Analysis Report: {ticker} - {report_date}"
+                
+                ax1.set_title(full_title, fontsize=16, fontweight='bold', color='darkblue', pad=30, loc='center')
 
                 # Current Price Marker
                 current_price = df_plot['Close'].iloc[-1]
@@ -2844,7 +2937,7 @@ class TinvestApp:
 
 
                     txt = f"\n{prefix}THỊ TRƯỜNG {name} ({res['date']})"
-                    txt += f"\n * CHỈ SỐ: {res['price']:,.2f}"
+                    txt += f"\n * CHỈ SỐ: {res['price']:,.0f}"
 
 
                     txt += f"\n * TRẠNG THÁI: {regime_label}"
@@ -2853,10 +2946,8 @@ class TinvestApp:
                     txt += f"\n * HÀNH ĐỘNG: {res['action']}"
 
 
-                    txt += f"\n * KHÁNG CỰ (R): {sr['r1'] if sr['r1'] > 0 else 'N/A'} | {sr['r2'] if sr['r2'] > 0 else 'N/A'}"
-
-
-                    txt += f"\n * HỖ TRỢ (S): {sr['s1'] if sr['s1'] > 0 else 'N/A'} | {sr['s2'] if sr['s2'] > 0 else 'N/A'}"
+                    txt += f"\n * KHÁNG CỰ (R): {sr['r1']:,.0f} | {sr['r2']:,.0f}" if sr['r1'] > 0 else "\n * KHÁNG CỰ (R): N/A"
+                    txt += f"\n * HỖ TRỢ (S): {sr['s1']:,.0f} | {sr['s2']:,.0f}" if sr['s1'] > 0 else "\n * HỖ TRỢ (S): N/A"
 
 
                     txt += f"\n   (S/R: {sr_label})"
@@ -2994,16 +3085,16 @@ class TinvestApp:
                     
                     txt += "\n\n 🎯 TỔNG KẾT CHIẾN LƯỢC TỪ AI:"
                     reg = res['regime']
-                    s1_val = f"{sr['s1']:,.2f}" if sr['s1'] > 0 else 'N/A'
-                    s2_val = f"{sr['s2']:,.2f}" if sr['s2'] > 0 else 'N/A'
-                    r1_val = f"{sr['r1']:,.2f}" if sr['r1'] > 0 else 'N/A'
-                    r2_val = f"{sr['r2']:,.2f}" if sr['r2'] > 0 else 'N/A'
+                    s1_val = f"{sr['s1']:,.0f}" if sr['s1'] > 0 else 'N/A'
+                    s2_val = f"{sr['s2']:,.0f}" if sr['s2'] > 0 else 'N/A'
+                    r1_val = f"{sr['r1']:,.0f}" if sr['r1'] > 0 else 'N/A'
+                    r2_val = f"{sr['r2']:,.0f}" if sr['r2'] > 0 else 'N/A'
                     dist_count = res.get('distribution_count', 0)
                     ra_day = res.get('ra_day', 0)
                     ftd_quality = res.get('ftd_quality', 'N/A')
                     
                     # Tinh SL cho Index dua tren S1
-                    sl_idx = f"{sr['s1'] * 0.99:,.2f}" if sr['s1'] > 0 else 'N/A'
+                    sl_idx = f"{sr['s1'] * 0.99:,.0f}" if sr['s1'] > 0 else 'N/A'
                     
                     if res['ftd_active']:
                         if reg in ["UPTREND", "STABLE_RECOVERY"]:
