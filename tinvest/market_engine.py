@@ -574,27 +574,23 @@ def analyze_market_breadth(data_dict: dict, vnindex_ticker="VNINDEX") -> dict:
 
     for ticker, df in list(data_dict.items()):
 
-        if ticker in [vnindex_ticker, "HNXINDEX", "UPCOM"]:
-
+        if ticker in [vnindex_ticker, "HNXINDEX", "UPCOM", "VN30", "HNX30"]:
             continue
 
-
-
-        if len(df) < 20:
-
+        if len(df) < 50: # Ensure enough data for MA50
             continue
 
-
-
-        c = float(df['Close'].iloc[-1])
+        # Lấy dữ liệu phiên cuối
+        last_row = df.iloc[-1]
+        c = float(last_row['Close'])
+        v = float(last_row['Volume'])
+        
+        # BỎ QUA các mã không có giao dịch (Volume = 0) hoặc dữ liệu lỗi
+        if v <= 0 or pd.isna(c) or c <= 0:
+            continue
 
         pc = float(df['Close'].iloc[-2])
-
-        v = float(df['Volume'].iloc[-1])
-
         av20 = float(df['Volume'].iloc[-20:].mean())
-
-
 
         total_stocks += 1
 

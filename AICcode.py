@@ -455,99 +455,50 @@ class TinvestApp:
 
 
         # Row 2: Basic Signals
-
-
         frame_signals_1 = tk.Frame(frame_adv)
-
-
         frame_signals_1.pack(fill=tk.X, pady=2)
-
-
         
-
-
-        btn_early = tk.Button(frame_signals_1, text="🟢 Mua Sớm (EARLY)", command=lambda: self.run_advanced_scanner("EARLY"), bg="#4CAF50", fg="white", font=("Arial", 10, "bold"))
-
-
+        btn_early = tk.Button(frame_signals_1, text="🟢 Mua Sớm", command=lambda: self.run_advanced_scanner("EARLY"), bg="#4CAF50", fg="white", font=("Arial", 10, "bold"))
         btn_early.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
-
-
         
-
-
-        btn_add1 = tk.Button(frame_signals_1, text="🟡 Gia Tăng 1 (ADD 1)", command=lambda: self.run_advanced_scanner("ADD_1"), bg="#FFC107", fg="black", font=("Arial", 10, "bold"))
-
-
+        btn_add1 = tk.Button(frame_signals_1, text="🟡 Gia Tăng 1", command=lambda: self.run_advanced_scanner("ADD_1"), bg="#FFC107", fg="black", font=("Arial", 10, "bold"))
         btn_add1.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
-
-
         
-
-
-        btn_add2 = tk.Button(frame_signals_1, text="🟡 Gia Tăng 2 (ADD 2)", command=lambda: self.run_advanced_scanner("ADD_2"), bg="#FF9800", fg="white", font=("Arial", 10, "bold"))
-
-
+        btn_add2 = tk.Button(frame_signals_1, text="🟠 Gia Tăng 2", command=lambda: self.run_advanced_scanner("ADD_2"), bg="#FF9800", fg="white", font=("Arial", 10, "bold"))
         btn_add2.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
-
-
         
-
-
-        btn_strong = tk.Button(frame_signals_1, text="🔴 Mua Mạnh (STRONG)", command=lambda: self.run_advanced_scanner("STRONG"), bg="#F44336", fg="white", font=("Arial", 10, "bold"))
-
-
+        btn_strong = tk.Button(frame_signals_1, text="🔴 Mua Mạnh", command=lambda: self.run_advanced_scanner("STRONG"), bg="#F44336", fg="white", font=("Arial", 10, "bold"))
         btn_strong.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
 
         
 
 
-        # Row 3: Advanced Filters & Recommendations
-
-
+        # Row 3: Advanced Filters Part 1
         frame_signals_2 = tk.Frame(frame_adv)
-
-
         frame_signals_2.pack(fill=tk.X, pady=2)
-
-
         
-
-
-        btn_accum = tk.Button(frame_signals_2, text="📦 Cổ phiếu Tích Lũy", command=lambda: self.run_advanced_scanner("ACCUMULATION"), bg="#9C27B0", fg="white", font=("Arial", 10, "bold"))
-
-
+        btn_accum = tk.Button(frame_signals_2, text="📦 Tích Lũy", command=lambda: self.run_advanced_scanner("ACCUMULATION"), bg="#9C27B0", fg="white", font=("Arial", 10, "bold"))
         btn_accum.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-
-
-
-
         btn_ma = tk.Button(frame_signals_2, text="📈 Perfect MA", command=lambda: self.run_advanced_scanner("PERFECT_MA"), bg="#00BCD4", fg="white", font=("Arial", 10, "bold"))
-
-
         btn_ma.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-
-
-
-
-        btn_trade = tk.Button(frame_signals_2, text="✅ Cổ phiếu TRADE", command=lambda: self.run_advanced_scanner("TRADEABLE"), bg="#008B8B", fg="white", font=("Arial", 10, "bold"))
-
-
+        btn_trade = tk.Button(frame_signals_2, text="✅ TRADE", command=lambda: self.run_advanced_scanner("TRADEABLE"), bg="#008B8B", fg="white", font=("Arial", 10, "bold"))
         btn_trade.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
+        # Row 4: Advanced Filters Part 2
+        frame_signals_3 = tk.Frame(frame_adv)
+        frame_signals_3.pack(fill=tk.X, pady=2)
 
-
-
-
-        btn_wait = tk.Button(frame_signals_2, text="☁️ Danh mục UPCLOUD", command=lambda: self.run_advanced_scanner("UPCLOUD"), bg="#1E90FF", fg="white", font=("Arial", 10, "bold"))
-
-
+        btn_wait = tk.Button(frame_signals_3, text="☁️ UPCLOUD", command=lambda: self.run_advanced_scanner("UPCLOUD"), bg="#1E90FF", fg="white", font=("Arial", 10, "bold"))
         btn_wait.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-        btn_white_adx = tk.Button(frame_signals_2, text="⚪ Trend MẠNH (ADX)", command=lambda: self.run_advanced_scanner("WHITE_ADX"), bg="#FFFFFF", fg="black", font=("Arial", 10, "bold"))
+        btn_white_adx = tk.Button(frame_signals_3, text="⚪ Trend ADX", command=lambda: self.run_advanced_scanner("WHITE_ADX"), bg="#FFFFFF", fg="black", font=("Arial", 10, "bold"))
         btn_white_adx.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+
+        btn_elliott = tk.Button(frame_signals_3, text="🌊 Elliott", command=lambda: self.run_advanced_scanner("ELLIOTT_BUY"), bg="#FFD700", fg="black", font=("Arial", 10, "bold"))
+        btn_elliott.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
 
 
@@ -2196,6 +2147,22 @@ class TinvestApp:
                         flags = "ADX Trắng (Rising & DI+ > DI-)"
                         val["risk_pct"] = val.get("risk_pct", 0) * 0.7  # Relax risk for scanner display
 
+                elif entry_target == "ELLIOTT_BUY":
+                    # Check for EW_Strong_Buy in last 3 sessions
+                    if 'EW_Strong_Buy' in df.columns:
+                        if df['EW_Strong_Buy'].tail(3).any():
+                            match = True
+                            size = "N/A"
+                            conf = "ELLIOTT"
+                            # Find exactly how many sessions ago the last signal was
+                            sig_indices = df.index[df['EW_Strong_Buy']]
+                            if not sig_indices.empty:
+                                last_sig_idx = sig_indices[-1]
+                                dist = df.index[-1] - last_sig_idx
+                                flags = f"Elliott BUY (Xuất hiện {dist} phiên trước)"
+                            else:
+                                flags = "Elliott BUY (Gần đây)"
+
 
                 else:
 
@@ -2871,7 +2838,11 @@ class TinvestApp:
 
                     # State Engine cho Index
                     from tinvest.state_engine import evaluate_state_rules
+                    from tinvest.analyzer import evaluate_heatmap, evaluate_elliott
                     state_rules = evaluate_state_rules(df_rich)
+                    
+                    heatmap_eval = evaluate_heatmap(df_rich)
+                    elliott_eval = evaluate_elliott(df_rich)
 
                     res_regime = analyze_market_index(idx_df, breadth_pct_ma20=breadth_ma20, breadth_pct_ma50=breadth_ma50, momentum_data=mom)
                     res_regime['price'] = float(idx_df['Close'].iloc[-1])
@@ -2887,6 +2858,8 @@ class TinvestApp:
                         "signals": signals,
                         "valuation": val,
                         "state_rules": state_rules,
+                        "heatmap_eval": heatmap_eval,
+                        "elliott_eval": elliott_eval,
                         "date": idx_df['Date'].iloc[-1].strftime("%Y-%m-%d") if 'Date' in idx_df.columns else "N/A"
                     }
 
@@ -2978,7 +2951,11 @@ class TinvestApp:
                         txt += f"\n   ● [Ichimoku] {ichi_d.get('status', '')}"
                         txt += f"\n   ● [RSI Setup] {rsi_d.get('status', '')}"
                         txt += f"\n   [MACD Setup] {macd_d.get('status', '')}"
-                        txt += f"\n   ● [ADX Setup] {adx_d.get('status', '')}\n"
+                        txt += f"\n   ● [ADX Setup] {adx_d.get('status', '')}"
+                        
+                        txt += f"\n\n [2.2 ĐÁNH GIÁ NẾN NHIỆT & ELLIOTT]"
+                        txt += f"\n   ● Heatmap: {res_dict.get('heatmap_eval', 'N/A')}"
+                        txt += f"\n   ● Elliott: {res_dict.get('elliott_eval', 'N/A')}\n"
                     else:
                         txt += f"\n * VSA: {vsa['dominant']} | Ichi: {ichi['trend']} | MA: {ma['trend_label']}"
                         txt += f"\n * RSI: {mom['rsi_val']} | MACD: {mom['macd_val']}\n"
@@ -3074,7 +3051,7 @@ class TinvestApp:
                         
                         m = st.get('metrics', {})
                         
-                        txt += "\n\n [2.2 ĐẶC ĐIỂM TRẠNG THÁI THỊ TRƯỜNG (ROBOT)]"
+                        txt += "\n\n [2.3 ĐẶC ĐIỂM TRẠNG THÁI THỊ TRƯỜNG (ROBOT)]"
                         txt += f"\n   ● Xu Hướng Cốt Lõi    : {st_pri}"
                         txt += f"\n   ● Hành Vi Vận Động     : {st_sec}"
                         txt += f"\n   ● Tín Hiệu Khuyến Nghị: {st_sig}"
