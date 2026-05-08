@@ -29,7 +29,12 @@ def calculate_zigzag(series, percent_change):
     
     for i in range(1, n):
         val = data[i]
-        diff = (val - last_piv_val) / last_piv_val
+        if last_piv_val == 0:
+            diff = 0.0
+            if val != 0:
+                diff = float('inf') if val > 0 else float('-inf')
+        else:
+            diff = (val - last_piv_val) / last_piv_val
         
         if trend == 0:
             if diff >= change:

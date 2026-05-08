@@ -21,39 +21,25 @@ def calculate_stc(close_prices, ma1=23, ma2=50, tc_len=10, factor=0.5):
     val1 = x_mac.rolling(window=tc_len).min()
     val2 = x_mac.rolling(window=tc_len).max() - val1
     
-    frac1 = np.zeros(len(close_prices))
-    for i in range(1, len(close_prices)):
-        if val2.iloc[i] > 0:
-            frac1[i] = ((x_mac.iloc[i] - val1.iloc[i]) / val2.iloc[i]) * 100
-        else:
-            frac1[i] = frac1[i-1]
+    frac1 = np.where(val2 > 0, ((x_mac - val1) / val2) * 100, np.nan)
+    frac1 = pd.Series(frac1).ffill().fillna(0).values
             
     # Smoothed PF
-    pf = np.zeros(len(close_prices))
-    pf[0] = frac1[0]
-    for i in range(1, len(close_prices)):
-        pf[i] = pf[i-1] + (factor * (frac1[i] - pf[i-1]))
+    pf = pd.Series(frac1).ewm(alpha=factor, adjust=False).mean().values
         
-    pf_series = pd.Series(pf)
+    pf_series = pd.Series(pf, index=close_prices.index)
     
     # 3. 2nd Stochastic
     val3 = pf_series.rolling(window=tc_len).min()
     val4 = pf_series.rolling(window=tc_len).max() - val3
     
-    frac2 = np.zeros(len(close_prices))
-    for i in range(1, len(close_prices)):
-        if val4.iloc[i] > 0:
-            frac2[i] = ((pf[i] - val3.iloc[i]) / val4.iloc[i]) * 100
-        else:
-            frac2[i] = frac2[i-1]
+    frac2 = np.where(val4 > 0, ((pf_series - val3) / val4) * 100, np.nan)
+    frac2 = pd.Series(frac2).ffill().fillna(0).values
             
     # Smoothed PFF
-    pff = np.zeros(len(close_prices))
-    pff[0] = frac2[0]
-    for i in range(1, len(close_prices)):
-        pff[i] = pff[i-1] + (factor * (frac2[i] - pff[i-1]))
+    pff = pd.Series(frac2).ewm(alpha=factor, adjust=False).mean().values
         
-    return pd.Series(pff)
+    return pd.Series(pff, index=close_prices.index)
 
 def calculate_pfe(close_prices, pds=10, smooth=5):
     """
@@ -134,15 +120,16 @@ def calculate_heatmap_matrix(df_orig):
     # 6. CCI Signal (CCI 9 vs CCI 8)
     # AFL uses CCI(9) > 0 and CCI(8) < 0
     # TP = (H+L+C)/3; CCI = (TP - MA(TP))/ (0.015 * MD(TP))
-    def cci(data_h, data_l, data_c, period):
+    # Since we ONLY check if CCI > 0 or CCI < 0, the denominator (0.015 * MD) is always positive
+    # and therefore does not affect the sign. We can skip the extremely slow MD calculation!
+    def cci_sign(data_h, data_l, data_c, period):
         tp = (data_h + data_l + data_c) / 3
         ma = tp.rolling(period).mean()
-        md = tp.rolling(period).apply(lambda x: np.abs(x - x.mean()).mean())
-        return (tp - ma) / (0.015 * md + 1e-10)
+        return tp - ma
     
-    cci9 = cci(h, l, c, 9)
-    cci8 = cci(h, l, c, 8)
-    res['CCI'] = np.select([cci9 > 0, cci8 < 0], [1, -1], default=0)
+    cci9_val = cci_sign(h, l, c, 9)
+    cci8_val = cci_sign(h, l, c, 8)
+    res['CCI'] = np.select([cci9_val > 0, cci8_val < 0], [1, -1], default=0)
     
     # 7. %BB Signal
     # x = ((C+2*StDev(C,7)-MA(C,7))/(4*StDev(C,7)))*100
@@ -190,14 +177,9 @@ def calculate_heatmap_matrix(df_orig):
     typical = (df['Open'] + h + l + c) / 4.0
     res['Flower_Close'] = typical.ewm(span=3, adjust=False).mean()
     
-    n = len(df)
-    f_open = np.zeros(n)
-    f_open[0] = (df['Open'].iloc[0] + res['Flower_Close'].iloc[0]) / 2.0
-    for i in range(1, n):
-        # fO=EMA((Ref(O,-1)+Ref(fC,-1))/2,3);
-        # Use simple EMA(prev_val, 3) approximation from the chain
-        prev_mix = (df['Open'].iloc[i-1] + res['Flower_Close'].iloc[i-1]) / 2.0
-        f_open[i] = f_open[i-1] + (2.0/4.0) * (prev_mix - f_open[i-1]) # EMA(3) alpha = 2/(3+1)
+    prev_mix = (df['Open'].shift(1) + res['Flower_Close'].shift(1)) / 2.0
+    prev_mix.iloc[0] = (df['Open'].iloc[0] + res['Flower_Close'].iloc[0]) / 2.0
+    f_open = prev_mix.ewm(alpha=0.5, adjust=False).mean().values
         
     res['Flower_Open'] = pd.Series(f_open, index=df.index)
     res['Flower_High'] = pd.concat([h, res['Flower_Open'], res['Flower_Close']], axis=1).max(axis=1).ewm(span=3, adjust=False).mean()

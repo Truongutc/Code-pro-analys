@@ -16,6 +16,7 @@ from .accumulation_engine import analyze_accumulation
 from .valuation_engine import evaluate_stock_valuation
 from .data_loader import enrich_dataframe
 from .state_engine import evaluate_state_rules
+from .mcdx_engine import evaluate_mcdx_rules
 
 logger = logging.getLogger(__name__)
 
@@ -130,9 +131,10 @@ def analyze_stock(ticker: str, df: pd.DataFrame) -> dict:
     # Store close_26 for Chikou analysis in report
     close_26 = df_rich['Close'].iloc[-26] if len(df_rich) > 26 else df_rich['Close'].iloc[0]
 
-    # 5. Additional AIC Indicators (Heatmap & Elliott)
+    # 5. Additional AIC Indicators (Heatmap & Elliott & MCDX)
     heatmap_eval = evaluate_heatmap(df_rich)
     elliott_eval = evaluate_elliott(df_rich)
+    mcdx_eval = evaluate_mcdx_rules(df_rich)
     
     return {
         "ticker": ticker.upper(),
@@ -149,7 +151,8 @@ def analyze_stock(ticker: str, df: pd.DataFrame) -> dict:
         "ma20": float(df_rich['MA20'].iloc[-1]),
         "ma50": float(df_rich['MA50'].iloc[-1]),
         "heatmap_eval": heatmap_eval,
-        "elliott_eval": elliott_eval
+        "elliott_eval": elliott_eval,
+        "mcdx_eval": mcdx_eval
     }
 
 
@@ -285,6 +288,14 @@ def format_report(result: dict) -> str:
             lines.append("\n  [HỆ THỐNG BẢN ĐỒ NHIỆT & SÓNG ELLIOTT]")
             lines.append(f"  ● Đánh giá Heatmap: {result.get('heatmap_eval', 'N/A')}")
             lines.append(f"  ● Đánh giá Elliott: {result.get('elliott_eval', 'N/A')}")
+            
+            # --- MCDX EVALUATION ---
+            mcdx = result.get('mcdx_eval', {})
+            if mcdx:
+                lines.append(f"\n  [CHỈ BÁO DÒNG TIỀN TẠO LẬP - MCDX]")
+                lines.append(f"  ● Trạng thái : {mcdx.get('status', 'N/A')}")
+                lines.append(f"  ● Hành động  : {mcdx.get('action', 'N/A')}")
+                lines.append(f"  ● Chi tiết   : {mcdx.get('details', 'N/A')}")
     lines.append("")
 
     # --- 1.5 CĂN CỨ TÍN HIỆU ---
@@ -432,6 +443,12 @@ def format_report(result: dict) -> str:
     lines.append(f"  👉 CHIẾN LƯỢC CỐT LÕI : {sr_signal.upper()}")
     lines.append(f"     ● Tỷ trọng khuyến nghị : {target_pct}")
     lines.append(f"     - Lý do hệ thống       : {reason_txt}")
+    
+    mcdx = result.get('mcdx_eval', {})
+    if mcdx:
+        mcdx_status = mcdx.get('status', 'N/A')
+        mcdx_action = mcdx.get('action', 'N/A')
+        lines.append(f"     - 💰 Tiền lớn (MCDX)   : {mcdx_status} -> {mcdx_action}")
     lines.append(f"     - 🛡️ Vị thế FULL TIỀN    : {cash_txt}")
     lines.append(f"     - 💎 Vị thế ĐANG CẦM CỔ : {hold_txt}")
     lines.append(f"     - ✂ Vị thế ĐANG KẸP     : {trap_txt}")

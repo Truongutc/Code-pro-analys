@@ -247,9 +247,16 @@ class TinvestApp:
 
         self._build_ui()
 
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        
-
+    def on_closing(self):
+        try:
+            import matplotlib.pyplot as plt
+            plt.close('all')
+        except:
+            pass
+        self.root.quit()
+        self.root.destroy()
 
         # NOTE: Auto-load on startup disabled as per request.
 
@@ -1668,10 +1675,11 @@ class TinvestApp:
                     
 
 
+                    old_cmp = cmp
                     cmp += len(batch_results)
 
 
-                    if cmp % 200 == 0 or cmp == total:
+                    if (cmp // 200) > (old_cmp // 200) or cmp == total:
 
 
                          self.log_sync(f"      ... Tiến độ: {cmp}/{total} mã...")
@@ -1847,7 +1855,7 @@ class TinvestApp:
                     spine.set_color('#333333')
 
             plt.tight_layout()
-            plt.show()
+            plt.show(block=False)
         except Exception as e:
             logger.error(f"Error showing heatmap: {e}")
             import traceback
@@ -1970,7 +1978,7 @@ class TinvestApp:
             ax.legend(loc='lower left', facecolor='black', edgecolor='yellow', labelcolor='white', fontsize=8)
             
             plt.tight_layout()
-            plt.show()
+            plt.show(block=False)
 
         except Exception as e:
             logger.error(f"Error showing Elliott window: {e}")
@@ -2363,9 +2371,9 @@ class TinvestApp:
 
 
                 import numpy as np
-
-
                 from tinvest.data_loader import enrich_dataframe
+                
+                plt.style.use('default')
 
 
                 
@@ -2555,15 +2563,15 @@ class TinvestApp:
                         import matplotlib.image as mpimg
                         img = mpimg.imread(logo_path)
                         imagebox = OffsetImage(img, zoom=0.15) # Adjust zoom as needed
-                        ab = AnnotationBbox(imagebox, (0.4, 0.96), frameon=False, xycoords='figure fraction')
+                        ab = AnnotationBbox(imagebox, (0.05, 0.96), frameon=False, xycoords='figure fraction')
                         fig.add_artist(ab)
-                        fig.text(0.45, 0.96, "=AI+CƠM!", ha="left", va="center", fontsize=22, fontweight='bold', color='black')
+                        fig.text(0.10, 0.96, "=AI+CƠM!", ha="left", va="center", fontsize=22, fontweight='bold', color='black')
                         logo_found = True
                 except Exception as e:
                     logger.error(f"Error loading logo: {e}")
                 
                 if not logo_found:
-                    fig.text(0.5, 0.98, "AIC CODE = AI + CƠM!", ha="center", va="top", fontsize=20, fontweight='bold', color='black')
+                    fig.text(0.05, 0.98, "AIC CODE = AI + CƠM!", ha="left", va="top", fontsize=20, fontweight='bold', color='black')
                 
                 # --- Title Formatting ---
                 report_date = df_plot['Date'].iloc[-1].strftime('%d/%m/%Y')
@@ -2593,13 +2601,21 @@ class TinvestApp:
                 opp_score = val.get('opp_score', 0)
                 risk_score = val.get('risk_score', 0)
                 report_date = df_plot['Date'].iloc[-1].strftime('%d/%m/%Y')
+                action_str = val.get('action', '')
+                if "YES" in action_str:
+                    rec_text = f"NÊN MUA (giá {fmt.format(current_price)}), Target 1: {fmt.format(val.get('tp1', 0))}, Target 2: {fmt.format(val.get('tp2', 0))}, Cutloss: {fmt.format(val.get('cutloss_full', 0))}"
+                elif "NO" in action_str or risk_score > 75 or "DOWNTREND" in sr_pri:
+                    rec_text = f"NÊN BÁN (giá {fmt.format(current_price)})"
+                else:
+                    rec_text = "TRUNG LẬP (hiện tại trung lập chưa nên hành động)"
                 
                 summary_text = (
                     f"TÓM LƯỢC NHẬN ĐỊNH ({report_date})\n"
                     f"● Trạng thái: {sr_pri}\n"
                     f"● Vận động: {sr_sec}\n"
                     f"● Opp Score: {opp_score}/100 | Risk: {risk_score}/100\n"
-                    f"● Xu hướng: {'TĂNG' if opp_score > 50 else 'THEO DÕI' if opp_score > 30 else 'YẾU'}"
+                    f"● Xu hướng: {'TĂNG' if opp_score > 50 else 'THEO DÕI' if opp_score > 30 else 'YẾU'}\n"
+                    f"● Khuyến nghị: {rec_text}"
                 )
                 
                 # Move summary box down to avoid Legend overlap
@@ -2633,21 +2649,50 @@ class TinvestApp:
                     fig.text(0.1, 0.02, annotation_text, fontsize=10, color='darkgreen', 
                              linespacing=1.8, bbox=dict(facecolor='white', alpha=0.9, edgecolor='lime', pad=5))
 
-                # Volume...
-                ax2.bar(x_idx_plot, df_plot['Volume'], 
-                        color=np.where(df_plot['Close'] >= df_plot['Open'], 'green', 'red'), alpha=0.5, width=0.6)
-                if 'VolMA20' in df_plot.columns:
-                    ax2.plot(x_idx_plot, df_plot['VolMA20'], color='blue', alpha=0.6)
+                # MCDX...
+                if 'MCDX_Banker' in df_plot.columns:
+                    # Banker (Red) - Bottom to Banker value
+                    ax2.bar(x_idx_plot, df_plot['MCDX_Banker'], color='red', width=0.8, alpha=0.8, label='Banker')
+                    # Hot Money (Yellow) - Stacked on top of Banker
+                    ax2.bar(x_idx_plot, df_plot['MCDX_HotMoney'], bottom=df_plot['MCDX_Banker'], color='yellow', width=0.8, alpha=0.8, label='Hot Money')
+                    # Retailer (Green) - Stacked on top of Banker + HotMoney
+                    ax2.bar(x_idx_plot, df_plot['MCDX_Retailer'], bottom=df_plot['MCDX_Banker'] + df_plot['MCDX_HotMoney'], color='green', width=0.8, alpha=0.8, label='Retailer')
+                    
+                    if 'MCDX_Banker_MA' in df_plot.columns:
+                        ax2.plot(x_idx_plot, df_plot['MCDX_Banker_MA'], color='black', linewidth=1.5, label='Banker MA')
+                    
+                    ax2.set_ylabel('MCDX', fontweight='bold', fontsize=9)
+                    ax2.set_ylim(0, 20)
+                    ax2.legend(loc='upper left', fontsize=8, ncol=4)
+                else:
+                    ax2.set_visible(False)
 
-                # --- RSI Subplot ---
-                if 'RSI' in df_plot.columns:
-                    ax3.plot(x_idx_plot, df_plot['RSI'], color='purple', linewidth=1.5, label='RSI (14)')
-                    ax3.axhline(70, color='red', linestyle='--', alpha=0.5)
-                    ax3.axhline(50, color='gray', linestyle='-.', alpha=0.5)
-                    ax3.axhline(30, color='green', linestyle='--', alpha=0.5)
-                    ax3.set_ylabel('RSI', fontweight='bold', fontsize=9)
-                    ax3.set_ylim(10, 90)
-                    ax3.legend(loc='upper left', fontsize=8)
+                # --- ADX Subplot ---
+                if 'ADX' in df_plot.columns:
+                    # Draw multi-colored ADX line
+                    adx_vals = df_plot['ADX'].values
+                    if 'ADX_Color' in df_plot.columns:
+                        adx_colors = df_plot['ADX_Color'].values
+                        for i in range(1, len(x_idx_plot)):
+                            c = str(adx_colors[i]).lower()
+                            if c == 'white': c = 'purple'
+                            ax3.plot(x_idx_plot[i-1:i+1], adx_vals[i-1:i+1], color=c, linewidth=2.0)
+                    else:
+                        ax3.plot(x_idx_plot, df_plot['ADX'], color='black', linewidth=1.5)
+                        
+                    ax3.plot(x_idx_plot, df_plot['DI_Plus'], color='green', linewidth=1.0, label='+DI')
+                    ax3.plot(x_idx_plot, df_plot['DI_Minus'], color='red', linewidth=1.0, label='-DI')
+                    ax3.axhline(25, color='gray', linestyle='--', alpha=0.8, label='Trend Threshold')
+                    ax3.set_ylabel('ADX', fontweight='bold', fontsize=9)
+                    ax3.set_ylim(bottom=0)
+                    
+                    import matplotlib.lines as mlines
+                    adx_legend = mlines.Line2D([], [], color='purple', linewidth=2.0, label='ADX (14)')
+                    handles, labels = ax3.get_legend_handles_labels()
+                    handles.insert(0, adx_legend)
+                    labels.insert(0, 'ADX (14)')
+                    ax3.legend(handles, labels, loc='upper left', fontsize=8, ncol=4)
+                    
                     ax3.grid(True, linestyle='--', alpha=0.3)
                 else:
                     ax3.set_visible(False)
@@ -2678,7 +2723,7 @@ class TinvestApp:
                 # Make sure the x limits are bounded by the total ordinal length
                 ax1.set_xlim(0, len(x_idx_ext) + 2)
                 ax2.grid(True, linestyle='--', alpha=0.3)
-                plt.show()
+                plt.show(block=False)
 
 
                 
@@ -2699,10 +2744,7 @@ class TinvestApp:
                 
 
 
-        import threading
-
-
-        threading.Thread(target=chart_task, daemon=True).start()
+        self.root.after(0, chart_task)
 
 
 
@@ -2839,10 +2881,12 @@ class TinvestApp:
                     # State Engine cho Index
                     from tinvest.state_engine import evaluate_state_rules
                     from tinvest.analyzer import evaluate_heatmap, evaluate_elliott
+                    from tinvest.mcdx_engine import evaluate_mcdx_rules
                     state_rules = evaluate_state_rules(df_rich)
                     
                     heatmap_eval = evaluate_heatmap(df_rich)
                     elliott_eval = evaluate_elliott(df_rich)
+                    mcdx_eval = evaluate_mcdx_rules(df_rich)
 
                     res_regime = analyze_market_index(idx_df, breadth_pct_ma20=breadth_ma20, breadth_pct_ma50=breadth_ma50, momentum_data=mom)
                     res_regime['price'] = float(idx_df['Close'].iloc[-1])
@@ -2860,6 +2904,7 @@ class TinvestApp:
                         "state_rules": state_rules,
                         "heatmap_eval": heatmap_eval,
                         "elliott_eval": elliott_eval,
+                        "mcdx_eval": mcdx_eval,
                         "date": idx_df['Date'].iloc[-1].strftime("%Y-%m-%d") if 'Date' in idx_df.columns else "N/A"
                     }
 
@@ -2956,6 +3001,13 @@ class TinvestApp:
                         txt += f"\n\n [2.2 ĐÁNH GIÁ NẾN NHIỆT & ELLIOTT]"
                         txt += f"\n   ● Heatmap: {res_dict.get('heatmap_eval', 'N/A')}"
                         txt += f"\n   ● Elliott: {res_dict.get('elliott_eval', 'N/A')}\n"
+                        
+                        mcdx = res_dict.get('mcdx_eval', {})
+                        if mcdx:
+                            txt += f"\n [CHỈ BÁO DÒNG TIỀN TẠO LẬP - MCDX]"
+                            txt += f"\n   ● Trạng thái : {mcdx.get('status', 'N/A')}"
+                            txt += f"\n   ● Hành động  : {mcdx.get('action', 'N/A')}"
+                            txt += f"\n   ● Chi tiết   : {mcdx.get('details', 'N/A')}\n"
                     else:
                         txt += f"\n * VSA: {vsa['dominant']} | Ichi: {ichi['trend']} | MA: {ma['trend_label']}"
                         txt += f"\n * RSI: {mom['rsi_val']} | MACD: {mom['macd_val']}\n"
@@ -3061,6 +3113,11 @@ class TinvestApp:
                             txt += f"\n   ● ADX: {m.get('adx',0):.1f} | MACD Hist: {m.get('hist',0):.2f} | Vol Spike: {m.get('vol_spike', False)} | Trend Bias: {m.get('trend_bias', 0)}"
                     
                     txt += "\n\n 🎯 TỔNG KẾT CHIẾN LƯỢC TỪ AI:"
+                    
+                    mcdx = res_dict.get('mcdx_eval', {})
+                    if mcdx:
+                        txt += f"\n  💰 DÒNG TIỀN TẠO LẬP (MCDX): {mcdx.get('status', 'N/A')} -> {mcdx.get('action', 'N/A')}"
+                        
                     reg = res['regime']
                     s1_val = f"{sr['s1']:,.0f}" if sr['s1'] > 0 else 'N/A'
                     s2_val = f"{sr['s2']:,.0f}" if sr['s2'] > 0 else 'N/A'
@@ -3374,7 +3431,7 @@ class TinvestApp:
             fig.autofmt_xdate()
             
             plt.tight_layout()
-            plt.show()
+            plt.show(block=False)
 
 
         except Exception as e:

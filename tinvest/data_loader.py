@@ -61,11 +61,8 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # ── 5. Heikin Ashi ─────────────────────────────────────────────────────
     # HA is a chain - must compute from start to ensure integrity
     ha_close = (out['Open'] + out['High'] + out['Low'] + out['Close']) / 4
-    ha_open = np.zeros(len(out))
-    
-    ha_open[0] = (out['Open'].iloc[0] + out['Close'].iloc[0]) / 2
-    for i in range(1, len(out)):
-        ha_open[i] = (ha_open[i-1] + ha_close.iloc[i-1]) / 2
+    ha_close_shifted = ha_close.shift(1).fillna((out['Open'].iloc[0] + out['Close'].iloc[0]) / 2)
+    ha_open = ha_close_shifted.ewm(alpha=0.5, adjust=False).mean()
         
     out['HA_Open'] = ha_open
     out['HA_Close'] = ha_close
@@ -133,33 +130,14 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     # ── 9. Pivot (Swing) Points (Fractal n=2 Strict) ────────────────────
     # Identify true Swing Highs / Lows matching exactly specific condition
-    highs = out['High'].values
-    lows = out['Low'].values
-    n = 2
-    swing_highs = np.zeros(len(out))
-    swing_lows = np.zeros(len(out))
+    highs = out['High']
+    lows = out['Low']
     
-    for i in range(n, len(out) - n):
-        cur_low = lows[i]
-        is_low = True
-        for j in range(1, n + 1):
-            if lows[i - j] <= cur_low or lows[i + j] <= cur_low:
-                is_low = False
-                break
-        if is_low:
-            swing_lows[i] = cur_low
-            
-        cur_high = highs[i]
-        is_high = True
-        for j in range(1, n + 1):
-            if highs[i - j] >= cur_high or highs[i + j] >= cur_high:
-                is_high = False
-                break
-        if is_high:
-            swing_highs[i] = cur_high
-            
-    out['SwingHigh'] = swing_highs
-    out['SwingLow'] = swing_lows
+    is_swing_high = (highs > highs.shift(1)) & (highs > highs.shift(2)) & (highs > highs.shift(-1)) & (highs > highs.shift(-2))
+    out['SwingHigh'] = np.where(is_swing_high, highs, 0)
+    
+    is_swing_low = (lows < lows.shift(1)) & (lows < lows.shift(2)) & (lows < lows.shift(-1)) & (lows < lows.shift(-2))
+    out['SwingLow'] = np.where(is_swing_low, lows, 0)
 
     # ── 10. AIC Professional Indicators ──────────────────────────────────────
     # ATR Slope over 5 days to measure price compression (Nén nền)
@@ -209,6 +187,15 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         out['AFL_CandleColor'] = np.where(out['Close'] >= out['Open'], '#98FB98', '#FFC0CB') # PaleGreen / Pink
     except Exception as e:
         logger.error(f"Error enriching with Elliott signals: {e}")
+
+    # ── 14. MCDX Engine (Retailer, Hot Money, Banker) ─────────────────────────
+    try:
+        from .mcdx_engine import calculate_mcdx
+        mcdx_df = calculate_mcdx(out)
+        for col in mcdx_df.columns:
+            out[col] = mcdx_df[col].values
+    except Exception as e:
+        logger.error(f"Error enriching with MCDX signals: {e}")
 
     return out
 
