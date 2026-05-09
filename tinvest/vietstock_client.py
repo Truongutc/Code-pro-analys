@@ -6,6 +6,11 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import time
 import re
+import re
+import ssl
+from collections import OrderedDict
+from requests.adapters import HTTPAdapter
+from urllib3.util.ssl_ import create_urllib3_context
 from tinvest.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
@@ -20,6 +25,23 @@ class VietstockClient:
         
         self.session_limited = False # Track if current token is restricted to 200 items
         self.session = requests.Session()
+        
+        # Enable Legacy SSL support for Machine 2 (OpenSSL 3+ compatibility)
+        try:
+            class LegacyAdapter(HTTPAdapter):
+                def init_poolmanager(self, *args, **kwargs):
+                    ctx = create_urllib3_context()
+                    # Enable legacy server connect (needed for some older TLS servers on OpenSSL 3.0+)
+                    ctx.options |= 0x4  # ssl.OP_LEGACY_SERVER_CONNECT
+                    kwargs['ssl_context'] = ctx
+                    return super(LegacyAdapter, self).init_poolmanager(*args, **kwargs)
+            
+            adapter = LegacyAdapter()
+            self.session.mount("https://", adapter)
+            logger.info("Enabled Legacy SSL Adapter for compatibility.")
+        except Exception as e:
+            logger.warning(f"Could not enable Legacy SSL Adapter: {e}")
+
         self.api_url = "https://finance.vietstock.vn/data/KQGDThongKeGiaPaging"
         self.token = None
         self.refresh_from_config()
@@ -34,36 +56,38 @@ class VietstockClient:
         # 1. Start with a clean slate to mirror browser exactly
         self.session.headers.clear()
         
-        # 2. Rebuild headers based on provided config
         ua = conf_headers.get("User-Agent") or conf_headers.get("user-agent")
         if not ua:
-            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
             
-        self.session.headers.update({
-            "User-Agent": ua,
-            "Accept": conf_headers.get("Accept", "*/*"),
-            "Accept-Language": conf_headers.get("Accept-Language", "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7"),
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "X-Requested-With": "XMLHttpRequest",
-            "Origin": "https://finance.vietstock.vn",
-            "Connection": "keep-alive"
-        })
+        # 2. Build Ordered Headers (Chrome-like Fingerprint)
+        ordered_headers = OrderedDict()
+        ordered_headers["sec-ch-ua"] = self.config_mgr._sanitize_string(conf_headers.get("sec-ch-ua", '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"'))
+        ordered_headers["sec-ch-ua-mobile"] = "?0"
+        ordered_headers["User-Agent"] = ua
+        ordered_headers["sec-ch-ua-platform"] = '"Windows"'
+        ordered_headers["Accept"] = "application/json, text/javascript, */*; q=0.01"
+        ordered_headers["X-Requested-With"] = "XMLHttpRequest"
+        ordered_headers["Sec-Fetch-Site"] = "same-origin"
+        ordered_headers["Sec-Fetch-Mode"] = "cors"
+        ordered_headers["Sec-Fetch-Dest"] = "empty"
         
-        # Inherit any other specialized headers (sec-*, referer)
-        for k, v in conf_headers.items():
-            k_low = k.lower()
-            if k_low.startswith("sec-") or k_low == "referer":
-                self.session.headers[k] = v
+        # Referer and Origin
+        ref = conf_headers.get("Referer") or f"{self.base_url}/ket-qua-giao-dich?tab=thong-ke-gia"
+        ordered_headers["Referer"] = self.config_mgr._sanitize_string(ref)
+        ordered_headers["Origin"] = "https://finance.vietstock.vn"
+        ordered_headers["Accept-Encoding"] = "gzip, deflate" # Standard requests support
+        ordered_headers["Accept-Language"] = "vi,en-US;q=0.9,en;q=0.8"
         
-        # Ensure Referer is at least the base page if missing
-        if "Referer" not in self.session.headers:
-            self.session.headers["Referer"] = f"{self.base_url}/ket-qua-giao-dich?tab=thong-ke-gia"
+        self.session.headers.update(ordered_headers)
+        
+        # 3. Clear and update cookies (Mirror Mode)
             
         # 3. Clear and update cookies
         self.session.cookies.clear()
         if conf_cookies:
             self.session.cookies.update(conf_cookies)
-            
+
         # 4. Sync tokens and status
         self.manual_token = self.config_mgr.get("payload_token")
         self.session_limited = False
@@ -88,6 +112,13 @@ class VietstockClient:
 
     def check_session_status(self, date_str=None):
         """Perform a small probe to check if the session is currently limited."""
+        # 1. Warm up session (Establish SSL/TLS and landing cookies)
+        try:
+            logger.info("[*] Warming up session...")
+            self.session.get(f"{self.base_url}/ket-qua-giao-dich?tab=thong-ke-gia", timeout=20)
+        except Exception as e:
+            logger.warning(f"Session warming failed: {e}")
+            
         if not date_str:
             now = datetime.now()
             date_str = now.strftime("%Y-%m-%d")
@@ -122,7 +153,8 @@ class VietstockClient:
             
             self.session_limited = False
             return "VALID"
-        except Exception:
+        except Exception as e:
+            logger.error(f"check_session_status critical error: {e}")
             return "ERROR"
 
     def get_token(self):
@@ -175,21 +207,33 @@ class VietstockClient:
             "pageSize": page_size,
             "catID": cat_id,
             "date": date_str,
-            "__RequestVerificationToken": token_to_use or ""
+            "__RequestVerificationToken": self.config_mgr._sanitize_string(token_to_use) if token_to_use else ""
         }
         
         try:
-            # 5. Mirror RAW Cookie Header if available (Crucial for bypass)
+            # 5. Mirror RAW Cookie Header via Cookie Jar (Allows session updates)
             raw_cookie_str = self.config_mgr.get("raw_cookie_str")
             if raw_cookie_str:
-                self.session.headers["Cookie"] = raw_cookie_str
-                # Clear standard cookies to let the header take priority
-                self.session.cookies.clear()
+                # Remove static header to let Jar take over
+                if "Cookie" in self.session.headers:
+                    del self.session.headers["Cookie"]
+                
+                # Parse and populate Jar
+                cookie_dict = self.config_mgr._parse_cookie_str(raw_cookie_str)
+                requests.utils.add_dict_to_cookiejar(self.session.cookies, cookie_dict)
             
             logger.info(f"[*] API POST -> {self.api_url} | Payload: page={page}, pageSize={page_size}, catID={cat_id}")
             self.session.headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
             
-            response = self.session.post(self.api_url, data=payload, timeout=15)
+            # CRITICAL: Sanitize ALL headers (keys and values) to ASCII
+            clean_headers = OrderedDict()
+            for k, v in self.session.headers.items():
+                clean_headers[self.config_mgr._sanitize_string(k)] = self.config_mgr._sanitize_string(v)
+            
+            self.session.headers.clear()
+            self.session.headers.update(clean_headers)
+            
+            response = self.session.post(self.api_url, data=payload, timeout=30)
             logger.info(f"[<] Response: {response.status_code}")
 
             if response.status_code == 200:
@@ -208,6 +252,9 @@ class VietstockClient:
                     
                     if "/Error/Index" in response.text:
                          logger.error("❌ Vietstock trả về trang lỗi hệ thống (/Error/Index). Vui lòng dán lại cURL mới.")
+                         # Clear everything to force a clean start
+                         self.session.cookies.clear()
+                         self.manual_token = None
                     
                     if not self._refreshing:
                         logger.warning("Đang thử tự động làm mới chuẩn (Interactive Refresh)...")
@@ -299,8 +346,9 @@ class VietstockClient:
                 bypass_size = 50 # Default safe value
                 
             all_stocks = []
-            # We iterate up to 40 pages to catch ~2000 symbols max
-            for p in range(1, 41):
+            # We iterate up to 100 pages to catch ~2000 symbols max (if page size is 20)
+            max_pages = 41 if bypass_size >= 50 else 101
+            for p in range(1, max_pages):
                 p_raw = self._fetch_page(cat_id, date_str, page=p, page_size=bypass_size)
                 if p_raw and isinstance(p_raw, list) and len(p_raw) >= 3:
                     p_stocks = p_raw[2]

@@ -16,7 +16,7 @@ class ConfigManager:
             "bypass_pageSize": 50,
             "cookies": {},
             "headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
                 "Accept": "application/json, text/javascript, */*; q=0.01",
                 "Accept-Language": "en-US,en;q=0.9",
                 "X-Requested-With": "XMLHttpRequest",
@@ -52,19 +52,26 @@ class ConfigManager:
         self.config[key] = value
         self._save(self.config)
 
-    def update_url(self, url):
+    def _sanitize_string(self, val):
+        """Ensure string is ASCII-compatible for HTTP headers."""
+        if not val or not isinstance(val, str): return val
+        # Remove non-ASCII characters that cause latin-1 encoding errors
+        return val.encode('ascii', 'ignore').decode('ascii').strip()
+
+    def set_vietstock_url(self, url):
         self.set("vietstock_api_url", url)
 
     def _sanitize_curl(self, text):
-        """Remove shell escapes and line continuations to make parsing easier."""
+        """Clean up shell artifacts from cURL strings (Windows/Bash)."""
         if not text: return ""
-        # 1. Remove line continuations (backslash or caret)
-        text = text.replace("\\\n", " ").replace(" ^\n", " ").replace("^\n", " ")
-        # 2. General shell cleanup
-        text = text.replace("^$", "$").replace("^\"", "\"")
-        text = text.replace("^\\^\"", "\"").replace("\\^\"", "\"").replace("\\\"", "\"")
-        # 3. Last resort: remove any remaining ^ before symbols
+        # 1. Line continuations
+        text = text.replace('\\\n', ' ').replace('^ \n', ' ')
+        # 2. Caret escapes (Windows CMD)
         text = re.sub(r"\^([=:\s\$])", r"\1", text)
+        # 3. Double carets and common Windows escaping artifacts
+        text = text.replace('^^', '^').replace('^"', '"')
+        # 4. Collapse spaces
+        text = re.sub(r'\s+', ' ', text).strip()
         return text
 
     def _is_tracked_header(self, name):
@@ -146,9 +153,17 @@ class ConfigManager:
                     k, v = k.strip(), v.strip()
                     if k.lower() == "cookie":
                         updates["cookies"].update(self._parse_cookie_str(v))
+                        updates["raw_cookie_str"] = v # Capture raw string
                     elif self._is_tracked_header(k):
-                        updates["headers"][k] = v
+                        updates["headers"][k] = self._sanitize_string(v)
             
+            # B2. Support -b or --cookie flags (common in Edge/Cốc Cốc)
+            cookie_flag_match = re.search(r"(?:-b|--cookie)\s+(?:'([^']+)'|\"((?:\\\\\"|[^\"])+)\")", target_text, re.IGNORECASE)
+            if cookie_flag_match:
+                cookie_str = cookie_flag_match.group(1) or cookie_flag_match.group(2)
+                updates["cookies"].update(self._parse_cookie_str(cookie_str))
+                updates["raw_cookie_str"] = cookie_str
+
             # C. Extract Payload (Token)
             data_match = re.search(r"--data(?:-raw|-binary|-ascii)?\s+(?:'([^']+)'|\"((?:\\\\\"|[^\"])+)\")", target_text, re.IGNORECASE)
             if data_match:
@@ -175,10 +190,24 @@ class ConfigManager:
                     if token_match:
                         updates["payload_token"] = token_match.group(1).split("&")[0].strip(";")
 
-        # D. Dual-token synchronization:
+        # D. HTML Token Fallback
         if not updates["payload_token"]:
-             if "__RequestVerificationToken" in updates["cookies"]:
-                 updates["payload_token"] = updates["cookies"]["__RequestVerificationToken"]
+            # Check for token in raw text (source code)
+            html_token = re.search(r'name="__RequestVerificationToken"\s+type="hidden"\s+value="([^"]+)"', target_text)
+            if html_token:
+                updates["payload_token"] = html_token.group(1)
+
+        # E. Dual-token synchronization:
+        if not updates["payload_token"]:
+            if "__RequestVerificationToken" in updates["cookies"]:
+                updates["payload_token"] = updates["cookies"]["__RequestVerificationToken"]
+
+        # E. Capture raw cookie string if missing but cookies are present
+        if not updates.get("raw_cookie_str") and updates["cookies"]:
+            updates["raw_cookie_str"] = "; ".join([f"{k}={v}" for k, v in updates["cookies"].items()])
+        
+        if updates.get("raw_cookie_str"):
+            updates["raw_cookie_str"] = self._sanitize_string(updates["raw_cookie_str"])
 
         # Commit updates
         updated = False
@@ -198,6 +227,10 @@ class ConfigManager:
         if updates["bypass_pageSize"] is not None:
              self.set("bypass_pageSize", updates["bypass_pageSize"])
              updated = True
+
+        if updates.get("raw_cookie_str"):
+            self.set("raw_cookie_str", updates["raw_cookie_str"])
+            updated = True
 
         if updates["headers"]:
              current_headers = self.config.get("headers", {})
@@ -240,7 +273,7 @@ class ConfigManager:
         if k_lower == "cookie":
             updates["cookies"].update(self._parse_cookie_str(v))
         else:
-            val = v.strip().strip(";").strip()
+            val = self._sanitize_string(v.strip().strip(";").strip())
             updates["cookies"][k] = val
             logger.info(f"[*] Đã nhận diện Cookie: {k}")
 
@@ -261,9 +294,12 @@ class ConfigManager:
 
     def _parse_cookie_str(self, cookie_str):
         cookies = {}
+        if not cookie_str: return cookies
         pairs = cookie_str.split(";")
         for p in pairs:
             if "=" in p:
-                k, v = p.strip().split("=", 1)
-                cookies[k] = v
+                parts = p.strip().split("=", 1)
+                k = self._sanitize_string(parts[0])
+                v = self._sanitize_string(parts[1])
+                if k: cookies[k] = v
         return cookies

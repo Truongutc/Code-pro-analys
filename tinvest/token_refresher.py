@@ -55,10 +55,10 @@ def fetch_fresh_token():
     # Sử dụng User-Agent từ config nếu có
     cfg = _load_config()
     existing_ua = cfg.get("captured_headers", {}).get("User-Agent")
+    chrome_version = "125"
     if existing_ua:
         user_agent = existing_ua
     else:
-        chrome_version = "146"
         user_agent = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_version}.0.0.0 Safari/537.36"
     options.add_argument(f"user-agent={user_agent}")
     
@@ -138,9 +138,12 @@ def fetch_fresh_token():
             "captured_headers": {
                 "User-Agent": user_agent,
                 "Accept": "application/json, text/javascript, */*; q=0.01",
-                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
                 "X-Requested-With": "XMLHttpRequest",
-                "Connection": "keep-alive"
+                "Connection": "keep-alive",
+                "sec-ch-ua": f"\"Google Chrome\";v=\"{chrome_version}\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"{chrome_version}\"",
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": "\"Windows\""
             }
         }
         

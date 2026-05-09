@@ -168,19 +168,19 @@ def evaluate_mcdx_rules(df: pd.DataFrame) -> dict:
     if strong_sell:
         return {
             "status": "DÒNG TIỀN RÚT RA (Outflow / Gãy nền)",
-            "action": "HẠ TỶ TRỌNG HOẶC THOÁT VỊ THẾ",
+            "action": "THẬN TRỌNG - ƯU TIÊN QUẢN TRỊ RỦI RO",
             "details": "Tiền lớn thoát dứt khoát, nổ vol chiều bán."
         }
     elif sell_signal:
         return {
             "status": "TIỀN LỚN SUY YẾU",
-            "action": "CANH BÁN / CHỐT LỜI MỘT PHẦN",
+            "action": "CANH CHỐT LỜI BỚT - NGƯNG MUA",
             "details": "Banker (Đỏ) cắt xuống MA đen hoặc giảm liên tục 3 phiên."
         }
     elif distribution:
         return {
             "status": "RỦI RO PHÂN PHỐI / FOMO",
-            "action": "KHÔNG MUA MỚI, CHUẨN BỊ CHỐT LỜI",
+            "action": "HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN",
             "details": "Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn."
         }
     elif best_buy:

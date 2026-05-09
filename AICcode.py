@@ -1920,15 +1920,15 @@ class TinvestApp:
             if 'EW_Large_2' in df.columns:
                 ax.plot(x_idx, df['EW_Large_2'], color='#2196F3', linewidth=2, label='Large Wave 2', linestyle=':')
 
-            # 5. Plot AUTO SEC (Linear Regression Channels)
-            if 'EW_SEC_Mid' in df.columns:
-                slope = df['EW_SEC_Slope'].iloc[-1]
-                sec_color = '#4CAF50' if slope > 0 else '#FF80AB' # Green if Up, Rose if Down
-                ax.plot(x_idx, df['EW_SEC_Mid'], color=sec_color, linewidth=1.5, alpha=0.7, label='SEC Channel')
-                if 'EW_SEC_Upper' in df.columns:
-                    ax.plot(x_idx, df['EW_SEC_Upper'], color=sec_color, linewidth=1, linestyle='--', alpha=0.5)
-                if 'EW_SEC_Lower' in df.columns:
-                    ax.plot(x_idx, df['EW_SEC_Lower'], color=sec_color, linewidth=1, linestyle='--', alpha=0.5)
+            # 5. Plot AUTO SEC (Linear Regression Channels) - DISABLED as per user request to improve scaling
+            # if 'EW_SEC_Mid' in df.columns:
+            #     slope = df['EW_SEC_Slope'].iloc[-1]
+            #     sec_color = '#4CAF50' if slope > 0 else '#FF80AB' # Green if Up, Rose if Down
+            #     ax.plot(x_idx, df['EW_SEC_Mid'], color=sec_color, linewidth=1.5, alpha=0.7, label='SEC Channel')
+            #     if 'EW_SEC_Upper' in df.columns:
+            #         ax.plot(x_idx, df['EW_SEC_Upper'], color=sec_color, linewidth=1, linestyle='--', alpha=0.5)
+            #     if 'EW_SEC_Lower' in df.columns:
+            #         ax.plot(x_idx, df['EW_SEC_Lower'], color=sec_color, linewidth=1, linestyle='--', alpha=0.5)
 
             # 6. Plot Signals (Arrows/Squares) - PRECISE AFL REPLICATION
             # --- SMALL WAVE SIGNALS (White/Black Arrows) ---
@@ -3023,11 +3023,18 @@ class TinvestApp:
                     if st:
                         pri_map = {"UPTREND": "Sóng Tăng mạnh", "DOWNTREND": "Sóng Giảm mạnh", "UPTREND_START": "Vừa bứt phá vào sóng Tăng", "DOWNTREND_START": "Vừa gãy nền vào sóng Giảm", "WEAK_UPTREND": "Tăng nhưng yếu dần", "WEAK_DOWNTREND": "Giảm nhẹ (đà rơi chậm lại)", "RECOVERY": "Giai đoạn HỒI PHỤC", "RANGE": "Đi biên ngang", "SQUEEZE": "Nén chặt biên hẹp", "NEUTRAL": "Trạng thái Trung tính", "SIDEWAY": "Đi ngang"}
                         sec_map = {"PULLBACK": "Nhịp kéo ngược (chỉnh lành mạnh)", "FAILED_PULLBACK": "Kéo ngược thất bại (thủng nền)", "EXHAUSTION": "Đuối sức (nguy cơ đảo chiều)", "REVERSAL_BUILD": "Xây nền đảo chiều đáy", "ROLL_OVER": "Xác nhận gãy", "ACCUMULATION": "Gom hàng bám nền", "DISTRIBUTION": "Phân phối", "TRAP": "Bẫy giá (lùa gà)", "UNDER_PRESSURE": "Áp lực bán (Tiệm cận hỗ trợ)", "NORMAL": "Bình thường"}
-                        sig_map = {"BREAKOUT_BUY": "MUA BREAKOUT", "PULLBACK_BUY": "MUA PULLBACK", "TREND_FOLLOW": "ÔM TIẾP", "REVERSAL_BUY": "MUA BẮT ĐÁY", "TAKE_PROFIT": "CHỐT LÃI", "EXIT_OR_SHORT": "THOÁT HÀNG", "EXIT_FAST": "CHẠY NGAY", "SHORT": "Đứng ngoài", "NO_TRADE": "CẤM MUA", "NONE": "Chưa có tín hiệu"}
+                        sig_map = {"BREAKOUT_BUY": "MUA BREAKOUT", "PULLBACK_BUY": "MUA PULLBACK", "TREND_FOLLOW": "ÔM TIẾP", "REVERSAL_BUY": "MUA BẮT ĐÁY", "TAKE_PROFIT": "CHỐT LÃI", "EXIT_OR_SHORT": "THOÁT HÀNG", "EXIT_FAST": "CHẠY NGAY", "SHORT": "Đứng ngoài", "NO_TRADE": "Hạn chế mua mới", "NONE": "Chưa có tín hiệu"}
                         
                         st_pri = pri_map.get(st.get('primary', ''), st.get('primary', 'N/A'))
                         st_sec = sec_map.get(st.get('secondary', ''), st.get('secondary', 'N/A'))
                         st_sig = sig_map.get(st.get('signal', ''), st.get('signal', 'N/A'))
+                        st_pri_raw = st.get('primary', '')
+                        if st.get('signal') == "NO_TRADE":
+                            if st_pri_raw in ['UPTREND', 'UPTREND_START']:
+                                st_sig = "Ưu tiên nắm giữ (Đợi chỉnh để mua)"
+                            else:
+                                st_sig = "Cần thận trọng (Chưa có điểm mua)"
+                        
                         st_conf = int(st.get('confidence', 0))
                         st_avoid = st.get('avoid_entry', False)
                         
@@ -3096,10 +3103,20 @@ class TinvestApp:
                                 alloc = "10-30%"
                                 alloc_note = "Chưa xác định rõ -> giữ ít phòng thủ"
                         
-                        # Override boi avoid
+                        # Override boi avoid - CHI AP DUNG KHI THI TRUONG YEU HOAC DOWNTREND
                         if st_avoid:
-                            alloc = "0-10%"
-                            alloc_note = "Bộ Lọc Rủi Ro đang BẬT -> CẤM MUA MỚI"
+                            if st_pri_raw in ['UPTREND', 'UPTREND_START'] and ftd_on:
+                                # Neu dang vao trend manh, chi ha ty trong xuong muc than trong, khong ve 0-10%
+                                if alloc == "80-100%": alloc = "60-80%"
+                                elif alloc == "60-80%": alloc = "40-60%"
+                                alloc_note = "⚠️ CẢNH BÁO: Thị trường quá nhiệt / MCDX phân phối -> Ưu tiên nắm giữ, hạn chế mua đuổi"
+                            elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START', 'MARKET_WEAKENING']:
+                                alloc = "0-10%"
+                                alloc_note = "Bộ Lọc Rủi Ro đang BẬT -> CẤM MUA MỚI"
+                            else:
+                                # Cac truong hop khac (Sideway/Recovery)
+                                alloc = "10-20%"
+                                alloc_note = "Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp"
                         
                         m = st.get('metrics', {})
                         
@@ -3116,7 +3133,7 @@ class TinvestApp:
                     
                     mcdx = res_dict.get('mcdx_eval', {})
                     if mcdx:
-                        txt += f"\n  💰 DÒNG TIỀN TẠO LẬP (MCDX): {mcdx.get('status', 'N/A')} -> {mcdx.get('action', 'N/A')}"
+                        txt += f"\n  💰 DÒNG TIỀN TẠO LẬP (MCDX - Tham khảo): {mcdx.get('status', 'N/A')} -> {mcdx.get('action', 'N/A')}"
                         
                     reg = res['regime']
                     s1_val = f"{sr['s1']:,.0f}" if sr['s1'] > 0 else 'N/A'
@@ -3190,7 +3207,10 @@ class TinvestApp:
                         txt += f"\n     Xác suất tiếp diễn xu hướng hiện tại: {st_win}"
                         txt += f"\n     ➡️ TỶ TRỌNG KHUYẾN NGHỊ: NẮM GIỮ {alloc} CỔ PHIẾU."
                         if st_avoid:
-                            txt += f"\n     ⛔ BỘ LỌC RỦI RO: ĐANG BẬT - TUYỆT ĐỐI KHÔNG MUA MỚI."
+                            if st_pri_raw in ['UPTREND', 'UPTREND_START'] and ftd_on:
+                                txt += f"\n     ⚠️ CẢNH BÁO: Trạng thái quá nhiệt / Phân kỳ âm -> Ưu tiên bảo vệ thành quả, CHỐT LỜI DẦN."
+                            else:
+                                txt += f"\n     ⛔ BỘ LỌC RỦI RO: ĐANG BẬT - TUYỆT ĐỐI KHÔNG MUA MỚI."
                     
                     return txt
 
