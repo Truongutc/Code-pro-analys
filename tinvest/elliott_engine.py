@@ -118,14 +118,13 @@ def calculate_elliott_wave_system(df):
     c = df['Close'].values
     h = df['High'].values
     l = df['Low'].values
-    typical = (h + l) / 2.0
     
     res = pd.DataFrame(index=df.index)
     
     # --- 1. Smaller Wave (Zig 1.0%) ---
     # Buy1 = DEMA(Zig, 1) > MA(Zig, 2)
     # Sell1 = DEMA(Zig, 2) > Zig
-    zz_small = calculate_zigzag(pd.Series(typical), 1.0).values
+    zz_small = calculate_zigzag(pd.Series(c), 1.0).values
     ew_small_1 = dema(pd.Series(zz_small), 1).values
     ew_small_2 = dema(pd.Series(zz_small), 2).values
     
@@ -140,7 +139,7 @@ def calculate_elliott_wave_system(df):
     res['EW_Small_2'] = ew_small_2
     
     # --- 2. Larger Wave (Zig 4.5%) ---
-    zz_large = calculate_zigzag(pd.Series(typical), 4.5).values
+    zz_large = calculate_zigzag(pd.Series(c), 4.5).values
     res['EW_Large_1'] = tema(pd.Series(zz_large), 1)
     res['EW_Large_2'] = tema(pd.Series(zz_large), 2)
     
@@ -193,9 +192,8 @@ def calculate_elliott_wave_system(df):
                 # StdErr(C, Daysback)
                 preds = intercept + slope * x_window
                 errs = y_window - preds
-                # AFL StdErr is sample standard deviation of residuals
-                # Note: AFL StdErr uses N-1 in denominator
-                std_e = np.sqrt(np.sum(errs**2) / (len(y_window) - 1)) if len(y_window) > 1 else 0
+                # AmiBroker's StdErr uses N (Daysback) in denominator
+                std_e = np.sqrt(np.sum(errs**2) / len(y_window)) if len(y_window) > 0 else 0
                 
                 aa = intercept
                 bb = slope
@@ -232,8 +230,10 @@ def calculate_elliott_wave_system(df):
     # Buy  = Cross(C,eU) OR C > eU;       
     # Sell = Cross(eL,C) OR C < eU;
     
-    # We use eU for both based on the AFL provided
-    # The exrem function ensures we only take the first transition
+    # Reverting to 100% AFL Logic as per user request:
+    # Buy  = Cross(C,eU) OR C > eU;       
+    # Sell = Cross(eL,C) OR C < eU;
+    # Note: C < eU is used for Sell to match AFL exactly.
     raw_mega_buy = pd.Series(c > res['EW_SEC_Upper'])
     raw_mega_sell = pd.Series(c < res['EW_SEC_Upper'])
     

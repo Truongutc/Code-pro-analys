@@ -183,8 +183,8 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         for col in ew_df.columns:
             out[col] = ew_df[col].values
         
-        # Thêm màu nến theo phong cách AFL Elliott
-        out['AFL_CandleColor'] = np.where(out['Close'] >= out['Open'], '#98FB98', '#FFC0CB') # PaleGreen / Pink
+        # Thêm màu nến Xanh lá / Đỏ chuẩn 100% (Pure Green / Pure Red)
+        out['AFL_CandleColor'] = np.where(out['Close'] >= out['Open'], '#00FF00', '#FF0000') 
     except Exception as e:
         logger.error(f"Error enriching with Elliott signals: {e}")
 

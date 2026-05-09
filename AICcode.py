@@ -1896,68 +1896,61 @@ class TinvestApp:
             fig.patch.set_facecolor('black') 
             ax.set_facecolor('black')
             
-            # 3. Plot Candlesticks (AFL Style)
-            candle_colors = df['AFL_CandleColor'].tolist()
-            up = df['Close'] >= df['Open']
-            dn = df['Close'] < df['Open']
-            
-            # Candle bars
-            ax.bar(x_idx[up], df.loc[up, 'Close'] - df.loc[up, 'Open'], bottom=df.loc[up, 'Open'], color='#00E600', width=0.6, alpha=0.9)
-            ax.bar(x_idx[dn], df.loc[dn, 'Open'] - df.loc[dn, 'Close'], bottom=df.loc[dn, 'Close'], color='#E60000', width=0.6, alpha=0.9)
-            ax.vlines(x_idx[up], df.loc[up, 'Low'], df.loc[up, 'High'], color='#00E600', linewidth=1)
-            ax.vlines(x_idx[dn], df.loc[dn, 'Low'], df.loc[dn, 'High'], color='#E60000', linewidth=1)
+            # 3. Plot Candlesticks (Forcing Pure Vibrant Colors)
+            for i in range(len(df)):
+                # Pure Green (#00FF00) and Pure Red (#FF0000) to match signals exactly
+                color = '#00FF00' if df.loc[i, 'Close'] >= df.loc[i, 'Open'] else '#FF0000'
+                
+                # High/Low Wick
+                ax.vlines(x_idx[i], df.loc[i, 'Low'], df.loc[i, 'High'], color=color, linewidth=1.5)
+                # Open/Close Body
+                if df.loc[i, 'Close'] >= df.loc[i, 'Open']:
+                    ax.bar(x_idx[i], df.loc[i, 'Close'] - df.loc[i, 'Open'], bottom=df.loc[i, 'Open'], color=color, width=0.7, alpha=1.0)
+                else:
+                    ax.bar(x_idx[i], df.loc[i, 'Open'] - df.loc[i, 'Close'], bottom=df.loc[i, 'Close'], color=color, width=0.7, alpha=1.0)
 
             # 4. Plot Elliott Waves
-            # Smaller Waves (Yellow)
+            # Smaller Waves (Yellow/Gold)
             if 'EW_Small_1' in df.columns:
-                ax.plot(x_idx, df['EW_Small_1'], color='#FFFF00', linewidth=2, label='Small Wave 1', alpha=0.8)
+                ax.plot(x_idx, df['EW_Small_1'], color='#FFFF00', linewidth=2.2, label='Small Wave 1', alpha=0.9)
             if 'EW_Small_2' in df.columns:
-                ax.plot(x_idx, df['EW_Small_2'], color='#C3C300', linewidth=2, label='Small Wave 2', alpha=0.8)
+                ax.plot(x_idx, df['EW_Small_2'], color='#FFD700', linewidth=2.2, label='Small Wave 2', alpha=0.9)
                 
-            # Larger Waves (Custom/Blue)
+            # Larger Waves (Green/Blue)
             if 'EW_Large_1' in df.columns:
-                ax.plot(x_idx, df['EW_Large_1'], color='#43A047', linewidth=2.5, label='Large Wave 1')
+                ax.plot(x_idx, df['EW_Large_1'], color='#00C853', linewidth=2.8, label='Large Wave 1')
             if 'EW_Large_2' in df.columns:
-                ax.plot(x_idx, df['EW_Large_2'], color='#2196F3', linewidth=2, label='Large Wave 2', linestyle=':')
+                ax.plot(x_idx, df['EW_Large_2'], color='#2979FF', linewidth=2.2, label='Large Wave 2', linestyle=':')
 
-            # 5. Plot AUTO SEC (Linear Regression Channels) - DISABLED as per user request to improve scaling
-            # if 'EW_SEC_Mid' in df.columns:
-            #     slope = df['EW_SEC_Slope'].iloc[-1]
-            #     sec_color = '#4CAF50' if slope > 0 else '#FF80AB' # Green if Up, Rose if Down
-            #     ax.plot(x_idx, df['EW_SEC_Mid'], color=sec_color, linewidth=1.5, alpha=0.7, label='SEC Channel')
-            #     if 'EW_SEC_Upper' in df.columns:
-            #         ax.plot(x_idx, df['EW_SEC_Upper'], color=sec_color, linewidth=1, linestyle='--', alpha=0.5)
-            #     if 'EW_SEC_Lower' in df.columns:
-            #         ax.plot(x_idx, df['EW_SEC_Lower'], color=sec_color, linewidth=1, linestyle='--', alpha=0.5)
+            # 5. Plot AUTO SEC (Linear Regression Channels) - DISABLED per user request for scaling
+            # (Logic remains in engine but plotting is hidden to keep candles clear)
 
             # 6. Plot Signals (Arrows/Squares) - PRECISE AFL REPLICATION
-            # --- SMALL WAVE SIGNALS (White/Black Arrows) ---
+            # --- SMALL WAVE SIGNALS ---
             if 'EW_Small_Buy' in df.columns:
                 s_buys = df[df['EW_Small_Buy']]
                 if not s_buys.empty:
-                    ax.plot(s_buys.index, s_buys['Low'] * 0.99, '^', markersize=6, color='white', label='Small Buy')
+                    ax.plot(s_buys.index, s_buys['Low'] * 0.995, '^', markersize=7, color='white', markeredgecolor='black', label='Small Buy')
             
             if 'EW_Small_Sell' in df.columns:
                 s_sells = df[df['EW_Small_Sell']]
                 if not s_sells.empty:
-                    ax.plot(s_sells.index, s_sells['High'] * 1.01, 'v', markersize=6, color='black', label='Small Sell')
+                    ax.plot(s_sells.index, s_sells['High'] * 1.005, 'v', markersize=7, color='black', markeredgecolor='white', label='Small Sell')
 
-            # --- MEGA SIGNALS (SEC CHANNEL BREAKOUT/RETURN) ---
+            # --- MEGA SIGNALS ---
             if 'EW_Strong_Buy' in df.columns:
                 buys = df[df['EW_Strong_Buy']]
                 if not buys.empty:
-                    # Triple layer green markers - Adjusted positions for tightness
-                    ax.plot(buys.index, buys['Low'] * 0.975, 's', markersize=12, color='#004D00', alpha=0.8) # Dark Green
-                    ax.plot(buys.index, buys['Low'] * 0.97, 's', markersize=9, color='#00FF00', alpha=0.9) # Lime Green
-                    ax.plot(buys.index, buys['Low'] * 0.972, '^', markersize=6, color='white')
+                    ax.plot(buys.index, buys['Low'] * 0.985, 's', markersize=11, color='#006400', alpha=0.8) # Dark Green
+                    ax.plot(buys.index, buys['Low'] * 0.98, 's', markersize=8, color='#00FF00', alpha=1.0) # Lime
+                    ax.plot(buys.index, buys['Low'] * 0.982, '^', markersize=5, color='white')
             
             if 'EW_Strong_Sell' in df.columns:
                 sells = df[df['EW_Strong_Sell']]
                 if not sells.empty:
-                    # Triple layer red markers - Adjusted positions for tightness
-                    ax.plot(sells.index, sells['High'] * 1.025, 's', markersize=12, color='#8B0000', alpha=0.8) # Dark Red
-                    ax.plot(sells.index, sells['High'] * 1.03, 's', markersize=9, color='#FF0000', alpha=0.9) # Red
-                    ax.plot(sells.index, sells['High'] * 1.027, 'v', markersize=6, color='white')
+                    ax.plot(sells.index, sells['High'] * 1.015, 's', markersize=11, color='#8B0000', alpha=0.8) # Dark Red
+                    ax.plot(sells.index, sells['High'] * 1.02, 's', markersize=8, color='#FF0000', alpha=1.0) # Red
+                    ax.plot(sells.index, sells['High'] * 1.017, 'v', markersize=5, color='white')
 
 
 
