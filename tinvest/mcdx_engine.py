@@ -2,31 +2,14 @@ import pandas as pd
 import numpy as np
 
 def calculate_rsi(series: pd.Series, period: int) -> pd.Series:
+    """Vectorized RSI calculation using EWM."""
     delta = series.diff()
     gain = delta.where(delta > 0, 0.0)
     loss = -delta.where(delta < 0, 0.0)
     
-    avg_gain = np.full(len(series), np.nan)
-    avg_loss = np.full(len(series), np.nan)
-    
-    gain_arr = gain.values
-    loss_arr = loss.values
-    
-    first_valid = series.first_valid_index()
-    if first_valid is None:
-        return pd.Series(np.nan, index=series.index)
-        
-    start_idx = series.index.get_loc(first_valid) + 1
-    if start_idx + period > len(series):
-        return pd.Series(np.nan, index=series.index)
-        
-    avg_gain[start_idx + period - 1] = np.mean(gain_arr[start_idx : start_idx + period])
-    avg_loss[start_idx + period - 1] = np.mean(loss_arr[start_idx : start_idx + period])
-    
     alpha = 1.0 / period
-    for i in range(start_idx + period, len(series)):
-        avg_gain[i] = alpha * gain_arr[i] + (1 - alpha) * avg_gain[i - 1]
-        avg_loss[i] = alpha * loss_arr[i] + (1 - alpha) * avg_loss[i - 1]
+    avg_gain = gain.ewm(alpha=alpha, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=alpha, adjust=False).mean()
         
     rs = avg_gain / (avg_loss + 1e-10)
     rsi = np.where(avg_loss == 0, 100.0, np.where(avg_gain == 0, 0.0, 100 - (100 / (1 + rs))))

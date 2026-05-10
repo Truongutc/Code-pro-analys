@@ -86,6 +86,25 @@ from tinvest.ma_engine import analyze_ma_trend
 
 
 from tinvest.valuation_engine import evaluate_stock_valuation
+import sys
+import os
+import matplotlib
+matplotlib.use('TkAgg') # Force TkAgg for compatibility with Tkinter and PyInstaller
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib.image as mpimg
+import matplotlib.lines as mlines
+import matplotlib.ticker as ticker_lib
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 
 
@@ -212,10 +231,26 @@ class TinvestApp:
         self.root = root
 
 
-        self.root.title("AIC code = AI + cơm! - Hệ thống Phân tích Chứng khoán")
+        self.root.title("AIC code = AI + cơm! - Hệ thống Phân tích Chứng khoán | Contact Zalo - 0988.94.84.67")
 
 
         self.root.geometry("850x650")
+        
+        # Set Window Icon
+        try:
+            import sys
+            if hasattr(sys, '_MEIPASS'):
+                # When running as bundled exe, look in _MEIPASS
+                icon_path = os.path.join(sys._MEIPASS, "app_icon.ico")
+            else:
+                # When running as script, look in current dir
+                app_dir = os.path.dirname(os.path.abspath(__file__))
+                icon_path = os.path.join(app_dir, "app_icon.ico")
+                
+            if os.path.exists(icon_path):
+                self.root.iconbitmap(icon_path)
+        except Exception as e:
+            logger.error(f"Error setting window icon: {e}")
 
 
         
@@ -385,7 +420,7 @@ class TinvestApp:
         
 
 
-        tk.Label(frame_analyze, text="Nhập mã chứng khoán (VD: HPG, VNM):").pack(side=tk.LEFT, padx=5)
+        tk.Label(frame_analyze, text="Nhập mã chứng khoán:").pack(side=tk.LEFT, padx=5)
 
 
         self.entry_ticker = tk.Entry(frame_analyze, width=10, font=("Arial", 12))
@@ -414,6 +449,9 @@ class TinvestApp:
 
         btn_elliott = tk.Button(frame_analyze, text="📊 Elliott Wave", command=self.run_elliott_chart, bg="#FF9800", fg="white", font=("Arial", 10, "bold"))
         btn_elliott.pack(side=tk.LEFT, padx=5)
+
+        btn_greenpink = tk.Button(frame_analyze, text="🌸 GP Chart", command=self.run_greenpink_chart, bg="#E91E63", fg="white", font=("Arial", 10, "bold"))
+        btn_greenpink.pack(side=tk.LEFT, padx=5)
 
 
 
@@ -724,10 +762,19 @@ class TinvestApp:
             self.storage.save_active_registry(all_valid_tickers)
             
             if not affected_tickers:
-                self.log_sync(f"ℹ️ {len(all_valid_tickers)} mã đã khớp hoàn toàn. Robot đang kiểm tra chỉ báo...")
-                self._sync_and_recompute_affected(all_valid_tickers)
+                # Instead of recomputing EVERYTHING, let's check if we have missing indicators in cache
+                missing_indicators = []
+                for t in all_valid_tickers:
+                    if not self.storage._get_indicators_path(t).exists():
+                        missing_indicators.append(t)
+                
+                if missing_indicators:
+                    self.log_sync(f"ℹ️ Phát hiện {len(missing_indicators)} mã thiếu chỉ báo. Đang bổ sung...")
+                    self._sync_and_recompute_affected(missing_indicators)
+                else:
+                    self.log_sync(f"ℹ️ {len(all_valid_tickers)} mã đã khớp và đầy đủ chỉ báo.")
             else:
-                self.log_sync(f"[3/4] Phát hiện {len(affected_tickers)} mã mới. Đang tính toán...")
+                self.log_sync(f"[3/4] Phát hiện {len(affected_tickers)} mã mới/thay đổi. Đang tính toán...")
                 self._sync_and_recompute_affected(list(affected_tickers))
 
             self.log_sync(f"\n✅ HOÀN TẤT! Đã nạp và tính toán xong cho {len(all_valid_tickers)} mã cổ phiếu.")
@@ -1146,9 +1193,15 @@ class TinvestApp:
 
             # --- FINISH ---
             self._update_breadth_from_cache()
-            final_count = len(self.analysis_cache)
-            self.root.after(0, self.lbl_file.config, {"text": f"Dữ liệu: {final_count} mã", "fg": "#1A237E"})
-            self.log_sync(f"✅ Hoàn tất! Đã nạp thành công {final_count} mã cổ phiếu vào bộ nhớ.")
+            
+            loaded_total = len(self.data_dict)
+            analyzed_total = len(self.analysis_cache)
+            
+            # Cập nhật nhãn trạng thái chi tiết hơn
+            status_text = f"Dữ liệu: {loaded_total} mã ({analyzed_total} đã phân tích)"
+            self.root.after(0, self.lbl_file.config, {"text": status_text, "fg": "#1A237E"})
+            self.log_sync(f"✅ Hoàn tất! Đã nạp {loaded_total} mã (trong đó {analyzed_total} mã đã có kết quả phân tích).")
+
             
             # Check for physical cleanup
             if registry and len(all_storage_tickers) > len(tickers) + 50:
@@ -1621,7 +1674,7 @@ class TinvestApp:
             # INCREASE batch_size to reduce process startup and pickling overhead
 
 
-            batch_size = 50 
+            batch_size = 10 
 
 
             batches = [items_to_recompute[i:i + batch_size] for i in range(0, total, batch_size)]
@@ -1696,22 +1749,81 @@ class TinvestApp:
             self.log_sync(f"❌ Lỗi xử lý: {e}")
 
     def _update_breadth_from_cache(self):
-        """Recalculate market breadth from analysis_cache."""
-        if len(self.analysis_cache) < 100:
-            return  # Prevent breadth corruption when only a few tickers were updated incrementally
+        """Recalculate market breadth from data_dict with 30-day persistence."""
+        if len(self.data_dict) < 5:
+            self.log_sync("⚠️ Cảnh báo: Cần ít nhất 5 mã cổ phiếu để tính độ rộng.")
+            return 
+            
+        # 1. Get reference dates from VNINDEX
+        vn_key = next((k for k in self.data_dict.keys() if "VNINDEX" in k), "VNINDEX")
+        idx_df = self.data_dict.get(vn_key)
+        if idx_df is None or idx_df.empty: 
+            self.log_sync("⚠️ Cảnh báo: Không tìm thấy dữ liệu VNINDEX để làm mốc thời gian.")
+            return
+        
+        self.log_sync("📊 Đang tính toán dữ liệu Độ rộng Thị trường (Time-series)...")
+        all_dates = pd.to_datetime(idx_df['Date']).sort_values().unique()
+        ref_date = all_dates[-1]
             
         breadth_dfs = []
-        for ticker, analysis in self.analysis_cache.items():
+        processed_count = 0
+        
+        # Iterate over data_dict directly as it contains all loaded prices
+        for ticker, df_sub in self.data_dict.items():
+            # Align with market_engine.py filtering
+            if ticker in ["VNINDEX", "HNXINDEX", "UPCOM", "VN30", "HNX30", "HAINDEX", "UPCOM-INDEX", "HNX-INDEX"]:
+                continue
+            
+            if len(df_sub) < 50:
+                continue
+                
             try:
-                df_sub = analysis["df"]
+                if df_sub is None or df_sub.empty: continue
+                
+                # Skip if delisted/suspended > 30 days
+                last_ticker_date = pd.to_datetime(df_sub['Date'].iloc[-1])
+                if (ref_date - last_ticker_date).days > 30:
+                    continue
+                
                 temp = pd.DataFrame()
-                temp['Date'] = df_sub['Date']
-                temp['Valid'] = 1
-                temp['>MA10'] = (df_sub['Close'] > df_sub['MA10']).astype(int)
-                temp['>MA20'] = (df_sub['Close'] > df_sub['MA20']).astype(int)
-                temp['>MA50'] = (df_sub['Close'] > df_sub['MA50']).astype(int)
+                temp['Date'] = pd.to_datetime(df_sub['Date'])
+                
+                # --- NEW: Robust state calculation ---
+                # Only consider rows with volume > 0 as "active" trading sessions
+                active_mask = (df_sub['Volume'] > 0) & (df_sub['Close'] > 0)
+                
+                # Robustly ensure we have MA columns
+                ma20 = df_sub['MA20'] if 'MA20' in df_sub.columns else df_sub['Close'].rolling(20).mean()
+                ma50 = df_sub['MA50'] if 'MA50' in df_sub.columns else df_sub['Close'].rolling(50).mean()
+                ma10 = df_sub['MA10'] if 'MA10' in df_sub.columns else df_sub['Close'].rolling(10).mean()
+
+                temp['Valid'] = active_mask.astype(int)
+                temp['>MA10'] = ((df_sub['Close'] > ma10) & active_mask).astype(int)
+                temp['>MA20'] = ((df_sub['Close'] > ma20) & active_mask).astype(int)
+                temp['>MA50'] = ((df_sub['Close'] > ma50) & active_mask).astype(int)
+                
+                # 1. First, set index to Date
+                temp = temp.set_index('Date')
+                
+                # 2. Filter to only ACTIVE dates before reindexing
+                # This ensures that 'inactive' dates become NaN after reindex, 
+                # so ffill() can correctly propagate the last ACTIVE state.
+                temp = temp[temp['Valid'] == 1]
+                
+                # 3. Reindex to all market dates and propagate state (up to 30 days)
+                temp = temp.reindex(all_dates).ffill(limit=30).reset_index()
+                
+                # After ffill, ensure 'Valid' is 1 for those filled rows
+                temp['Valid'] = temp['Valid'].fillna(0) # In case it's still NaN after ffill
+                
                 breadth_dfs.append(temp)
-            except: pass
+                processed_count += 1
+
+            except Exception as e: 
+                # Log the error for the first few failures to help debugging, then suppress
+                if processed_count < 10:
+                    logger.error(f"Error processing breadth for {ticker}: {e}")
+                pass 
             
         if breadth_dfs:
             all_breadth = pd.concat(breadth_dfs)
@@ -1722,6 +1834,12 @@ class TinvestApp:
             mb['%MA20'] = (grouped['>MA20'] / valid_counts) * 100
             mb['%MA50'] = (grouped['>MA50'] / valid_counts) * 100
             self.market_breadth = mb.sort_index()
+            self.log_sync(f"✅ Đã cập nhật Biểu đồ Độ rộng từ {processed_count} mã cổ phiếu.")
+        else:
+            self.log_sync("⚠️ Cảnh báo: Không có đủ dữ liệu hợp lệ để tính độ rộng.")
+
+
+
 
     def run_analyzer(self):
         if not self.data_dict:   
@@ -1895,6 +2013,8 @@ class TinvestApp:
             fig, ax = plt.subplots(figsize=(15, 9))
             fig.patch.set_facecolor('black') 
             ax.set_facecolor('black')
+            ax.set_title(f"AIC code - Chart Eliot wave - {ticker}", color='gold', fontsize=16, fontweight='bold', pad=15)
+
             
             # 3. Plot Candlesticks (Forcing Pure Vibrant Colors)
             for i in range(len(df)):
@@ -1952,6 +2072,114 @@ class TinvestApp:
                     ax.plot(sells.index, sells['High'] * 1.02, 's', markersize=8, color='#FF0000', alpha=1.0) # Red
                     ax.plot(sells.index, sells['High'] * 1.017, 'v', markersize=5, color='white')
 
+            plt.tight_layout()
+            plt.show(block=False)
+        except Exception as e:
+            logger.error(f"Error showing Elliott chart: {e}")
+
+    def run_greenpink_chart(self):
+        ticker = self.entry_ticker.get().strip().upper()
+        if not ticker: return
+        df = self.data_dict.get(ticker)
+        if df is None or len(df) < 30:
+            messagebox.showwarning("Không đủ dữ liệu", f"Mã '{ticker}' cần ít nhất 30 phiên để phân tích GreenPink.")
+            return
+        
+        self.log_sync(f"Đang mở Biểu đồ GreenPink cho mã {ticker} (150 phiên gần nhất)...", clear=True)
+        self.show_greenpink_window(ticker, df)
+
+    def show_greenpink_window(self, ticker, df_full):
+        try:
+            import matplotlib.pyplot as plt
+            from tinvest.data_loader import enrich_dataframe
+
+            plt.style.use('dark_background')
+
+            # --- ROBUST DATA CHECK ---
+            if 'GP_xFast' not in df_full.columns or 'OCT_A1' not in df_full.columns:
+                self.log_sync("Dữ liệu GreenPink/Octopus bị thiếu. Đang tính toán bổ sung...", clear=True)
+                df_full = enrich_dataframe(df_full)
+                self.data_dict[ticker] = df_full
+
+            # 1. Prepare Data (Last 150 bars)
+            count = 150
+            df = df_full.tail(count).copy().reset_index(drop=True)
+            x_idx = np.arange(len(df))
+            
+            # 2. Setup Figure with 2 subplots
+            fig, (ax, ax2) = plt.subplots(2, 1, figsize=(15, 11), sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+            fig.patch.set_facecolor('black') 
+            ax.set_facecolor('black')
+            ax2.set_facecolor('black')
+            
+            # --- TOP SUBPLOT: GREENPINK ---
+            # 3. Plot Cloud (E14 vs E21)
+            e14 = df['GP_E14']
+            e21 = df['GP_E21']
+            for i in range(1, len(df)):
+                c = df.loc[i, 'Close']
+                color = '#00FF00' if (c > e14[i] and c > e21[i]) else '#FF69B4' # Hot Pink
+                ax.fill_between(x_idx[i-1:i+1], e14[i-1:i+1], e21[i-1:i+1], color=color, alpha=0.3, linewidth=0)
+
+            # 4. Plot xFast and xSlow
+            ax.plot(x_idx, df['GP_xFast'], color='lime', linewidth=2.5, label='xFast (Green)')
+            ax.plot(x_idx, df['GP_xSlow'], color='red', linewidth=2.5, label='xSlow (Red)')
+
+            # 5. Plot Bollinger Bands on xSlow
+            ax.plot(x_idx, df['GP_BB_Top'], color='blue', linewidth=1.2, alpha=0.8, label='BB Top (xSlow)')
+            ax.plot(x_idx, df['GP_BB_Bot'], color='blue', linewidth=1.2, alpha=0.8, label='BB Bot (xSlow)')
+            ax.fill_between(x_idx, df['GP_BB_Bot'], df['GP_BB_Top'], color='blue', alpha=0.1)
+
+            # 6. Plot Candlesticks
+            for i in range(len(df)):
+                color = '#00FF00' if df.loc[i, 'Close'] >= df.loc[i, 'Open'] else '#FF0000'
+                ax.vlines(x_idx[i], df.loc[i, 'Low'], df.loc[i, 'High'], color=color, linewidth=1.0)
+                if df.loc[i, 'Close'] >= df.loc[i, 'Open']:
+                    ax.bar(x_idx[i], df.loc[i, 'Close'] - df.loc[i, 'Open'], bottom=df.loc[i, 'Open'], color=color, width=0.6)
+                else:
+                    ax.bar(x_idx[i], df.loc[i, 'Open'] - df.loc[i, 'Close'], bottom=df.loc[i, 'Close'], color=color, width=0.6)
+
+            # --- BOTTOM SUBPLOT: OCTOPUS (MACD MCGINLEY) ---
+            ax2.plot(x_idx, df['OCT_A1'], color='white', linewidth=0.8, alpha=0.3) # Reference line
+            
+            # Plot A1 and B1 (Mirror) with dynamic color dots/line
+            for i in range(1, len(df)):
+                color = df.loc[i, 'OCT_Color']
+                ax2.plot(x_idx[i-1:i+1], df.loc[i-1:i, 'OCT_A1'], color=color, linewidth=2.5)
+                ax2.plot(x_idx[i-1:i+1], df.loc[i-1:i, 'OCT_B1'], color=color, linewidth=2.5)
+
+            
+            # Plot Bollinger Bands Cloud on A1
+            ax2.plot(x_idx, df['OCT_BB_Top'], color='#00008B', linewidth=1.0, linestyle='--', alpha=0.6)
+            ax2.plot(x_idx, df['OCT_BB_Bot'], color='#00008B', linewidth=1.0, linestyle='--', alpha=0.6)
+            ax2.fill_between(x_idx, df['OCT_BB_Bot'], df['OCT_BB_Top'], color='#ADD8E6', alpha=0.2, label='Octopus Band')
+            ax2.axhline(0, color='white', linewidth=0.5, alpha=0.5)
+
+            # 7. Formatting
+            ax.set_title(f"GP & OCTOPUS CHART (HHV-LLV + McGinley): {ticker}", color='gold', fontsize=15, fontweight='bold', pad=12)
+            ax.set_ylabel("Price", color='white', fontweight='bold')
+            ax2.set_ylabel("Octopus MACD", color='white', fontweight='bold')
+            
+            for axis in [ax, ax2]:
+                axis.grid(True, color='#222222', linestyle=':', alpha=0.5)
+                axis.tick_params(colors='white')
+                for spine in axis.spines.values():
+                    spine.set_color('#444444')
+            
+            date_labels = df['Date'].dt.strftime('%d/%m/%y').tolist()
+            import matplotlib.ticker as ticker_lib
+            ax2.xaxis.set_major_formatter(ticker_lib.FuncFormatter(lambda x, pos: date_labels[int(round(x))] if 0 <= int(round(x)) < len(date_labels) else ""))
+            
+            ax.legend(loc='lower left', facecolor='black', edgecolor='#00FF00', labelcolor='white', fontsize=8)
+            ax2.legend(loc='lower left', facecolor='black', edgecolor='#FF69B4', labelcolor='white', fontsize=8)
+            
+            plt.tight_layout()
+            plt.show(block=False)
+
+        except Exception as e:
+            logger.error(f"Error showing GreenPink window: {e}")
+            import traceback
+            traceback.print_exc()
 
 
             # 7. Formatting
@@ -2027,6 +2255,10 @@ class TinvestApp:
                 if df is None or (hasattr(df, 'empty') and df.empty):
                     continue
 
+                # --- NEW: Minimum Volume Filter (200,000) ---
+                current_vol = df['Volume'].iloc[-1] if 'Volume' in df.columns else 0
+                if current_vol < 200000:
+                    continue
 
                 avg_vol_20 = df["Volume"].tail(20).mean() if len(df) >= 20 else df["Volume"].mean()
 
@@ -2357,13 +2589,6 @@ class TinvestApp:
             try:
 
 
-                import matplotlib.pyplot as plt
-
-
-                import matplotlib.dates as mdates
-
-
-                import numpy as np
                 from tinvest.data_loader import enrich_dataframe
                 
                 plt.style.use('default')
@@ -2547,18 +2772,17 @@ class TinvestApp:
                 is_index = ticker.upper().endswith("INDEX") or "VN30" in ticker.upper()
                 fmt = "{:,.0f}" if is_index else "{:,.2f}"
                 
-                # --- Top Title with Logo ---
-                logo_path = r"C:\Users\COMPUTER\Desktop\Vector logo.png"
+                logo_name = "Vector logo.png"
+                logo_path = resource_path(logo_name)
+                
                 logo_found = False
                 try:
                     if os.path.exists(logo_path):
-                        from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-                        import matplotlib.image as mpimg
                         img = mpimg.imread(logo_path)
-                        imagebox = OffsetImage(img, zoom=0.15) # Adjust zoom as needed
-                        ab = AnnotationBbox(imagebox, (0.05, 0.96), frameon=False, xycoords='figure fraction')
+                        imagebox = OffsetImage(img, zoom=0.05) # Adjust zoom as needed
+                        ab = AnnotationBbox(imagebox, (0.05, 0.94), frameon=False, xycoords='figure fraction')
                         fig.add_artist(ab)
-                        fig.text(0.10, 0.96, "=AI+CƠM!", ha="left", va="center", fontsize=22, fontweight='bold', color='black')
+                        fig.text(0.07, 0.94, "=AI+CƠM!", ha="left", va="center", fontsize=12, fontweight='bold', color='black')
                         logo_found = True
                 except Exception as e:
                     logger.error(f"Error loading logo: {e}")
@@ -2679,7 +2903,6 @@ class TinvestApp:
                     ax3.set_ylabel('ADX', fontweight='bold', fontsize=9)
                     ax3.set_ylim(bottom=0)
                     
-                    import matplotlib.lines as mlines
                     adx_legend = mlines.Line2D([], [], color='purple', linewidth=2.0, label='ADX (14)')
                     handles, labels = ax3.get_legend_handles_labels()
                     handles.insert(0, adx_legend)
@@ -2710,7 +2933,6 @@ class TinvestApp:
                 ax1.legend(loc='upper left', fontsize=9, ncol=4)
                 
                 # Use FuncFormatter to map ordinal x back to Dates
-                import matplotlib.ticker as ticker_lib
                 ax4.xaxis.set_major_formatter(ticker_lib.FuncFormatter(format_date))
                 
                 # Make sure the x limits are bounded by the total ordinal length
@@ -2788,12 +3010,11 @@ class TinvestApp:
                 
 
 
+                self.log_sync("   ... Đang tính toán độ rộng (Breadth)...")
                 breadth_res = analyze_market_breadth(self.data_dict, "VNINDEX")
-
-
+                self.log_sync(f"   ... Độ rộng: {breadth_res['breadth_label']} ({breadth_res['strong_stocks_pct']}% > MA50)")
+                
                 breadth_ma20 = breadth_res.get("strong_stocks_ma20_pct", 50.0)
-
-
                 breadth_ma50 = breadth_res.get("strong_stocks_pct", 50.0)
 
 
@@ -3220,9 +3441,10 @@ class TinvestApp:
                 
 
 
+                self.log_sync("   ... Đang phân tích kỹ thuật VNINDEX...")
                 vn_full = analyze_full_index(self.data_dict.get(vn_key))
-
-
+                
+                self.log_sync("   ... Đang phân tích kỹ thuật HNX/UPCOM...")
                 hn_full = analyze_full_index(self.data_dict.get(hn_key))
 
 
@@ -3283,162 +3505,114 @@ class TinvestApp:
 
 
     def show_market_breadth(self):
-
-
-        if getattr(self, 'market_breadth', None) is None or self.market_breadth.empty:
-
-
-            from tkinter import messagebox
-
-
-            messagebox.showwarning("Cảnh báo", "Dữ liệu độ rộng thị trường chưa sẵn sàng. Vui lòng nạp dữ liệu!")
-
-
-            return
-
-
+        mb_data = getattr(self, 'market_breadth', None)
+        if mb_data is None or mb_data.empty:
+            # Try a last-minute update if we have enough analysis cache but mb is missing
+            if len(self.analysis_cache) >= 5:
+                self.log_sync("Đang khởi tạo lại dữ liệu biểu đồ độ rộng...")
+                self._update_breadth_from_cache()
+                mb_data = getattr(self, 'market_breadth', None)
             
-
-
+            if mb_data is None or mb_data.empty:
+                from tkinter import messagebox
+                messagebox.showwarning("Cảnh báo", "Dữ liệu độ rộng thị trường chưa sẵn sàng. Vui lòng nhấn '📂 Load Cache' hoặc '🌐 Update' trước!")
+                return
+            
         try:
-
-
             import matplotlib.pyplot as plt
-
-
             import matplotlib.dates as mdates
-
-
-        except ImportError:
-
-
-            import sys
-
-
-            import subprocess
-
-
-            from tkinter import messagebox
-
-
-            messagebox.showinfo("Đang Tự Cài Đặt", "Hệ thống đang cài 'matplotlib'...")
-
-
-            try:
-
-
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
-
-
-                import matplotlib.pyplot as plt
-
-
-                import matplotlib.dates as mdates
-
-
-            except Exception as e:
-
-
-                messagebox.showerror("Lỗi", f"Không thể cài đặt matplotlib: {e}")
-
-
+            import matplotlib.ticker as mticker
+            
+            # --- Prepare Data ---
+            days = 504
+            df_plot = mb_data.tail(days).copy()
+            if df_plot.empty: 
+                messagebox.showwarning("Cảnh báo", "Dữ liệu độ rộng trống. Không thể vẽ.")
                 return
 
-
-            
-
-
-        try:
-
-
-            days = 504
-
-
-            df_plot = self.market_breadth.tail(days).copy()
-
-
-            if df_plot.empty: return
-
-
-                
-
-
             dates = pd.to_datetime(df_plot.index)
-
-
             df_plot['%MA20_smooth'] = df_plot['%MA20'].rolling(window=5, min_periods=1).mean()
-
-
             df_plot['%MA50_smooth'] = df_plot['%MA50'].rolling(window=5, min_periods=1).mean()
-
-
             
-
-
+            # --- Create Figure ---
             fig, ax1 = plt.subplots(figsize=(14, 8))
+            plt.style.use('default') # Use default white style
+            fig.patch.set_facecolor('white')
+            ax1.set_facecolor('white')
             
+            # Ensure text visibility on white
+            for item in ([ax1.title, ax1.xaxis.label, ax1.yaxis.label] +
+                         ax1.get_xticklabels() + ax1.get_yticklabels()):
+                item.set_color('black')
+
             # --- Primary Axis: Breadth (%) ---
-            line1, = ax1.plot(dates, df_plot['%MA20_smooth'], color='#2196F3', linewidth=2, label='% Cổ phiếu > MA20')
-            line2, = ax1.plot(dates, df_plot['%MA50_smooth'], color='#9C27B0', linewidth=2, label='% Cổ phiếu > MA50')
+            line1, = ax1.plot(dates, df_plot['%MA20_smooth'], color='#007FFF', linewidth=2.5, label='% Cổ phiếu > MA20')
+            line2, = ax1.plot(dates, df_plot['%MA50_smooth'], color='#FF00FF', linewidth=2.5, label='% Cổ phiếu > MA50')
             
             # Add latest value annotations
-            last_date = dates[-1]
-            val20 = df_plot['%MA20_smooth'].iloc[-1]
-            val50 = df_plot['%MA50_smooth'].iloc[-1]
+            if not df_plot.empty:
+                last_date = dates[-1]
+                val20 = df_plot['%MA20_smooth'].iloc[-1]
+                val50 = df_plot['%MA50_smooth'].iloc[-1]
+                
+                ax1.annotate(f" {val20:.1f}%", xy=(last_date, val20), xytext=(8, -5), textcoords='offset points', 
+                             color='#007FFF', fontweight='bold', fontsize=11)
+                ax1.annotate(f" {val50:.1f}%", xy=(last_date, val50), xytext=(8, 5), textcoords='offset points', 
+                             color='#FF00FF', fontweight='bold', fontsize=11)
+
+            ax1.set_title('BIỂU ĐỒ ĐỘ RỘNG THỊ TRƯỜNG & VNINDEX', fontsize=16, fontweight='bold', color='black', pad=25)
+            ax1.set_xlabel('Thời Gian', color='black', fontweight='bold')
+            ax1.set_ylabel('Tỉ Lệ Độ Rộng (%)', fontsize=11, fontweight='bold', color='black')
+            ax1.set_ylim(0, 105)
+            ax1.grid(True, linestyle=':', color='gray', alpha=0.3)
             
-            ax1.annotate(f" {val20:.1f}%", xy=(last_date, val20), xytext=(8, -5), textcoords='offset points', 
-                         color='#1976D2', fontweight='bold', fontsize=11)
-            ax1.annotate(f" {val50:.1f}%", xy=(last_date, val50), xytext=(8, 5), textcoords='offset points', 
-                         color='#7B1FA2', fontweight='bold', fontsize=11)
-
-            ax1.set_title('BIỂU ĐỒ ĐỘ RỘNG THỊ TRƯỜNG & VNINDEX', fontsize=14, fontweight='bold', pad=20)
-            ax1.set_xlabel('Thời Gian')
-            ax1.set_ylabel('Tỉ Lệ Độ Rộng (%)', fontsize=10, fontweight='bold')
-            ax1.set_ylim(0, 100)
-            ax1.grid(True, linestyle='--', alpha=0.4)
-
             # --- Secondary Axis: VNINDEX Price ---
             vn_key = next((k for k in self.data_dict.keys() if "VNINDEX" in k), "VNINDEX")
             df_vn = self.data_dict.get(vn_key)
             if df_vn is not None and not df_vn.empty:
-                # Align VNINDEX data with the plot dataframe dates
-                # df_vn has sequential numerical index and a 'Date' column. df_plot has Date string index.
+                # Merge logic to align VNIndex with Breadth dates
                 df_vn_indexed = df_vn.copy()
-                df_vn_indexed['DateStr'] = pd.to_datetime(df_vn_indexed['Date']).dt.strftime('%Y-%m-%d')
-                df_vn_indexed = df_vn_indexed.set_index('DateStr')
+                df_vn_indexed['Date'] = pd.to_datetime(df_vn_indexed['Date'])
+                df_vn_indexed = df_vn_indexed.set_index('Date')
                 
-                df_plot_dates = pd.to_datetime(df_plot.index).strftime('%Y-%m-%d')
-                common_dates = df_plot_dates.intersection(df_vn_indexed.index)
-                
-                df_vn_plot = df_vn_indexed.loc[common_dates]
-                if not df_vn_plot.empty:
+                # Get common dates
+                common_dates = dates.intersection(df_vn_indexed.index)
+                if not common_dates.empty:
+                    df_vn_plot = df_vn_indexed.loc[common_dates]
                     ax2 = ax1.twinx()
                     
                     up = df_vn_plot[df_vn_plot['Close'] >= df_vn_plot['Open']]
                     down = df_vn_plot[df_vn_plot['Close'] < df_vn_plot['Open']]
                     
                     # Candlestick Bodies
-                    ax2.bar(mdates.date2num(pd.to_datetime(up.index)), up['Close'] - up['Open'], bottom=up['Open'], color='white', edgecolor='#455A64', linewidth=1.2, width=0.6, alpha=0.9, zorder=3)
-                    ax2.bar(mdates.date2num(pd.to_datetime(down.index)), down['Open'] - down['Close'], bottom=down['Close'], color='#455A64', edgecolor='#455A64', width=0.6, alpha=0.9, zorder=3)
+                    ax2.bar(mdates.date2num(up.index), up['Close'] - up['Open'], bottom=up['Open'], color='#00CC00', edgecolor='black', linewidth=0.5, width=0.6, alpha=0.8, zorder=3)
+                    ax2.bar(mdates.date2num(down.index), down['Open'] - down['Close'], bottom=down['Close'], color='#FF0000', edgecolor='black', linewidth=0.5, width=0.6, alpha=0.8, zorder=3)
                     
                     # Candlestick Wicks
-                    ax2.vlines(mdates.date2num(pd.to_datetime(up.index)), up['Low'], up['High'], color='#455A64', linewidth=1.2, zorder=2)
-                    ax2.vlines(mdates.date2num(pd.to_datetime(down.index)), down['Low'], down['High'], color='#455A64', linewidth=1.2, zorder=2)
+                    ax2.vlines(mdates.date2num(up.index), up['Low'], up['High'], color='black', linewidth=1.0, zorder=2)
+                    ax2.vlines(mdates.date2num(down.index), down['Low'], down['High'], color='black', linewidth=1.0, zorder=2)
                     
                     # Dummy line for legend
                     import matplotlib.lines as mlines
-                    line3 = mlines.Line2D([], [], color='#455A64', marker='s', linestyle='None', markersize=8, label='VNINDEX (Candles)')
+                    line3 = mlines.Line2D([], [], color='black', marker='s', linestyle='None', markersize=8, label='VNINDEX (Nến)')
                     
-                    ax2.set_ylabel('Điểm số VNINDEX', color='#455A64', fontsize=10, fontweight='bold')
-                    ax2.tick_params(axis='y', labelcolor='#455A64')
-                    ax2.grid(False) # avoid overlapping grid
+                    ax2.set_ylabel('Điểm số VNINDEX', color='black', fontsize=11, fontweight='bold')
+                    ax2.tick_params(axis='y', labelcolor='black')
                     
                     # Combine legends
                     lines = [line1, line2, line3]
                     labels = [l.get_label() for l in lines]
-                    ax1.legend(lines, labels, loc='upper left', frameon=True, shadow=True)
+                    ax1.legend(lines, labels, loc='upper left', frameon=True, shadow=True, facecolor='white', edgecolor='black', labelcolor='black')
             else:
-                ax1.legend(loc='upper left', frameon=True, shadow=True)
+                ax1.legend(loc='upper left', frameon=True, shadow=True, facecolor='white', edgecolor='black', labelcolor='black')
+
+            # Annotate current values with clear background to avoid overlap
+            bbox_props = dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7)
+            ax1.text(self.market_breadth.index[-1], self.market_breadth['%MA20'].iloc[-1], f"{self.market_breadth['%MA20'].iloc[-1]:.1f}%", 
+                    color='#007AFF', fontweight='bold', va='center', ha='left', bbox=bbox_props)
+            ax1.text(self.market_breadth.index[-1], self.market_breadth['%MA50'].iloc[-1], f"{self.market_breadth['%MA50'].iloc[-1]:.1f}%", 
+                    color='#FF00FF', fontweight='bold', va='center', ha='left', bbox=bbox_props)
+
 
             ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m/%Y'))
             fig.autofmt_xdate()
@@ -3446,14 +3620,13 @@ class TinvestApp:
             plt.tight_layout()
             plt.show(block=False)
 
-
         except Exception as e:
-
-
+            import traceback
+            trace_str = traceback.format_exc()
+            logger.error(f"Error in show_market_breadth: {e}\n{trace_str}")
             from tkinter import messagebox
+            messagebox.showerror("Lỗi biểu đồ", f"Lỗi khi vẽ biểu đồ: {str(e)}")
 
-
-            messagebox.showerror("Lỗi biểu đồ", f"Lỗi khi vẽ: {str(e)}")
 
 
 

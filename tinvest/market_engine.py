@@ -572,21 +572,31 @@ def analyze_market_breadth(data_dict: dict, vnindex_ticker="VNINDEX") -> dict:
 
 
 
-    for ticker, df in list(data_dict.items()):
+    # Lấy ngày tham chiếu từ VNINDEX
+    idx_df = data_dict.get(vnindex_ticker)
+    ref_date = idx_df['Date'].iloc[-1] if idx_df is not None and not idx_df.empty else None
 
+    for ticker, df in list(data_dict.items()):
         if ticker in [vnindex_ticker, "HNXINDEX", "UPCOM", "VN30", "HNX30"]:
             continue
 
-        if len(df) < 50: # Ensure enough data for MA50
+        if len(df) < 50: 
             continue
 
-        # Lấy dữ liệu phiên cuối
+        # 1. Kiểm tra nếu mã đã ngưng giao dịch quá lâu (>30 ngày) -> Loại bỏ
+        if ref_date is not None:
+            last_date = df['Date'].iloc[-1]
+            if (ref_date - last_date).days > 30:
+                continue
+
+        # 2. Lấy dữ liệu phiên cuối có giá trị (ffill logic)
+        # Nếu phiên cuối Vol=0, vẫn lấy giá Close của nó (vì giá thường được giữ nguyên)
         last_row = df.iloc[-1]
         c = float(last_row['Close'])
         v = float(last_row['Volume'])
         
-        # BỎ QUA các mã không có giao dịch (Volume = 0) hoặc dữ liệu lỗi
-        if v <= 0 or pd.isna(c) or c <= 0:
+        # Chỉ loại bỏ nếu giá không hợp lệ (<=0) hoặc dữ liệu rỗng hoàn toàn
+        if pd.isna(c) or c <= 0:
             continue
 
         pc = float(df['Close'].iloc[-2])

@@ -308,16 +308,6 @@ def format_report(result: dict) -> str:
         lines.append(f"  ● Điểm Nổ Nến: Breakout_Up={m.get('breakout_up', False)} | Nến Lực={m.get('strong_candle', False)}")
         lines.append("")
 
-    # --- 2. HỆ THỐNG CĂN CỨ TÍN HIỆU ---
-    if m:
-        lines.append("  [2. BIỆN LUẬN LÝ DO (TÍN HIỆU CƠ SỞ CHẨN ĐOÁN)]")
-        lines.append(f"  ● ADX (Xung lực): {m.get('adx', 0):.2f} (Chop: {m.get('chop', False)}) | Biên độ giá: {m.get('range_width', 0):.2f} / ATR: {m.get('atr', 0):.2f}")
-        lines.append(f"  ● Cấu Trúc (S_Bias): {m.get('structure_bias', 0)} | Xu Hướng (T_Bias): {m.get('trend_bias', 0)} (Trend Khoẻ: {m.get('strong_trend', False)})")
-        lines.append(f"  ● Động Lượng MACD: {m.get('macd', 0):.2f} | Hist: {m.get('hist', 0):.2f}")
-        lines.append(f"  ● Thanh Khoản (Vol): Spike={m.get('vol_spike', False)} | Dry={m.get('vol_dry', False)}")
-        lines.append(f"  ● Điểm Nổ Nến: Breakout_Up={m.get('breakout_up', False)} | Nến Lực={m.get('strong_candle', False)}")
-        lines.append("")
-
     # --- 3. MỨC GIÁ QUAN TRỌNG ---
     lines.append("  [3. MỨC GIÁ QUAN TRỌNG - S/R]")
     lines.append(f"  ● Giá hiện tại: {price:,.2f}")

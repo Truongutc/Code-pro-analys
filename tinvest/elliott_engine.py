@@ -1,242 +1,290 @@
-"""
-Module: Elliott Engine
-======================
-Implements Elliott Wave smoothing (DEMA/TEMA) and Linear Regression Channels (AUTO SEC).
-Optimized for performance to handle large datasets.
-"""
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-def calculate_zigzag(series, percent_change):
-    """
-    AmiBroker-style ZigZag implementation.
-    Identifies peaks and troughs where price moves by >= percent_change.
-    """
-    if len(series) < 2:
-        return series
-    
-    change = percent_change / 100.0
-    data = series.values
-    n = len(data)
-    zigzag = np.full(n, np.nan)
-    
-    last_piv_val = data[0]
-    last_piv_idx = 0
-    trend = 0 
-    
-    zigzag[0] = last_piv_val
-    
-    for i in range(1, n):
-        val = data[i]
-        if last_piv_val == 0:
-            diff = 0.0
-            if val != 0:
-                diff = float('inf') if val > 0 else float('-inf')
+# =========================================================
+# AFL STYLE EMA / DEMA / TEMA
+# =========================================================
+
+def ema_afl(arr, period):
+    arr = np.asarray(arr, dtype=np.float64)
+    out = np.full(len(arr), np.nan)
+    if len(arr) == 0:
+        return out
+    alpha = 2.0 / (period + 1.0)
+    out[0] = arr[0]
+    for i in range(1, len(arr)):
+        if np.isnan(out[i-1]):
+            out[i] = arr[i]
         else:
-            diff = (val - last_piv_val) / last_piv_val
-        
-        if trend == 0:
-            if diff >= change:
-                trend = 1
-                last_piv_val = val
-                last_piv_idx = i
-            elif diff <= -change:
-                trend = -1
-                last_piv_val = val
-                last_piv_idx = i
-        elif trend == 1:
-            if val > last_piv_val:
-                last_piv_val = val
-                last_piv_idx = i
-            elif diff <= -change:
-                zigzag[last_piv_idx] = last_piv_val
-                trend = -1
-                last_piv_val = val
-                last_piv_idx = i
-        elif trend == -1:
-            if val < last_piv_val:
-                last_piv_val = val
-                last_piv_idx = i
-            elif diff >= change:
-                zigzag[last_piv_idx] = last_piv_val
-                trend = 1
-                last_piv_val = val
-                last_piv_idx = i
-                
-    zigzag[last_piv_idx] = last_piv_val
-    zigzag[-1] = data[-1]
-    
-    zz_series = pd.Series(zigzag).interpolate(method='linear')
-    return zz_series
+            out[i] = alpha * arr[i] + (1 - alpha) * out[i - 1]
+    return out
 
-def dema(series, n):
-    """Double Exponential Moving Average."""
-    e1 = series.ewm(span=n, adjust=False).mean()
-    e2 = e1.ewm(span=n, adjust=False).mean()
+def dema_afl(arr, period):
+    e1 = ema_afl(arr, period)
+    e2 = ema_afl(e1, period)
     return 2 * e1 - e2
 
-def tema(series, n):
-    """Triple Exponential Moving Average."""
-    e1 = series.ewm(span=n, adjust=False).mean()
-    e2 = e1.ewm(span=n, adjust=False).mean()
-    e3 = e2.ewm(span=n, adjust=False).mean()
+def tema_afl(arr, period):
+    e1 = ema_afl(arr, period)
+    e2 = ema_afl(e1, period)
+    e3 = ema_afl(e2, period)
     return 3 * e1 - 3 * e2 + e3
 
+# =========================================================
+# AFL STYLE MA
+# =========================================================
+
+def ma_afl(arr, period):
+    return pd.Series(arr).rolling(int(period), min_periods=1).mean().values
+
+# =========================================================
+# AFL STYLE CROSS
+# =========================================================
+
+def cross(a, b):
+    a = np.asarray(a)
+    b = np.asarray(b)
+    out = np.zeros(len(a), dtype=bool)
+    if len(a) < 2: return out
+    out[1:] = (a[1:] > b[1:]) & (a[:-1] <= b[:-1])
+    return out
+
+# =========================================================
+# AFL STYLE EXREM
+# =========================================================
+
 def exrem(buy, sell):
-    """
-    Excludes redundant signals. Optimized via Vectorization/Fast Loop.
-    """
-    buy_raw = buy.values if hasattr(buy, 'values') else buy
-    sell_raw = sell.values if hasattr(sell, 'values') else sell
-    n = len(buy_raw)
-    
-    result_buy = np.zeros(n, dtype=bool)
-    result_sell = np.zeros(n, dtype=bool)
-    
-    state = 0 
-    for i in range(n):
-        if buy_raw[i] and state <= 0:
-            result_buy[i] = True
+    buy = np.asarray(buy, dtype=bool)
+    sell = np.asarray(sell, dtype=bool)
+    rb = np.zeros(len(buy), dtype=bool)
+    rs = np.zeros(len(sell), dtype=bool)
+    state = 0
+    for i in range(len(buy)):
+        if buy[i] and state != 1:
+            rb[i] = True
             state = 1
-        elif sell_raw[i] and state >= 0:
-            result_sell[i] = True
+        elif sell[i] and state != -1:
+            rs[i] = True
             state = -1
-            
-    idx = buy.index if hasattr(buy, 'index') else None
-    return pd.Series(result_buy, index=idx), pd.Series(result_sell, index=idx)
+    return rb, rs
+
+# =========================================================
+# AFL STYLE VALUEWHEN
+# =========================================================
+
+def valuewhen(cond, values):
+    out = np.full(len(values), np.nan)
+    last = np.nan
+    for i in range(len(values)):
+        if cond[i]:
+            last = values[i]
+        out[i] = last
+    return out
+
+# =========================================================
+# AFL STYLE BARSSINCE
+# =========================================================
+
+def barssince(cond):
+    out = np.full(len(cond), np.nan)
+    last_true = -1
+    for i in range(len(cond)):
+        if cond[i]:
+            last_true = i
+        if last_true == -1:
+            out[i] = np.nan
+        else:
+            out[i] = i - last_true
+    return out
+
+# =========================================================
+# AFL STYLE PEAK / TROUGH
+# =========================================================
+
+def peak(arr, change_pct):
+    arr = np.asarray(arr)
+    out = np.full(len(arr), np.nan)
+    change = change_pct / 100.0
+    for i in range(1, len(arr)-1):
+        if arr[i] > arr[i-1] and arr[i] >= arr[i+1]:
+            retrace = False
+            for j in range(i+1, len(arr)):
+                dd = (arr[j] - arr[i]) / arr[i]
+                if dd <= -change:
+                    retrace = True
+                    break
+            if retrace:
+                out[i] = arr[i]
+    return out
+
+def trough(arr, change_pct):
+    arr = np.asarray(arr)
+    out = np.full(len(arr), np.nan)
+    change = change_pct / 100.0
+    for i in range(1, len(arr)-1):
+        if arr[i] < arr[i-1] and arr[i] <= arr[i+1]:
+            bounce = False
+            for j in range(i+1, len(arr)):
+                up = (arr[j] - arr[i]) / arr[i]
+                if up >= change:
+                    bounce = True
+                    break
+            if bounce:
+                out[i] = arr[i]
+    return out
+
+# =========================================================
+# AFL STYLE ZIG
+# =========================================================
+
+def zig_afl(series, percent):
+    arr = np.asarray(series, dtype=np.float64)
+    n = len(arr)
+    zz = np.full(n, np.nan)
+    change = percent / 100.0
+    trend = 0
+    last_pivot_idx = 0
+    last_pivot_price = arr[0]
+    zz[0] = arr[0]
+    for i in range(1, n):
+        move = (arr[i] - last_pivot_price) / last_pivot_price
+        if trend == 0:
+            if move >= change:
+                trend = 1
+                last_pivot_idx = i
+                last_pivot_price = arr[i]
+            elif move <= -change:
+                trend = -1
+                last_pivot_idx = i
+                last_pivot_price = arr[i]
+        elif trend == 1:
+            if arr[i] >= last_pivot_price:
+                last_pivot_idx = i
+                last_pivot_price = arr[i]
+            elif move <= -change:
+                zz[last_pivot_idx] = last_pivot_price
+                trend = -1
+                last_pivot_idx = i
+                last_pivot_price = arr[i]
+        elif trend == -1:
+            if arr[i] <= last_pivot_price:
+                last_pivot_idx = i
+                last_pivot_price = arr[i]
+            elif move >= change:
+                zz[last_pivot_idx] = last_pivot_price
+                trend = 1
+                last_pivot_idx = i
+                last_pivot_price = arr[i]
+    zz[last_pivot_idx] = last_pivot_price
+    zz = pd.Series(zz).interpolate().bfill().ffill().values
+    return zz
+
+# =========================================================
+# AFL STYLE LINEAR REGRESSION
+# =========================================================
+
+def linreg_point_afl(arr):
+    """Calculates Linear Regression for a specific window, returning end values."""
+    n = len(arr)
+    if n < 2: return 0.0, arr[-1], 0.0
+    x = np.arange(n)
+    xm, ym = x.mean(), arr.mean()
+    ssxy = np.sum((x - xm) * (arr - ym))
+    ssxx = np.sum((x - xm) ** 2)
+    slope = ssxy / ssxx if ssxx != 0 else 0
+    intercept_start = ym - slope * xm
+    intercept_end = intercept_start + slope * (n - 1)
+    pred = intercept_start + slope * x
+    stderr = np.sqrt(np.mean((arr - pred) ** 2))
+    return slope, intercept_end, stderr
+
+# =========================================================
+# MAIN ENGINE
+# =========================================================
 
 def calculate_elliott_wave_system(df):
     """
-    Calculates Elliott Wave logic and AUTO SEC Channel (Anchored Linear Regression).
-    Precisely replicates AFL logic for signal placement and channel projection.
+    Main Engine: Replicates AFL Elliott Wave Super System.
     """
-    n = len(df)
-    if n < 10:
-        return pd.DataFrame(index=df.index)
-
     c = df['Close'].values
     h = df['High'].values
     l = df['Low'].values
-    
-    res = pd.DataFrame(index=df.index)
-    
-    # --- 1. Smaller Wave (Zig 1.0%) ---
-    # Buy1 = DEMA(Zig, 1) > MA(Zig, 2)
-    # Sell1 = DEMA(Zig, 2) > Zig
-    zz_small = calculate_zigzag(pd.Series(c), 1.0).values
-    ew_small_1 = dema(pd.Series(zz_small), 1).values
-    ew_small_2 = dema(pd.Series(zz_small), 2).values
-    
-    # MA(Zig, 2)
-    ma_zz_2 = pd.Series(zz_small).rolling(2).mean().fillna(pd.Series(zz_small)).values
-    
-    raw_buy1 = ew_small_1 > ma_zz_2
-    raw_sell1 = ew_small_2 > zz_small
-    
-    res['EW_Small_Buy'], res['EW_Small_Sell'] = exrem(raw_buy1, raw_sell1)
-    res['EW_Small_1'] = ew_small_1
-    res['EW_Small_2'] = ew_small_2
-    
-    # --- 2. Larger Wave (Zig 4.5%) ---
-    zz_large = calculate_zigzag(pd.Series(c), 4.5).values
-    res['EW_Large_1'] = tema(pd.Series(zz_large), 1)
-    res['EW_Large_2'] = tema(pd.Series(zz_large), 2)
-    
-    # --- 3. AUTO SEC VERSION 1.2 (Anchored Linear Regression) ---
+    n = len(c)
+    out = pd.DataFrame(index=df.index)
+
+    # =====================================================
+    # SMALLER WAVE (ZIG 1.0%)
+    # =====================================================
+    zz1 = zig_afl(c, 1.0)
+    ew1 = dema_afl(zz1, 1)
+    ew2 = dema_afl(zz1, 2)
+    ma2 = ma_afl(zz1, 2)
+    ma1 = ma_afl(zz1, 1)
+
+    buy1 = cross(ew1, ma2) | (ew1 > ma2)
+    sell1 = cross(ew2, ma1) | (ew2 > ma1)
+    buy1, sell1 = exrem(buy1, sell1)
+
+    out['EW_Small_Buy'] = buy1
+    out['EW_Small_Sell'] = sell1
+    out['BuyPrice1'] = valuewhen(buy1, (h + l) / 2)
+    out['SellPrice1'] = valuewhen(sell1, (h + l) / 2)
+    out['EW_Small_1'] = ew1
+    out['EW_Small_2'] = ew2
+
+    # =====================================================
+    # LARGE WAVE (ZIG 4.5%)
+    # =====================================================
+    zz2 = zig_afl(c, 4.5)
+    out['EW_Large_1'] = tema_afl(zz2, 1)
+    out['EW_Large_2'] = tema_afl(zz2, 2)
+
+    # =====================================================
+    # AUTO SEC (ZIG 4.75%)
+    # =====================================================
     sens = 4.75
-    zz_sec_series = calculate_zigzag(pd.Series(c), sens)
-    zz_sec = zz_sec_series.values
-    
-    # Identify Peaks and Troughs same as AFL
-    # A turnpoint occurs where the slope of the ZigZag changes
-    diffs = zz_sec_series.diff().values
-    is_turnpoint = np.zeros(n, dtype=bool)
-    for i in range(1, n-1):
-        if abs(diffs[i] - diffs[i+1]) > 1e-10:
-            is_turnpoint[i] = True
-            
-    # Handle the absolute last bar as a turnpoint to close the last wave calculation
-    is_turnpoint[-1] = True 
-    is_turnpoint[0] = True # Root
-    
-    pivot_indices = np.where(is_turnpoint)[0]
-    
+    zz_sec = zig_afl(c, sens)
+    pk = peak(c, sens)
+    tr = trough(c, sens)
+
+    # Use small epsilon or exact match for pivot detection
+    peak_cond = np.isclose(zz_sec, np.nan_to_num(pk, nan=-999999))
+    trough_cond = np.isclose(zz_sec, np.nan_to_num(tr, nan=-999999))
+
+    barpk = barssince(peak_cond)
+    bartr = barssince(trough_cond)
+    turnpoint = np.fmin(barpk, bartr)
+
     sec_mid = np.full(n, np.nan)
     sec_up = np.full(n, np.nan)
     sec_lo = np.full(n, np.nan)
-    sec_slope = np.zeros(n)
-    
-    # Active regression parameters
-    aa = np.nan
-    bb = np.nan
-    std_e = np.nan
-    last_piv_idx = 0
-    daysback = 0
-    
+
     for i in range(n):
-        if is_turnpoint[i]:
-            # At turnpoint, update Daysback and Regression params from the FINISHED wave
-            # Wave length = distance to PREVIOUS pivot
-            daysback = i - last_piv_idx + 1
-            
-            if daysback > 1:
-                # Calculate regression on Close[last_piv_idx : i+1]
-                y_window = c[last_piv_idx : i + 1]
-                x_window = np.arange(len(y_window))
-                
-                # LinRegSlope and Intercept
-                # y = intercept + slope * x
-                slope, intercept = np.polyfit(x_window, y_window, 1)
-                
-                # StdErr(C, Daysback)
-                preds = intercept + slope * x_window
-                errs = y_window - preds
-                # AmiBroker's StdErr uses N (Daysback) in denominator
-                std_e = np.sqrt(np.sum(errs**2) / len(y_window)) if len(y_window) > 0 else 0
-                
-                aa = intercept
-                bb = slope
-                
-            last_piv_idx = i
-            
-        # Every bar, calculate projected lines
-        # y = Aa + bb * ( x - (Lastx - DaysBack + 1) )
-        if not np.isnan(aa):
-            # x_rel is the distance from the START of the previous wave
-            # If current wave started at last_piv_idx.
-            # The previous wave started at (last_piv_idx - daysback + 1)
-            # Actually, per AFL: aa is intercept at start of previous wave.
-            # So x_rel = distance from start of PREVIOUS wave.
-            start_prev_wave = last_piv_idx - daysback + 1
-            x_rel = i - start_prev_wave
-            
-            y_val = aa + bb * x_rel
-            sec_up[i] = y_val + 2 * std_e
-            sec_lo[i] = y_val - 2 * std_e
-            
-            # Mback = Level + slope * Turnpoint
-            # Turnpoint is BarsSince(pivot)
-            turnpoint = i - last_piv_idx
-            sec_mid[i] = aa + bb * turnpoint # Note: Mback resets at every pivot in AFL
-            sec_slope[i] = bb
-            
-    res['EW_SEC_Mid'] = sec_mid
-    res['EW_SEC_Upper'] = sec_up
-    res['EW_SEC_Lower'] = sec_lo
-    res['EW_SEC_Slope'] = sec_slope
+        if np.isnan(turnpoint[i]): continue
+        daysback = int(turnpoint[i]) + 1
+        if daysback < 2: continue
+        
+        window = c[i - daysback + 1 : i + 1]
+        slope, intercept, stderr = linreg_point_afl(window)
+        
+        sec_mid[i] = intercept
+        sec_up[i] = intercept + 2 * stderr
+        sec_lo[i] = intercept - 2 * stderr
+
+    out['EW_SEC_Mid'] = sec_mid
+    out['EW_SEC_Upper'] = sec_up
+    out['EW_SEC_Lower'] = sec_lo
+
+    # =====================================================
+    # MEGA BUY SELL
+    # =====================================================
+    buy = cross(c, sec_up) | (c > sec_up)
+    sell = cross(sec_lo, c) | (c < sec_lo) # breakdown lower band
     
-    # Signals (Mega Wave)
-    # Buy  = Cross(C,eU) OR C > eU;       
-    # Sell = Cross(eL,C) OR C < eU;
-    
-    # Reverting to 100% AFL Logic as per user request:
-    # Buy  = Cross(C,eU) OR C > eU;       
-    # Sell = Cross(eL,C) OR C < eU;
-    # Note: C < eU is used for Sell to match AFL exactly.
-    raw_mega_buy = pd.Series(c > res['EW_SEC_Upper'])
-    raw_mega_sell = pd.Series(c < res['EW_SEC_Upper'])
-    
-    res['EW_Strong_Buy'], res['EW_Strong_Sell'] = exrem(raw_mega_buy, raw_mega_sell)
-    
-    return res
+    buy, sell = exrem(buy, sell)
+    out['EW_Strong_Buy'] = buy
+    out['EW_Strong_Sell'] = sell
+    out['MegaBuyPrice'] = valuewhen(buy, c)
+    out['MegaSellPrice'] = valuewhen(sell, c / 4)
+
+    return out

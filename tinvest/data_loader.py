@@ -45,7 +45,7 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     # ── 3. Volume ──────────────────────────────────────────────────────────
     out['AvgVolume20'] = out['Volume'].rolling(20).mean()
 
-    # ── 4. Ichimoku ────────────────────────────────────────────────────────
+    # ── 4. Ichimoku Cloud ──────────────────────────────────────────────────
     for period, name in [(9, 'Tenkan'), (26, 'Kijun'), (65, 'Kijun65'), (52, 'SpanB_raw')]:
         target_name = name if name != 'SpanB_raw' else 'SpanB'
         res = (out['High'].rolling(period).max() + out['Low'].rolling(period).min()) / 2
@@ -196,6 +196,20 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             out[col] = mcdx_df[col].values
     except Exception as e:
         logger.error(f"Error enriching with MCDX signals: {e}")
+
+    # ── 15. GreenPink Engine (HHV-LLV Scalper) ─────────────────────────────
+    try:
+        from .greenpink_engine import analyze_greenpink
+        out = analyze_greenpink(out)
+    except Exception as e:
+        logger.error(f"Error enriching with GreenPink signals: {e}")
+
+    # ── 16. Octopus Engine (McGinley MACD) ─────────────────────────────────
+    try:
+        from .octopus_engine import analyze_octopus
+        out = analyze_octopus(out)
+    except Exception as e:
+        logger.error(f"Error enriching with Octopus signals: {e}")
 
     return out
 

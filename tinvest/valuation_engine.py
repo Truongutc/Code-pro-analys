@@ -11,26 +11,34 @@ logger = logging.getLogger(__name__)
 
 def _get_indicators(df: pd.DataFrame) -> dict:
     last = df.iloc[-1]
+    
+    def _get_val(col, default=0.0):
+        val = last.get(col, default)
+        try:
+            return float(val) if not pd.isna(val) else default
+        except:
+            return default
+
     return {
-        "price": float(last['Close']),
-        "ma10": float(last.get('MA10', last['Close'])),
-        "ma20": float(last['MA20']),
-        "ma50": float(last['MA50']),
-        "ma100": float(last.get('MA100', last['Close'])),
-        "ma200": float(last.get('MA200', last['Close'])),
-        "tenkan": float(last['Tenkan']),
-        "kijun": float(last['Kijun']),
-        "k65": float(last.get('Kijun65', last['Kijun'])),
-        "span_a": float(last['SpanA']),
-        "span_b": float(last['SpanB']),
-        "cloud_top": float(max(last['SpanA'], last['SpanB'])),
-        "cloud_bottom": float(min(last['SpanA'], last['SpanB'])),
-        "rsi": float(last.get('RSI', 50)),
-        "macd": float(last.get('MACD', 0)),
-        "macd_hist": float(last.get('MACD_Hist', 0)),
-        "adx": float(last.get('ADX', 0)),
-        "di_plus": float(last.get('DI_Plus', 0)),
-        "di_minus": float(last.get('DI_Minus', 0))
+        "price": _get_val('Close'),
+        "ma10": _get_val('MA10'),
+        "ma20": _get_val('MA20'),
+        "ma50": _get_val('MA50'),
+        "ma100": _get_val('MA100'),
+        "ma200": _get_val('MA200'),
+        "tenkan": _get_val('Tenkan'),
+        "kijun": _get_val('Kijun'),
+        "k65": _get_val('Kijun65'),
+        "span_a": _get_val('SpanA'),
+        "span_b": _get_val('SpanB'),
+        "cloud_top": _get_val('CloudTop'),
+        "cloud_bottom": _get_val('CloudBottom'),
+        "rsi": _get_val('RSI', 50),
+        "macd": _get_val('MACD'),
+        "macd_hist": _get_val('MACD_Hist'),
+        "adx": _get_val('ADX'),
+        "di_plus": _get_val('DI_Plus'),
+        "di_minus": _get_val('DI_Minus')
     }
 
 def _find_swing_points(df: pd.DataFrame) -> dict:
@@ -257,12 +265,15 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
 
     # ── 2. EARLY BUY ──────────────────────────────────────────────────────────
     elif entry_type == "EARLY":
-        s1 = max(inds["tenkan"], inds["ma10"])
+        # Support: max(Tenkan, MA10, MA20) if below price
+        cands_s1 = [v for v in [inds["tenkan"], inds["ma10"], inds["ma20"]] if v > 0 and v < p]
+        s1 = max(cands_s1) if cands_s1 else (nearest_valley_below or p * 0.97)
+        
         # S2: Min 5% from p
         cands_s2 = [v for v in valleys_below if v < p * 0.95]
         s2 = max(cands_s2) if cands_s2 else s1 * 0.92
         
-        r1 = min(inds["kijun"], inds["ma20"])
+        r1 = min(inds["kijun"], inds["ma20"]) if (inds["kijun"] > p or inds["ma20"] > p) else p * 1.05
         # R2: Min 5% from p
         cands_r2 = [v for v in [inds["cloud_bottom"], nearest_peak_above] if v is not None and v > p * 1.05]
         r2 = min(cands_r2) if cands_r2 else r1 * 1.06
@@ -285,7 +296,7 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
         if source == "MA_PULLBACK":
             s1, s2 = inds["ma20"], inds["ma50"]
         elif source == "MA_CROSS":
-            s1, s2 = max(df['Close'].iloc[-1], inds["ma10"]), low10
+            s1, s2 = max(p * 0.99, inds["ma10"]), low10
         elif source == "ICHI_BOUNCE":
             s1, s2 = max(inds["kijun"], inds["tenkan"]), max(inds["cloud_top"], inds["k65"])
         elif source == "ICHI_CROSS":
@@ -297,9 +308,13 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
             r2 = min(cands_r2) if cands_r2 else r1 * 1.05
             tp = r2
         else: # Fallback
-            s1, s2 = inds["ma20"], inds["ma50"]
+            s1, s2 = (inds["ma20"] or nearest_valley_below), (inds["ma50"] or s1 * 0.95)
             
-        sl1, sl2 = s1 * 0.98, s2 * 0.98
+        # Ensure s1 is valid
+        if not s1 or s1 >= p:
+            s1 = max([v for v in [inds["ma20"], inds["tenkan"], nearest_valley_below] if v and v < p] or [p * 0.97])
+
+        sl1, sl2 = s1 * 0.98, s2 * 0.98 if s2 else s1 * 0.95
 
     # ── 4. ADD_2 BUY ──────────────────────────────────────────────────────────
     elif entry_type == "ADD_2":
@@ -311,18 +326,20 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
         ts = min(r1 * 0.97, p * 1.10)
         
         if source == "HA_REVERSAL":
-            s1, s2 = inds["tenkan"], inds["kijun"]
+            s1 = max([v for v in [inds["tenkan"], inds["ma10"], inds["ma20"]] if v < p] or [p * 0.97])
+            s2 = max([v for v in [inds["kijun"], inds["ma20"], inds["ma50"]] if v < s1] or [s1 * 0.95])
             sl1 = s1 * 0.97
             sl2 = max(s2 * 0.97, inds["cloud_top"])
         elif source == "TK_CROSS_UP":
-            tk_cross_val = min(inds["tenkan"], inds["kijun"])
-            s1 = max(tk_cross_val, inds["k65"])
-            cands_s2 = [v for v in [tk_cross_val, inds["k65"]] if v < s1]
-            s2 = max(cands_s2) if cands_s2 else inds["kijun"]
-            sl1 = inds["tenkan"] * 0.97
+            tk_cross_val = min(inds["tenkan"], inds["kijun"]) if (inds["tenkan"] > 0 and inds["kijun"] > 0) else inds["ma20"]
+            s1 = max([v for v in [tk_cross_val, inds["k65"], inds["ma20"]] if v < p] or [p * 0.97])
+            cands_s2 = [v for v in [tk_cross_val, inds["k65"], inds["ma50"]] if v < s1]
+            s2 = max(cands_s2) if cands_s2 else (nearest_valley_below or s1 * 0.95)
+            sl1 = s1 * 0.97
             sl2 = max(s2 * 0.97, inds["cloud_top"])
         else:
-            s1, s2 = inds["tenkan"], inds["kijun"]
+            s1 = max([v for v in [inds["tenkan"], inds["ma10"], inds["ma20"]] if v < p] or [p * 0.97])
+            s2 = max([v for v in [inds["kijun"], inds["ma20"], inds["ma50"]] if v < s1] or [s1 * 0.95])
             sl1, sl2 = s1 * 0.97, s2 * 0.97
 
     # ── 5. STRONG BUY ─────────────────────────────────────────────────────────
@@ -347,17 +364,34 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
             s1, s2 = inds["ma10"], inds["ma20"]
             sl1, sl2 = s1 * 0.95, s2 * 0.95
 
-    # Safeguards
+    # Safeguards & Index Optimization
+    if is_index:
+        # Indices need robust supports - ensure S1 is at least MA20 if price is above it
+        if p > inds["ma20"] > 0:
+            s1 = max(s1, inds["ma20"])
+        if p > inds["ma50"] > 0:
+            s2 = max(s2, inds["ma50"]) if s2 < inds["ma50"] else s2
+
     if r1 <= p: r1 = p * 1.03
     if r2 < p * 1.05: r2 = max(r1 * 1.05, p * 1.07)
     if tp <= p: tp = r1
     
-    if s1 >= p: s1 = nearest_valley_below if nearest_valley_below else p * 0.96
-    if s2 > p * 0.95: s2 = min(s1 * 0.95, p * 0.92)
+    # Ultimate Support Safeguard (handles 0, NaN, or s1 >= p)
+    if not s1 or pd.isna(s1) or s1 >= p:
+        valid_valleys = [v for v in valleys_below if v < p * 0.998] if is_index else [v for v in valleys_below if v < p * 0.99]
+        if valid_valleys:
+            s1 = valid_valleys[-1]
+        else:
+            # Fallback to MA20 or fixed offset
+            s1 = inds["ma20"] if (inds["ma20"] > 0 and inds["ma20"] < p) else p * 0.96
+            
+    if not s2 or pd.isna(s2) or s2 >= s1:
+        s2 = nearest_valley_below if (nearest_valley_below and nearest_valley_below < s1) else s1 * 0.95
+    
     if not s2: s2 = 0.0
     
-    if sl1 >= p: sl1 = p * 0.97
-    if sl2 >= sl1: sl2 = sl1 * 0.96
+    if not sl1 or pd.isna(sl1) or sl1 >= p: sl1 = p * 0.97
+    if not sl2 or pd.isna(sl2) or sl2 >= sl1: sl2 = sl1 * 0.96
 
     return {
         "s1": float(s1) if s1 else 0.0, "s2": float(s2) if s2 else 0.0, 
@@ -453,7 +487,13 @@ def evaluate_stock_valuation(ticker: str, df: pd.DataFrame, entry_info: dict) ->
     pos = _classify_position(price, levels)
     
     hist = inds["macd_hist"]
-    p_hist = float(df['MACD_Hist'].iloc[-2]) if len(df) > 1 else hist
+    p_hist = hist
+    if 'MACD_Hist' in df.columns and len(df) > 1:
+        try:
+            p_hist = float(df['MACD_Hist'].iloc[-2])
+        except:
+            p_hist = hist
+            
     macd_status = "Tích cực (Histogram tăng)" if hist > p_hist else "Tiêu cực (Histogram giảm)"
     if inds["macd"] > 0 and hist > 0:
         macd_status = "Đà tăng mạnh (MACD > 0 & Hist > 0)"

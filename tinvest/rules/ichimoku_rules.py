@@ -9,25 +9,31 @@ def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
     last = df.iloc[idx]
     
     price = float(last['Close'])
-    tenkan = float(last.get('Tenkan', price))
-    kijun = float(last.get('Kijun', price))
-    span_a = float(last.get('SpanA', price))
-    span_b = float(last.get('SpanB', price))
+    def _get_val(col, i=idx, default=price):
+        if col not in df.columns: return default
+        val = df[col].iloc[i]
+        try:
+            return float(val) if not pd.isna(val) else default
+        except:
+            return default
+
+    tenkan = _get_val('Tenkan')
+    kijun = _get_val('Kijun')
+    span_a = _get_val('SpanA')
+    span_b = _get_val('SpanB')
     
     cloud_top = max(span_a, span_b)
     cloud_bottom = min(span_a, span_b)
     cloud_thickness = cloud_top - cloud_bottom
     is_cloud_green = span_a >= span_b
     
-    # Kumo ahead (Tương lai 26 phiên - do data pipeline cấu trúc, tạm đo bằng trend SpanA hiện tại)
-    # Nếu df có chứa tương lai (df['SpanA'].iloc[-1] là tương lai), nếu không ta dùng độ dốc SpanA 5 phiên gần nhất
-    prev_span_a = float(df['SpanA'].iloc[idx-5]) if len(df) >= abs(idx)+5 else span_a
+    # Kumo ahead
+    prev_span_a = _get_val('SpanA', idx-5) if len(df) >= abs(idx)+5 else span_a
     is_kumo_rising = span_a > prev_span_a
     
     # Chikou Span: Giá hiện tại so với giá của 26 phiên trước 
-    # (Chikou Span thực chất là giá hiện tại lùi về 26 nến, nên để biết nó không bị cản thì giá hiện tại phải lớn hơn nến quá khứ)
-    price_26_ago = float(df['Close'].iloc[idx-26])
-    chikou_bullish = price > price_26_ago  # Chikou > quá khứ
+    price_26_ago = _get_val('Close', idx-26)
+    chikou_bullish = price > price_26_ago
     
     # Xác định các tín hiệu
     tk_cross_up = tenkan > kijun
@@ -58,8 +64,10 @@ def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
     # 🔴 4. REVERSAL (ĐẢO CHIỀU)
     elif inside_cloud and tk_cross_down and not chikou_bullish:
         # Nếu trước đó đang trên mây (check 5-10 phiên trước)
-        past_price = float(df['Close'].iloc[idx-5])
-        past_cloud_top = max(float(df['SpanA'].iloc[idx-5]), float(df['SpanB'].iloc[idx-5]))
+        past_price = _get_val('Close', idx-5)
+        past_span_a = _get_val('SpanA', idx-5)
+        past_span_b = _get_val('SpanB', idx-5)
+        past_cloud_top = max(past_span_a, past_span_b)
         if past_price > past_cloud_top:
             status.append("REVERSAL (ĐẢO CHIỀU): Giá từ trên mây chui vào mây, Tenkan < Kijun, Chikou bị cản.")
             action.append("Trend đang CHẾT. Hạn chế mua mới, hạ tỷ trọng ngay lập tức.")
@@ -85,8 +93,10 @@ def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
     
     # Setup 2: KUMO BREAKOUT
     # Kểm tra nếu vừa break lên từ dưới
-    past_price_2 = float(df['Close'].iloc[idx-2])
-    past_cloud_top_2 = max(float(df['SpanA'].iloc[idx-2]), float(df['SpanB'].iloc[idx-2]))
+    past_price_2 = _get_val('Close', idx-2)
+    past_span_a_2 = _get_val('SpanA', idx-2)
+    past_span_b_2 = _get_val('SpanB', idx-2)
+    past_cloud_top_2 = max(past_span_a_2, past_span_b_2)
     if past_price_2 <= past_cloud_top_2 and price > cloud_top and tk_cross_up and is_cloud_green:
         status.append("SETUP 2 (KUMO BREAKOUT): Xuyên mây thành công, Tenkan cắt Kijun, Kumo xanh tương lai.")
         action.append("Bắt đầu Trend Uptrend mới. TÍN HIỆU MUA XÁC NHẬN.")
@@ -95,7 +105,8 @@ def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
     if above_cloud and tk_cross_up:
         # Kijun là Nam châm giá
         if abs(price - kijun)/kijun < 0.015:  # Chạm Kijun (dao động 1.5%)
-            if price > float(df['Open'].iloc[idx]): # Nến bật lên (xanh)
+            open_price = _get_val('Open')
+            if price > open_price: # Nến bật lên (xanh)
                 status.append("SETUP 3 (KIJUN BOUNCE): Giá nhúng về Kijun và bật lên trong Uptrend.")
                 action.append("Entry MUA cực đẹp. Vào hàng ngay vùng giá này.")
         
@@ -109,7 +120,9 @@ def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
             action.append("Xác suất bị xuyên thủng cao, cần cảnh giác bảo vệ vị thế.")
             
     # Giao cắt Tenkan/Kijun Analysis
-    if tk_cross_up and not float(df['Tenkan'].iloc[idx-1]) > float(df['Kijun'].iloc[idx-1]):
+    prev_tenkan = _get_val('Tenkan', idx-1)
+    prev_kijun = _get_val('Kijun', idx-1)
+    if tk_cross_up and not prev_tenkan > prev_kijun:
         # Vừa mới cắt lên 
         if above_cloud:
             status.append("Tín hiệu MUA MẠNH: Giao cắt Vàng (Tenkan lên Kijun) TRÊN MÂY.")
