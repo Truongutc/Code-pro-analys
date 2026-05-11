@@ -23,8 +23,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "dist\AIC-code\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "d:\Github\Phan-mem-xuat-ban\app_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "d:\Github\Phan-mem-xuat-ban\app_icon.ico"; DestDir: "{app}\_internal"; Flags: ignoreversion
+Source: "app_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "app_icon.ico"; DestDir: "{app}\_internal"; Flags: ignoreversion
 
 [Icons]
 Name: "{autodesktop}\AIC-code"; Filename: "{app}\AIC-code.exe"; IconFilename: "{app}\app_icon.ico"

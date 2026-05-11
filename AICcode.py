@@ -1296,15 +1296,15 @@ class TinvestApp:
                 
 
 
-                # Threshold < 1500 because total stocks HOSE+HNX+UPCOM should be ~1600+
-                # If it's < 1500, it means at least one exchange was truncated at 200.
-                bad_dates = [d for d, count in ticker_counts.items() if count > 0 and count < 1500]
+                # Threshold < 1200 because total stocks HOSE+HNX+UPCOM should be ~1350+
+                # If it's < 1200, it means at least one exchange was truncated at 200.
+                bad_dates = [d for d, count in ticker_counts.items() if count > 0 and count < 1200]
 
 
                 if bad_dates:
 
 
-                    self.log_sync(f"⚠️ Phát hiện {len(bad_dates)} ngày bị thiếu mã (< 1500 mã): {', '.join(bad_dates)}")
+                    self.log_sync(f"⚠️ Phát hiện {len(bad_dates)} ngày bị thiếu mã (< 1200 mã): {', '.join(bad_dates)}")
 
 
                     self.log_sync(f"[*] Đang xóa và chuẩn bị nạp lại dữ liệu đầy đủ cho các ngày lỗi...")
@@ -1417,9 +1417,9 @@ class TinvestApp:
                     df_day = self.vs_client.format_to_df(day_total)
                     final_count = len(df_day)
                     
-                    # Rule 3: Kiểm tra số lượng mã tối thiểu (Ngưỡng 1500 mã thô)
-                    if total_raw < 1500:
-                        msg = f"❌ LỖI DỮ LIỆU: Ngày {d} chỉ có {total_raw} mã (Yêu cầu tối thiểu 1500).\nDữ liệu ngày này sẽ bị HỦY BỎ."
+                    # Rule 3: Kiểm tra số lượng mã tối thiểu (Ngưỡng 1200 mã thô)
+                    if total_raw < 1200:
+                        msg = f"❌ LỖI DỮ LIỆU: Ngày {d} chỉ có {total_raw} mã (Yêu cầu tối thiểu 1200).\nDữ liệu ngày này sẽ bị HỦY BỎ."
                         self.log_sync(msg)
                         messagebox.showerror("Dữ liệu thiếu hụt", msg)
                         continue # Bỏ qua ngày này
@@ -3546,20 +3546,9 @@ class TinvestApp:
                 item.set_color('black')
 
             # --- Primary Axis: Breadth (%) ---
-            line1, = ax1.plot(dates, df_plot['%MA20_smooth'], color='#007FFF', linewidth=2.5, label='% Cổ phiếu > MA20')
-            line2, = ax1.plot(dates, df_plot['%MA50_smooth'], color='#FF00FF', linewidth=2.5, label='% Cổ phiếu > MA50')
+            line1, = ax1.plot(dates, df_plot['%MA20_smooth'], color='#1A237E', linewidth=2.5, label='% Cổ phiếu > MA20')
+            line2, = ax1.plot(dates, df_plot['%MA50_smooth'], color='#E65100', linewidth=2.5, label='% Cổ phiếu > MA50')
             
-            # Add latest value annotations
-            if not df_plot.empty:
-                last_date = dates[-1]
-                val20 = df_plot['%MA20_smooth'].iloc[-1]
-                val50 = df_plot['%MA50_smooth'].iloc[-1]
-                
-                ax1.annotate(f" {val20:.1f}%", xy=(last_date, val20), xytext=(8, -5), textcoords='offset points', 
-                             color='#007FFF', fontweight='bold', fontsize=11)
-                ax1.annotate(f" {val50:.1f}%", xy=(last_date, val50), xytext=(8, 5), textcoords='offset points', 
-                             color='#FF00FF', fontweight='bold', fontsize=11)
-
             ax1.set_title('BIỂU ĐỒ ĐỘ RỘNG THỊ TRƯỜNG & VNINDEX', fontsize=16, fontweight='bold', color='black', pad=25)
             ax1.set_xlabel('Thời Gian', color='black', fontweight='bold')
             ax1.set_ylabel('Tỉ Lệ Độ Rộng (%)', fontsize=11, fontweight='bold', color='black')
@@ -3606,12 +3595,14 @@ class TinvestApp:
             else:
                 ax1.legend(loc='upper left', frameon=True, shadow=True, facecolor='white', edgecolor='black', labelcolor='black')
 
-            # Annotate current values with clear background to avoid overlap
+            # Annotate current values with clear background and separate positions to avoid overlap
             bbox_props = dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.7)
-            ax1.text(self.market_breadth.index[-1], self.market_breadth['%MA20'].iloc[-1], f"{self.market_breadth['%MA20'].iloc[-1]:.1f}%", 
-                    color='#007AFF', fontweight='bold', va='center', ha='left', bbox=bbox_props)
-            ax1.text(self.market_breadth.index[-1], self.market_breadth['%MA50'].iloc[-1], f"{self.market_breadth['%MA50'].iloc[-1]:.1f}%", 
-                    color='#FF00FF', fontweight='bold', va='center', ha='left', bbox=bbox_props)
+            # MA20 (Navy) aligned to bottom (shows above the point)
+            ax1.text(self.market_breadth.index[-1], self.market_breadth['%MA20'].iloc[-1], f" {self.market_breadth['%MA20'].iloc[-1]:.1f}%", 
+                    color='#1A237E', fontweight='bold', va='bottom', ha='left', bbox=bbox_props)
+            # MA50 (Orange) aligned to top (shows below the point)
+            ax1.text(self.market_breadth.index[-1], self.market_breadth['%MA50'].iloc[-1], f" {self.market_breadth['%MA50'].iloc[-1]:.1f}%", 
+                    color='#E65100', fontweight='bold', va='top', ha='left', bbox=bbox_props)
 
 
             ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m/%Y'))
