@@ -11,8 +11,18 @@ def mcginley_dynamic(series, period):
     prices = series.values
     for i in range(1, len(series)):
         prev_md = md[i-1]
-        if prev_md == 0: prev_md = prices[i]
-        md[i] = prev_md + (prices[i] - prev_md) / (period * (prices[i] / prev_md)**4)
+        if prev_md <= 0: 
+            md[i] = prices[i]
+            continue
+            
+        ratio = prices[i] / prev_md
+        # Tránh mẫu số bằng 0 khi prices[i] = 0
+        denom = period * (ratio**4)
+        if denom < 0.01:
+            # Nếu mẫu số quá nhỏ, tiến dần về EMA bình thường hoặc giữ nguyên giá trị
+            md[i] = prev_md + (prices[i] - prev_md) / period
+        else:
+            md[i] = prev_md + (prices[i] - prev_md) / denom
     return pd.Series(md, index=series.index)
 
 def analyze_octopus(df: pd.DataFrame) -> pd.DataFrame:

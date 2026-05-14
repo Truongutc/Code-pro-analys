@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import logging
+import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -347,3 +348,39 @@ class StorageManager:
         new_registry = sorted(list(registry - set(tickers_to_remove)))
         self.save_active_registry(new_registry)
         logger.info(f"Removed {len(tickers_to_remove)} delisted tickers from registry.")
+
+    def clear_computed_data(self):
+        """Xóa toàn bộ dữ liệu giá, chỉ báo và phân tích trên đĩa (Full Reset)."""
+        count = 0
+        folders = [self.prices_dir, self.indicators_dir, self.analysis_dir]
+        
+        for folder in folders:
+            if folder.exists():
+                try:
+                    # Đếm số file trước khi xóa để báo cáo
+                    files = list(folder.glob("*"))
+                    count += len(files)
+                    
+                    # Xóa toàn bộ thư mục
+                    shutil.rmtree(folder)
+                    # Tạo lại thư mục trống
+                    folder.mkdir(parents=True, exist_ok=True)
+                    logger.info(f"Đã xóa sạch thư mục: {folder.name}")
+                except Exception as e:
+                    logger.error(f"Lỗi khi xóa thư mục {folder.name}: {e}")
+        
+        # Xóa registry
+        self.clear_registry()
+        
+        return count
+
+    def clear_registry(self):
+        """Delete the active_tickers.json registry file."""
+        path = self.base_dir / "active_tickers.json"
+        if path.exists():
+            try:
+                path.unlink()
+                return True
+            except Exception as e:
+                logger.error(f"Failed to clear registry: {e}")
+        return False

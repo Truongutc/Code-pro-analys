@@ -176,19 +176,15 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     except Exception as e:
         logger.error(f"Error enriching with Heatmap signals: {e}")
 
-    # ── 13. Elliott Wave System (AFL Logic) ────────────────────────────────
-    try:
-        from .elliott_engine import calculate_elliott_wave_system
-        ew_df = calculate_elliott_wave_system(out)
-        for col in ew_df.columns:
-            out[col] = ew_df[col].values
-        
-        # Thêm màu nến Xanh lá / Đỏ chuẩn 100% (Pure Green / Pure Red)
-        out['AFL_CandleColor'] = np.where(out['Close'] >= out['Open'], '#00FF00', '#FF0000') 
-    except Exception as e:
-        logger.error(f"Error enriching with Elliott signals: {e}")
 
-    # ── 14. MCDX Engine (Retailer, Hot Money, Banker) ─────────────────────────
+    # ── 14. Heikin Ashi Engine (Trailing Stop & Smoothed HA) ───────────────
+    try:
+        from .heikin_engine import analyze_heikin
+        out = analyze_heikin(out)
+    except Exception as e:
+        logger.error(f"Error enriching with Heikin signals: {e}")
+
+    # ── 15. MCDX Engine (Retailer, Hot Money, Banker) ─────────────────────────
     try:
         from .mcdx_engine import calculate_mcdx
         mcdx_df = calculate_mcdx(out)
@@ -197,14 +193,14 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     except Exception as e:
         logger.error(f"Error enriching with MCDX signals: {e}")
 
-    # ── 15. GreenPink Engine (HHV-LLV Scalper) ─────────────────────────────
+    # ── 16. GreenPink Engine (HHV-LLV Scalper) ─────────────────────────────
     try:
         from .greenpink_engine import analyze_greenpink
         out = analyze_greenpink(out)
     except Exception as e:
         logger.error(f"Error enriching with GreenPink signals: {e}")
 
-    # ── 16. Octopus Engine (McGinley MACD) ─────────────────────────────────
+    # ── 17. Octopus Engine (McGinley MACD) ─────────────────────────────────
     try:
         from .octopus_engine import analyze_octopus
         out = analyze_octopus(out)

@@ -167,6 +167,11 @@ def analyze_ticker_worker(ticker_df_tuple):
         
 
 
+        # [NEW] Kiểm tra nghiêm ngặt tính toàn vẹn của dữ liệu Trending
+        if 'HK_NW' not in df_rich.columns or 'T2_SMA' not in df_rich.columns:
+            logger.warning(f"Ticker {ticker} missing Trending columns after first enrichment. Retrying once...")
+            df_rich = enrich_dataframe(df_rich) # Second pass attempt
+
         # Lưu df_rich (đã enrich) thay vì df raw để tái sử dụng cho breadth, scanner
 
 
@@ -371,8 +376,8 @@ class TinvestApp:
         btn_vs = tk.Button(frame_btns, text="🌐 Update", command=self.run_vietstock_update, bg="#2196F3", fg="white", font=("Arial", 9, "bold"), padx=8)
         btn_vs.pack(side=tk.RIGHT, padx=2)
 
-        btn_cleanup = tk.Button(frame_btns, text="🧹 Dọn dẹp", command=self.cleanup_storage, bg="#FF5722", fg="white", font=("Arial", 9, "bold"), padx=8)
-        btn_cleanup.pack(side=tk.RIGHT, padx=2)
+        btn_reset = tk.Button(frame_btns, text="🗑️ Reset Dữ liệu", command=self.reset_data_cache, bg="#FF5722", fg="white", font=("Arial", 9, "bold"), padx=8)
+        btn_reset.pack(side=tk.RIGHT, padx=2)
 
 
 
@@ -447,11 +452,12 @@ class TinvestApp:
         btn_heatmap = tk.Button(frame_analyze, text="🔥 Heatmap", command=self.run_heatmap_chart, bg="#E91E63", fg="white", font=("Arial", 10, "bold"))
         btn_heatmap.pack(side=tk.LEFT, padx=5)
 
-        btn_elliott = tk.Button(frame_analyze, text="📊 Elliott Wave", command=self.run_elliott_chart, bg="#FF9800", fg="white", font=("Arial", 10, "bold"))
-        btn_elliott.pack(side=tk.LEFT, padx=5)
 
         btn_greenpink = tk.Button(frame_analyze, text="🌸 GP Chart", command=self.run_greenpink_chart, bg="#E91E63", fg="white", font=("Arial", 10, "bold"))
         btn_greenpink.pack(side=tk.LEFT, padx=5)
+
+        btn_heikin = tk.Button(frame_analyze, text="📈 Trending", command=self.run_heikin_chart, bg="#4CAF50", fg="white", font=("Arial", 10, "bold"))
+        btn_heikin.pack(side=tk.LEFT, padx=5)
 
 
 
@@ -529,8 +535,8 @@ class TinvestApp:
         btn_ma = tk.Button(frame_signals_2, text="📈 Perfect MA", command=lambda: self.run_advanced_scanner("PERFECT_MA"), bg="#00BCD4", fg="white", font=("Arial", 10, "bold"))
         btn_ma.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-        btn_trade = tk.Button(frame_signals_2, text="✅ TRADE", command=lambda: self.run_advanced_scanner("TRADEABLE"), bg="#008B8B", fg="white", font=("Arial", 10, "bold"))
-        btn_trade.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+        btn_heikin = tk.Button(frame_signals_2, text="📈 Heikin", command=lambda: self.run_advanced_scanner("HEIKIN_BUY"), bg="#008B8B", fg="white", font=("Arial", 10, "bold"))
+        btn_heikin.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
         # Row 4: Advanced Filters Part 2
         frame_signals_3 = tk.Frame(frame_adv)
@@ -542,8 +548,6 @@ class TinvestApp:
         btn_white_adx = tk.Button(frame_signals_3, text="⚪ Trend ADX", command=lambda: self.run_advanced_scanner("WHITE_ADX"), bg="#FFFFFF", fg="black", font=("Arial", 10, "bold"))
         btn_white_adx.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-        btn_elliott = tk.Button(frame_signals_3, text="🌊 Elliott", command=lambda: self.run_advanced_scanner("ELLIOTT_BUY"), bg="#FFD700", fg="black", font=("Arial", 10, "bold"))
-        btn_elliott.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
 
 
@@ -744,38 +748,25 @@ class TinvestApp:
                         # Mã hợp lệ
                         all_valid_tickers.append(t)
                             
-                        # Sync with Storage (Parquet-SSoT)
-                        t_min = self.storage.sync_prices(t, clean_sub, source='CSV')
-                        if t_min is not None:
-                            affected_tickers.add(t)
+                        # 1. Đồng bộ giá vào Storage
+                        self.storage.sync_prices(t, clean_sub, source='CSV')
+                        # 2. Luôn thêm vào danh sách tính toán để đảm bảo đủ 100% chỉ báo mới nhất
+                        affected_tickers.add(t)
                     except Exception:
                         pass
 
             if skipped_3char > 0 or skipped_old > 0:
-                self.log_sync(f"   [*] Đã lọc bỏ: {skipped_3char} mã sai định dạng, {skipped_old} mã ngừng giao dịch/hủy niêm yết.")
+                self.log_sync(f"   [*] Đã lọc bỏ: {skipped_3char} mã rác/không đạt tiêu chí.")
 
-            if not all_valid_tickers:
-                self.log_sync("ℹ️ Không tìm thấy mã cổ phiếu hợp lệ nào trong file CSV.")
+            if not affected_tickers:
+                self.log_sync("ℹ️ Không tìm thấy mã cổ phiếu hợp lệ nào để tính toán.")
                 return
 
-            # Kích hoạt tất cả các mã hợp lệ tìm thấy vào Registry
-            self.storage.save_active_registry(all_valid_tickers)
+            # Kích hoạt Registry
+            self.storage.save_active_registry(list(affected_tickers))
             
-            if not affected_tickers:
-                # Instead of recomputing EVERYTHING, let's check if we have missing indicators in cache
-                missing_indicators = []
-                for t in all_valid_tickers:
-                    if not self.storage._get_indicators_path(t).exists():
-                        missing_indicators.append(t)
-                
-                if missing_indicators:
-                    self.log_sync(f"ℹ️ Phát hiện {len(missing_indicators)} mã thiếu chỉ báo. Đang bổ sung...")
-                    self._sync_and_recompute_affected(missing_indicators)
-                else:
-                    self.log_sync(f"ℹ️ {len(all_valid_tickers)} mã đã khớp và đầy đủ chỉ báo.")
-            else:
-                self.log_sync(f"[3/4] Phát hiện {len(affected_tickers)} mã mới/thay đổi. Đang tính toán...")
-                self._sync_and_recompute_affected(list(affected_tickers))
+            self.log_sync(f"[3/4] Đang tính toán toàn diện (100% Rules) cho {len(affected_tickers)} mã hợp lệ...")
+            self._sync_and_recompute_affected(list(affected_tickers))
 
             self.log_sync(f"\n✅ HOÀN TẤT! Đã nạp và tính toán xong cho {len(all_valid_tickers)} mã cổ phiếu.")
         except Exception as e:
@@ -1100,23 +1091,33 @@ class TinvestApp:
         self.log_sync("\n--- ĐANG TẢI DỮ LIỆU TỪ BỘ NHỚ ĐỆM (CACHE)... ---", clear=True)
         threading.Thread(target=self._load_from_cache_bg, daemon=True).start()
 
-    def cleanup_storage(self):
-        """Physically delete junk files from disk based on the registry."""
-        registry = self.storage.get_active_registry()
-        if not registry:
-            messagebox.showwarning("Cảnh báo", "Chưa có Registry (Whitelist). Vui lòng Chạy 'Update' trước để hệ thống xác định danh sách mã niêm yết hiện tại.")
-            return
-            
-        junk_tickers = self.storage.cleanup_inactive_files(dry_run=True)
-        if not junk_tickers:
-            messagebox.showinfo("Thông báo", "Tuyệt vời! Dữ liệu của bạn đã sạch sẽ, không tìm thấy mã rác nào.")
-            return
-            
-        confirm = messagebox.askyesno("Xác nhận dọn dẹp", f"Tìm thấy {len(junk_tickers)} mã cũ/rác (không còn niêm yết hoặc file rác).\n\nBạn có chắc chắn muốn XÓA VĨNH VIỄN các file này khỏi ổ cứng để tăng tốc hệ thống không?")
+    def reset_data_cache(self):
+        """Xóa toàn bộ dữ liệu đã tính toán (Indicators & Analysis) để buộc hệ thống tính lại."""
+        confirm = messagebox.askyesno("Xác nhận Reset", 
+            "Hành động này sẽ XÓA TOÀN BỘ dữ liệu đã lưu (Giá + Chỉ báo + Phân tích) trên máy tính.\n\n"
+            "Hệ thống sẽ trở về trạng thái mới tinh. Bạn sẽ phải nạp lại CSV hoặc Update từ đầu.\n\n"
+            "Bạn có chắc chắn muốn thực hiện không?")
+        
         if confirm:
-            deleted = self.storage.cleanup_inactive_files(dry_run=False)
-            messagebox.showinfo("Hoàn tất", f"Đã xóa thành công {len(deleted)} mã rác. Hãy 'Load Cache' lại để thấy sự thay đổi.")
-            self.load_from_cache()
+            # 1. Clear Disk
+            try:
+                count = self.storage.clear_computed_data()
+                # storage.clear_computed_data now calls clear_registry internally
+            except Exception as e:
+                self.log_sync(f"❌ Lỗi khi xóa dữ liệu trên đĩa: {e}")
+                messagebox.showerror("Lỗi", f"Không thể xóa một số tệp tin. Có thể chúng đang được mở bởi chương trình khác.\nChi tiết: {e}")
+                count = 0
+            
+            # 2. Clear Memory
+            self.data_dict = {}
+            self.analysis_cache = {}
+            self.backtest_results = {}
+            
+            # 3. Update UI
+            self.lbl_file.config(text="Dữ liệu: Đã Reset (0)", fg="red")
+            self.log_sync(f"\n✅ Đã xóa {count} file bộ nhớ đệm thành công.")
+            self.log_sync("Bây giờ bạn hãy bấm '📂 Load Cache' hoặc '🌐 Update' để hệ thống tính toán lại theo rule mới.")
+            messagebox.showinfo("Hoàn tất", f"Đã reset thành công {count} file. Hãy tải lại dữ liệu để áp dụng rule mới.")
 
 
 
@@ -1203,10 +1204,16 @@ class TinvestApp:
             self.log_sync(f"✅ Hoàn tất! Đã nạp {loaded_total} mã (trong đó {analyzed_total} mã đã có kết quả phân tích).")
 
             
+            # Check for missing indicators in the loaded cache
+            missing_trending = [t for t, df in self.data_dict.items() if 'HK_NW' not in df.columns or 'T2_SMA' not in df.columns]
+            if missing_trending:
+                self.log_sync(f"\n⚠️ LƯU Ý: Có {len(missing_trending)} mã thiếu chỉ báo Trending mới (dữ liệu cũ).")
+                self.log_sync("Hệ thống sẽ tự động tính bù khi bạn mở biểu đồ hoặc bạn có thể bấm 'Update' để tính lại toàn bộ.")
+            
             # Check for physical cleanup
             if registry and len(all_storage_tickers) > len(tickers) + 50:
                 self.log_sync(f"\n⚠️ LƯU Ý: Phát hiện {len(all_storage_tickers) - len(tickers)} mã 'rác' trong ổ cứng.")
-                self.log_sync("Hệ thống đã tự động lọc bỏ khi nạp. Bạn có thể nhấn 'Xóa mã cũ' để dọn dẹp ổ cứng.")
+                self.log_sync("Hệ thống đã tự động lọc bỏ khi nạp các mã rác khỏi bộ nhớ tạm.")
 
         except Exception as e:
             self.log_sync(f"⚠️ Lỗi khi nạp cache: {e}")
@@ -1708,20 +1715,15 @@ class TinvestApp:
 
 
                     for ticker, res in batch_results:
-
-
                         if res:
-
-
                             self.analysis_cache[ticker] = res
-
+                            # [QUAN TRỌNG] Cập nhật lại data_dict với DF đã được làm giàu (Enriched)
+                            # Nếu không cập nhật ở đây, bước HẬU KIỂM sẽ báo thiếu cột và tính lại vô ích.
+                            if 'df' in res:
+                                self.data_dict[ticker] = res['df']
 
                             # SAVE TO STORAGE
-
-
                             self.storage.save_indicators(ticker, res['df'])
-
-
                             self.storage.save_analysis(ticker, res)
 
 
@@ -1740,6 +1742,25 @@ class TinvestApp:
 
 
 
+
+            # --- BƯỚC 4: HẬU KIỂM (FINAL FILL-CHECK) ---
+            missing_after = []
+            for t in tickers:
+                df_check = self.data_dict.get(t)
+                if df_check is not None and ('HK_NW' not in df_check.columns or 'T2_SMA' not in df_check.columns):
+                    missing_after.append(t)
+            
+            if missing_after:
+                self.log_sync(f"⚠️ HẬU KIỂM: Phát hiện {len(missing_after)} mã thiếu Trending (do lỗi nạp). Đang xử lý bù...")
+                for t in missing_after:
+                    try:
+                        df_final = enrich_dataframe(self.data_dict[t])
+                        self.data_dict[t] = df_final
+                        self.storage.save_indicators(t, df_final)
+                    except: pass
+                self.log_sync("✅ Hậu kiểm hoàn tất. Tất cả mã đã đủ 100% thông số.")
+            else:
+                self.log_sync("✅ Tuyệt vời! 100% mã nạp vào đã đầy đủ chỉ số Trending.")
 
             self._update_breadth_from_cache()
             self.root.after(0, self.lbl_file.config, {"text": f"Dữ liệu: {len(self.analysis_cache)} mã", "fg": "blue"})
@@ -1787,6 +1808,9 @@ class TinvestApp:
                 
                 temp = pd.DataFrame()
                 temp['Date'] = pd.to_datetime(df_sub['Date'])
+                
+                # Deduplicate dates to prevent "cannot reindex on an axis with duplicate labels"
+                temp = temp.drop_duplicates(subset=['Date'])
                 
                 # --- NEW: Robust state calculation ---
                 # Only consider rows with volume > 0 as "active" trading sessions
@@ -1979,103 +2003,6 @@ class TinvestApp:
             import traceback
             traceback.print_exc()
 
-    def run_elliott_chart(self):
-        ticker = self.entry_ticker.get().strip().upper()
-        if not ticker: return
-        df = self.data_dict.get(ticker)
-        if df is None or len(df) < 30:
-            messagebox.showwarning("Không đủ dữ liệu", f"Mã '{ticker}' cần ít nhất 30 phiên để phân tích Elliott.")
-            return
-        
-        self.log_sync(f"Đang mở Biểu đồ Elliott Wave cho mã {ticker} (150 phiên gần nhất)...", clear=True)
-        self.show_elliott_window(ticker, df)
-
-    def show_elliott_window(self, ticker, df_full):
-        try:
-            import matplotlib.pyplot as plt
-            import matplotlib.dates as mdates
-            from tinvest.data_loader import enrich_dataframe
-
-            plt.style.use('dark_background')
-
-            # --- ROBUST DATA CHECK (Self-Healing) ---
-            if 'AFL_CandleColor' not in df_full.columns:
-                self.log_sync("Dữ liệu Elliott/AFL bị thiếu. Đang tính toán bổ sung...", clear=True)
-                df_full = enrich_dataframe(df_full)
-                self.data_dict[ticker] = df_full # Update cache
-
-            # 1. Prepare Data (Last 150 bars)
-            count = 150
-            df = df_full.tail(count).copy().reset_index(drop=True)
-            x_idx = np.arange(len(df))
-            
-            # 2. Setup Figure
-            fig, ax = plt.subplots(figsize=(15, 9))
-            fig.patch.set_facecolor('black') 
-            ax.set_facecolor('black')
-            ax.set_title(f"AIC code - Chart Eliot wave - {ticker}", color='gold', fontsize=16, fontweight='bold', pad=15)
-
-            
-            # 3. Plot Candlesticks (Forcing Pure Vibrant Colors)
-            for i in range(len(df)):
-                # Pure Green (#00FF00) and Pure Red (#FF0000) to match signals exactly
-                color = '#00FF00' if df.loc[i, 'Close'] >= df.loc[i, 'Open'] else '#FF0000'
-                
-                # High/Low Wick
-                ax.vlines(x_idx[i], df.loc[i, 'Low'], df.loc[i, 'High'], color=color, linewidth=1.5)
-                # Open/Close Body
-                if df.loc[i, 'Close'] >= df.loc[i, 'Open']:
-                    ax.bar(x_idx[i], df.loc[i, 'Close'] - df.loc[i, 'Open'], bottom=df.loc[i, 'Open'], color=color, width=0.7, alpha=1.0)
-                else:
-                    ax.bar(x_idx[i], df.loc[i, 'Open'] - df.loc[i, 'Close'], bottom=df.loc[i, 'Close'], color=color, width=0.7, alpha=1.0)
-
-            # 4. Plot Elliott Waves
-            # Smaller Waves (Yellow/Gold)
-            if 'EW_Small_1' in df.columns:
-                ax.plot(x_idx, df['EW_Small_1'], color='#FFFF00', linewidth=2.2, label='Small Wave 1', alpha=0.9)
-            if 'EW_Small_2' in df.columns:
-                ax.plot(x_idx, df['EW_Small_2'], color='#FFD700', linewidth=2.2, label='Small Wave 2', alpha=0.9)
-                
-            # Larger Waves (Green/Blue)
-            if 'EW_Large_1' in df.columns:
-                ax.plot(x_idx, df['EW_Large_1'], color='#00C853', linewidth=2.8, label='Large Wave 1')
-            if 'EW_Large_2' in df.columns:
-                ax.plot(x_idx, df['EW_Large_2'], color='#2979FF', linewidth=2.2, label='Large Wave 2', linestyle=':')
-
-            # 5. Plot AUTO SEC (Linear Regression Channels) - DISABLED per user request for scaling
-            # (Logic remains in engine but plotting is hidden to keep candles clear)
-
-            # 6. Plot Signals (Arrows/Squares) - PRECISE AFL REPLICATION
-            # --- SMALL WAVE SIGNALS ---
-            if 'EW_Small_Buy' in df.columns:
-                s_buys = df[df['EW_Small_Buy']]
-                if not s_buys.empty:
-                    ax.plot(s_buys.index, s_buys['Low'] * 0.995, '^', markersize=7, color='white', markeredgecolor='black', label='Small Buy')
-            
-            if 'EW_Small_Sell' in df.columns:
-                s_sells = df[df['EW_Small_Sell']]
-                if not s_sells.empty:
-                    ax.plot(s_sells.index, s_sells['High'] * 1.005, 'v', markersize=7, color='black', markeredgecolor='white', label='Small Sell')
-
-            # --- MEGA SIGNALS ---
-            if 'EW_Strong_Buy' in df.columns:
-                buys = df[df['EW_Strong_Buy']]
-                if not buys.empty:
-                    ax.plot(buys.index, buys['Low'] * 0.985, 's', markersize=11, color='#006400', alpha=0.8) # Dark Green
-                    ax.plot(buys.index, buys['Low'] * 0.98, 's', markersize=8, color='#00FF00', alpha=1.0) # Lime
-                    ax.plot(buys.index, buys['Low'] * 0.982, '^', markersize=5, color='white')
-            
-            if 'EW_Strong_Sell' in df.columns:
-                sells = df[df['EW_Strong_Sell']]
-                if not sells.empty:
-                    ax.plot(sells.index, sells['High'] * 1.015, 's', markersize=11, color='#8B0000', alpha=0.8) # Dark Red
-                    ax.plot(sells.index, sells['High'] * 1.02, 's', markersize=8, color='#FF0000', alpha=1.0) # Red
-                    ax.plot(sells.index, sells['High'] * 1.017, 'v', markersize=5, color='white')
-
-            plt.tight_layout()
-            plt.show(block=False)
-        except Exception as e:
-            logger.error(f"Error showing Elliott chart: {e}")
 
     def run_greenpink_chart(self):
         ticker = self.entry_ticker.get().strip().upper()
@@ -2181,30 +2108,152 @@ class TinvestApp:
             import traceback
             traceback.print_exc()
 
+    def run_heikin_chart(self):
+        ticker = self.entry_ticker.get().strip().upper()
+        if not ticker: return
+        df = self.data_dict.get(ticker)
+        if df is None or len(df) < 30:
+            messagebox.showwarning("Không đủ dữ liệu", f"Mã '{ticker}' cần ít nhất 30 phiên để phân tích Heikin.")
+            return
+        
+        self.log_sync(f"Đang mở Biểu đồ Heikin Ashi Signal cho mã {ticker} (150 phiên gần nhất)...", clear=True)
+        self.show_heikin_window(ticker, df)
 
-            # 7. Formatting
-            ax.set_title(f"ELLIOTT WAVE SYSTEM: {ticker} (Last 150 Bars)", color='gold', fontsize=18, fontweight='bold', pad=20)
-            ax.set_ylabel("Price", color='white', fontweight='bold')
-            ax.grid(True, color='#222222', linestyle=':', alpha=0.5)
+    def show_heikin_window(self, ticker, df_full):
+        try:
+            import matplotlib.pyplot as plt
+            from tinvest.data_loader import enrich_dataframe
+
+            plt.style.use('dark_background')
+
+            # --- ROBUST DATA CHECK ---
+            if 'HK_NW' not in df_full.columns or 'T2_SMA' not in df_full.columns:
+                self.log_sync("Dữ liệu Heikin/2Trend bị thiếu. Đang tính toán bổ sung...", clear=True)
+                df_full = enrich_dataframe(df_full)
+                self.data_dict[ticker] = df_full
+                # SAVE to disk so we don't have to recompute next time
+                try:
+                    self.storage.save_indicators(ticker, df_full)
+                    # Also update analysis cache if exists
+                    if ticker in self.analysis_cache:
+                        self.analysis_cache[ticker]['df'] = df_full
+                except: pass
+
+            # 1. Prepare Data (Last 150 bars)
+            count = 150
+            df = df_full.tail(count).copy().reset_index(drop=True)
+            x_idx = np.arange(len(df))
             
-            # Date X-axis
+            # 2. Setup Figure with 2 subplots
+            fig, (ax, ax2) = plt.subplots(2, 1, figsize=(15, 11), sharex=True, gridspec_kw={'height_ratios': [1, 1]})
+            fig.patch.set_facecolor('black') 
+            ax.set_facecolor('black')
+            ax2.set_facecolor('black')
+            
+            # --- TOP SUBPLOT: HEIKIN & TREND COLOR ---
+            # 3. Plot Hull MA Cloud
+            mh = df['HK_MHull']
+            sh = df['HK_SHull']
+            ax.fill_between(x_idx, mh, sh, where=(mh > sh), color='lime', alpha=0.1)
+            ax.fill_between(x_idx, mh, sh, where=(mh <= sh), color='red', alpha=0.1)
+
+            # 3.1. Trend Color Line (EMA 13)
+            tc_trend = df['TC_Trend']
+            tc_t_color = df['TC_TrendColor']
+            for i in range(1, len(df)):
+                ax.plot(x_idx[i-1:i+1], tc_trend.iloc[i-1:i+1], color=tc_t_color.iloc[i], linewidth=2.5, alpha=0.9)
+            
+            # 3.2. Stop Line (ATR Stop)
+            tc_stop = df['TC_StopLine']
+            tc_s_color = df['TC_StopColor']
+            ax.scatter(x_idx, tc_stop, color=tc_s_color, s=10, marker='_')
+
+            # 4. Plot NW Trailing Stop
+            nw = df['HK_NW']
+            trend = df['HK_Trend']
+            for i in range(1, len(df)):
+                color = '#00FF00' if trend.iloc[i] == 1 else '#FF0000'
+                ax.plot(x_idx[i-1:i+1], nw.iloc[i-1:i+1], color=color, linewidth=2)
+
+            # 5. Plot Smoothed Heikin Ashi Candles
+            ho, hh, hl, hc = df['HK_Flower_Open'], df['HK_Flower_High'], df['HK_Flower_Low'], df['HK_Flower_Close']
+            bar_colors = df['HK_BarColor']
+            color_map = {'brightGreen': '#00FF00', 'red': '#FF0000', 'white': '#FFFFFF'}
+            for i in range(len(df)):
+                c = color_map.get(bar_colors.iloc[i], '#FFFFFF')
+                ax.vlines(x_idx[i], hl.iloc[i], hh.iloc[i], color=c, linewidth=1)
+                ax.bar(x_idx[i], abs(hc.iloc[i] - ho.iloc[i]) + 0.001, bottom=min(ho.iloc[i], hc.iloc[i]), color=c, width=0.6, alpha=0.8)
+
+            # 6. Plot Signal Shapes
+            buys = df[df['HK_BuySignal'] | df['HK_BuyManh']]
+            sells = df[df['HK_SellSignal'] | df['HK_SellManh']]
+            if not buys.empty:
+                ax.plot(buys.index, buys['HK_Flower_Low'] * 0.985, '^', markersize=10, color='lime', markeredgecolor='white')
+            if not sells.empty:
+                ax.plot(sells.index, sells['HK_Flower_High'] * 1.015, 'v', markersize=10, color='red', markeredgecolor='white')
+
+            # --- BOTTOM SUBPLOT: NORMAL CANDLES & 2TREND ---
+            # 7. Plot Normal Candlesticks
+            o, h, l, c_val = df['Open'], df['High'], df['Low'], df['Close']
+            for i in range(len(df)):
+                color = '#00FF00' if c_val.iloc[i] >= o.iloc[i] else '#FF0000'
+                ax2.vlines(x_idx[i], l.iloc[i], h.iloc[i], color=color, linewidth=1)
+                ax2.bar(x_idx[i], abs(c_val.iloc[i] - o.iloc[i]) + 0.001, bottom=min(o.iloc[i], c_val.iloc[i]), color=color, width=0.6)
+
+            # 8. Plot 2Trend SMA
+            t2_sma = df['T2_SMA']
+            t2_trend = df['T2_SMA_Trend']
+            for i in range(1, len(df)):
+                color = '#00ffaa' if t2_trend.iloc[i] == 1 else '#ff0000'
+                ax2.plot(x_idx[i-1:i+1], t2_sma.iloc[i-1:i+1], color=color, linewidth=3)
+
+            # 9. Plot 2Trend Supertrend Bands
+            st_upper = df['T2_ST_Upper']
+            st_lower = df['T2_ST_Lower']
+            st_trend = df['T2_ST_Trend']
+            mid = (o + c_val) / 2
+            ax2.fill_between(x_idx, mid, st_lower, where=(st_trend == 1), color='#00ffaa', alpha=0.2)
+            ax2.fill_between(x_idx, mid, st_upper, where=(st_trend == -1), color='#ff0000', alpha=0.2)
+            
+            # 10. Signals for 2Trend
+            # ta.crossover(trend_state, 0)
+            t2_sma_shift = df['T2_SMA_Trend'].shift(1).fillna(0)
+            t2_st_shift = df['T2_ST_Trend'].shift(1).fillna(0)
+            
+            buys2 = df[(df['T2_SMA_Trend'] == 1) & (t2_sma_shift <= 0)]
+            sells2 = df[(df['T2_SMA_Trend'] == -1) & (t2_sma_shift >= 0)]
+            
+            if not buys2.empty:
+                for idx in buys2.index:
+                    ax2.text(idx, df['Low'].iloc[idx]*0.97, "𝑳", color='#00ffaa', fontsize=12, fontweight='bold', ha='center')
+            if not sells2.empty:
+                for idx in sells2.index:
+                    ax2.text(idx, df['High'].iloc[idx]*1.03, "𝑺", color='#ff0000', fontsize=12, fontweight='bold', ha='center')
+
+            # 11. Formatting
+            last_date = df['Date'].iloc[-1].strftime('%d/%m/%Y') if 'Date' in df.columns else "N/A"
+            ax.set_title(f"Chart trend color - {ticker} - {last_date}", color='gold', fontsize=16, fontweight='bold', pad=15)
+            ax2.set_title(f"Normal Candles & 2Trend Logic", color='gold', fontsize=14, fontweight='bold')
+            
+            for a in [ax, ax2]:
+                a.set_ylabel("Price", color='white', fontweight='bold')
+                a.grid(True, color='#222222', linestyle=':', alpha=0.5)
+                a.tick_params(colors='white')
+                for spine in a.spines.values():
+                    spine.set_color('#444444')
+            
             date_labels = df['Date'].dt.strftime('%d/%m/%y').tolist()
             import matplotlib.ticker as ticker_lib
-            ax.xaxis.set_major_formatter(ticker_lib.FuncFormatter(lambda x, pos: date_labels[int(round(x))] if 0 <= int(round(x)) < len(date_labels) else ""))
-            
-            ax.tick_params(colors='white')
-            for spine in ax.spines.values():
-                spine.set_color('#444444')
-            
-            ax.legend(loc='lower left', facecolor='black', edgecolor='yellow', labelcolor='white', fontsize=8)
+            ax2.xaxis.set_major_formatter(ticker_lib.FuncFormatter(lambda x, pos: date_labels[int(round(x))] if 0 <= int(round(x)) < len(date_labels) else ""))
             
             plt.tight_layout()
             plt.show(block=False)
 
         except Exception as e:
-            logger.error(f"Error showing Elliott window: {e}")
+            logger.error(f"Error showing Heikin window: {e}")
             import traceback
             traceback.print_exc()
+
 
     def run_advanced_scanner(self, entry_target: str):
 
@@ -2308,35 +2357,24 @@ class TinvestApp:
                         flags = "MA10 > MA20 > MA50 > 100 > 200 (Giá > MA20 & Hỗ trợ MA50)"
 
 
-                elif entry_target == "TRADEABLE":
-                    action_str = val.get("action", "")
-                    sr = data.get("state_rules", {})
-                    sr_sig = sr.get("signal", "NONE")
-                    sr_pri = sr.get("primary", "")
-                    sr_avoid = sr.get("avoid_entry", False)
-                    sr_conf = int(sr.get("confidence", 0))
+                elif entry_target == "HEIKIN_BUY":
+                    # Logic: Tín hiệu Mua Heikin (HK_BuySignal hoặc HK_BuyManh) xuất hiện trong T-0 hoặc T-1
+                    # Khớp với yêu cầu mới: Chỉ lấy mã báo mua hôm nay hoặc hôm qua
                     
-                    opp_score = val.get("opp_score", 0)
-                    risk_score = val.get("risk_score", 0)
+                    buy_2 = df['HK_BuySignal'].tail(2).any() or df['HK_BuyManh'].tail(2).any()
                     
-                    # Dieu kien mua NGHIEM NGAT hon de loc co phieu "Mua duoc luon":
-                    # 1) Opportunity Score cao (>= 50) va Risk Score thap (< 45)
-                    # 2) Primary State phai la TANG hoac bat dau TANG/Nen chat
-                    # 3) Khong bi bo loc rui ro chan
-                    # 4) Gia khong vuot qua 5% so voi diem mua ly tuong (Buy Zone)
-                    
-                    ideal_price = val.get("price", 0)
-                    current_price = df['Close'].iloc[-1]
-                    in_buy_zone = (current_price <= ideal_price * 1.05) if ideal_price > 0 else False
-                    
-                    trend_ok = sr_pri in ["UPTREND", "UPTREND_START", "WEAK_UPTREND", "TRANSITION", "SQUEEZE"]
-                    
-                    # Bo loc tong hop ni l?ng theo yu c?u
-                    if not sr_avoid and trend_ok and sr_conf >= 1 and opp_score >= 50 and risk_score < 45 and in_buy_zone:
+                    if buy_2:
                         match = True
-                        size = res.get("position_size", "N/A")
-                        conf = f"STATE:{sr_conf} | OPP:{opp_score}"
-                        flags = f"Buy Zone ({(current_price/ideal_price-1)*100:+.1f}%) | {sr_sig} | {sr_pri}"
+                        # Xác định phiên có tín hiệu gần nhất trong 2 phiên
+                        last_2 = df.tail(2)
+                        sig_type = "MUA MẠNH" if last_2['HK_BuyManh'].any() else "MUA SỚM"
+                        
+                        current_price = df['Close'].iloc[-1]
+                        nw_val = df['HK_NW'].iloc[-1]
+                        
+                        size = "N/A"
+                        conf = "HEIKIN"
+                        flags = f"{sig_type} | Giá: {current_price} | Stoploss: {nw_val:.2f}"
 
 
                 elif entry_target == "UPCLOUD":
@@ -2380,21 +2418,6 @@ class TinvestApp:
                         flags = "ADX Trắng (Rising & DI+ > DI-)"
                         val["risk_pct"] = val.get("risk_pct", 0) * 0.7  # Relax risk for scanner display
 
-                elif entry_target == "ELLIOTT_BUY":
-                    # Check for EW_Strong_Buy in last 3 sessions
-                    if 'EW_Strong_Buy' in df.columns:
-                        if df['EW_Strong_Buy'].tail(3).any():
-                            match = True
-                            size = "N/A"
-                            conf = "ELLIOTT"
-                            # Find exactly how many sessions ago the last signal was
-                            sig_indices = df.index[df['EW_Strong_Buy']]
-                            if not sig_indices.empty:
-                                last_sig_idx = sig_indices[-1]
-                                dist = df.index[-1] - last_sig_idx
-                                flags = f"Elliott BUY (Xuất hiện {dist} phiên trước)"
-                            else:
-                                flags = "Elliott BUY (Gần đây)"
 
 
                 else:
@@ -3094,12 +3117,11 @@ class TinvestApp:
 
                     # State Engine cho Index
                     from tinvest.state_engine import evaluate_state_rules
-                    from tinvest.analyzer import evaluate_heatmap, evaluate_elliott
+                    from tinvest.analyzer import evaluate_heatmap
                     from tinvest.mcdx_engine import evaluate_mcdx_rules
                     state_rules = evaluate_state_rules(df_rich)
                     
                     heatmap_eval = evaluate_heatmap(df_rich)
-                    elliott_eval = evaluate_elliott(df_rich)
                     mcdx_eval = evaluate_mcdx_rules(df_rich)
 
                     res_regime = analyze_market_index(idx_df, breadth_pct_ma20=breadth_ma20, breadth_pct_ma50=breadth_ma50, momentum_data=mom)

@@ -67,42 +67,6 @@ def evaluate_heatmap(df: pd.DataFrame) -> str:
     return f"Trạng thái: {color_map.get(current, current)}"
 
 
-def evaluate_elliott(df: pd.DataFrame) -> str:
-    """Evaluate Elliott Wave signals based on recency and noise."""
-    if 'EW_Strong_Buy' not in df.columns or 'EW_Strong_Sell' not in df.columns:
-        return "N/A (Chưa nạp dữ liệu Elliott)"
-        
-    last_10 = df.tail(10)
-    has_buy_10 = last_10['EW_Strong_Buy'].any()
-    has_sell_10 = last_10['EW_Strong_Sell'].any()
-    
-    # 1. Nếu trong 10 phiên gần đây có cả buy và sell thì đánh giá là tín hiệu đang nhiễu động
-    if has_buy_10 and has_sell_10:
-        return "TÍN HIỆU NHIỄU ĐỘNG (Có cả Buy & Sell trong 10 phiên)"
-        
-    # 2. Nếu có tín hiệu trong 3 phiên gần nhất
-    last_3 = df.tail(3)
-    if last_3['EW_Strong_Buy'].any():
-        return "TÍN HIỆU BUY MẠNH (Gần đây)"
-    if last_3['EW_Strong_Sell'].any():
-        return "TÍN HIỆU SELL MẠNH (Gần đây)"
-        
-    # 3. Nếu ngoài 3 phiên thì đó là tín hiệu buy sell đã khá xa hiệu lực yếu
-    all_buys = df[df['EW_Strong_Buy']]
-    all_sells = df[df['EW_Strong_Sell']]
-    
-    latest_buy_idx = all_buys.index[-1] if not all_buys.empty else -1
-    latest_sell_idx = all_sells.index[-1] if not all_sells.empty else -1
-    current_idx = df.index[-1]
-    
-    if latest_buy_idx > latest_sell_idx:
-        dist = current_idx - latest_buy_idx
-        return f"Tín hiệu BUY đã xa (cách {dist} phiên, hiệu lực yếu)"
-    elif latest_sell_idx > latest_buy_idx:
-        dist = current_idx - latest_sell_idx
-        return f"Tín hiệu SELL đã xa (cách {dist} phiên, hiệu lực yếu)"
-        
-    return "Không có tín hiệu rõ ràng"
 
 
 
@@ -131,9 +95,7 @@ def analyze_stock(ticker: str, df: pd.DataFrame) -> dict:
     # Store close_26 for Chikou analysis in report
     close_26 = df_rich['Close'].iloc[-26] if len(df_rich) > 26 else df_rich['Close'].iloc[0]
 
-    # 5. Additional AIC Indicators (Heatmap & Elliott & MCDX)
     heatmap_eval = evaluate_heatmap(df_rich)
-    elliott_eval = evaluate_elliott(df_rich)
     mcdx_eval = evaluate_mcdx_rules(df_rich)
     
     return {
@@ -151,7 +113,6 @@ def analyze_stock(ticker: str, df: pd.DataFrame) -> dict:
         "ma20": float(df_rich['MA20'].iloc[-1]),
         "ma50": float(df_rich['MA50'].iloc[-1]),
         "heatmap_eval": heatmap_eval,
-        "elliott_eval": elliott_eval,
         "mcdx_eval": mcdx_eval
     }
 
@@ -284,10 +245,9 @@ def format_report(result: dict) -> str:
             lines.append(f"  ● Setup    : {adx_d.get('status', 'N/A')}")
             lines.append(f"  ● Khuyến nghị: {adx_d.get('action', 'N/A')}")
 
-            # --- NEW: HEATMAP & ELLIOTT EVALUATIONS ---
-            lines.append("\n  [HỆ THỐNG BẢN ĐỒ NHIỆT & SÓNG ELLIOTT]")
+            # --- NEW: HEATMAP EVALUATIONS ---
+            lines.append("\n  [HỆ THỐNG BẢN ĐỒ NHIỆT]")
             lines.append(f"  ● Đánh giá Heatmap: {result.get('heatmap_eval', 'N/A')}")
-            lines.append(f"  ● Đánh giá Elliott: {result.get('elliott_eval', 'N/A')}")
             
             # --- MCDX EVALUATION ---
             mcdx = result.get('mcdx_eval', {})
