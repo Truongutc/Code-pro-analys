@@ -549,12 +549,14 @@ class TinvestApp:
         btn_white_adx.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
 
-
-
-
+        # --- Phương án 3: Đánh giá danh mục ---
+        frame_portfolio = tk.LabelFrame(self.root, text="Phương án 3: Đánh giá danh mục đầu tư", font=("Arial", 10, "bold"), pady=10, padx=10)
+        frame_portfolio.pack(fill=tk.X, padx=10, pady=5)
+        
+        btn_analys = tk.Button(frame_portfolio, text="🔍 Analys (Đánh Giá Danh Mục)", command=self.open_portfolio_dialog, bg="#673AB7", fg="white", font=("Arial", 10, "bold"))
+        btn_analys.pack(side=tk.LEFT, padx=5)
 
         # --- Bottom Frame: Output / Results ---
-
 
         frame_bottom = tk.LabelFrame(self.root, text="Kết Quả", font=("Arial", 10, "bold"), padx=10, pady=10)
 
@@ -777,6 +779,121 @@ class TinvestApp:
 
 
 
+
+    def open_portfolio_dialog(self):
+        """Mở cửa sổ Đánh giá danh mục đầu tư"""
+        top = tk.Toplevel(self.root)
+        top.title("Đánh giá danh mục đầu tư (Portfolio Analysis)")
+        top.geometry("800x650")
+        
+        def format_number(event):
+            if event.keysym in ('Left', 'Right', 'Up', 'Down', 'BackSpace', 'Delete', 'End', 'Home'):
+                return
+            widget = event.widget
+            pos = widget.index(tk.INSERT)
+            prev_len = len(widget.get())
+            text = widget.get().replace(',', '')
+            if not text: return
+            try:
+                parts = text.split('.')
+                if parts[0] and parts[0] != '-':
+                    parts[0] = "{:,}".format(int(parts[0]))
+                formatted = '.'.join(parts)
+                widget.delete(0, tk.END)
+                widget.insert(0, formatted)
+                new_len = len(formatted)
+                widget.icursor(max(0, pos + (new_len - prev_len)))
+            except ValueError:
+                pass
+
+        # Section 1: Thông số tài sản
+        frame_params = tk.LabelFrame(top, text="1. Nhóm thông số tài sản", font=("Arial", 10, "bold"), padx=10, pady=10)
+        frame_params.pack(fill=tk.X, padx=10, pady=5)
+        
+        # Grid layout for params
+        tk.Label(frame_params, text="Tiền mặt đang có (VNĐ):").grid(row=0, column=0, sticky="w", pady=2)
+        entry_nav = tk.Entry(frame_params, width=20)
+        entry_nav.insert(0, "0") # Default 0
+        entry_nav.bind('<KeyRelease>', format_number)
+        entry_nav.grid(row=0, column=1, padx=5, pady=2)
+        
+        tk.Label(frame_params, text="Tỷ trọng CP khuyến cáo (%):").grid(row=0, column=2, sticky="w", pady=2)
+        entry_weight = tk.Entry(frame_params, width=10)
+        entry_weight.insert(0, "100")
+        entry_weight.grid(row=0, column=3, padx=5, pady=2)
+        
+        tk.Label(frame_params, text="Tỷ lệ cutloss (%):").grid(row=1, column=0, sticky="w", pady=2)
+        entry_cutloss = tk.Entry(frame_params, width=10)
+        entry_cutloss.insert(0, "7")
+        entry_cutloss.grid(row=1, column=1, padx=5, pady=2)
+        
+        tk.Label(frame_params, text="Số mã mong muốn:").grid(row=1, column=2, sticky="w", pady=2)
+        entry_ntickers = tk.Entry(frame_params, width=10)
+        entry_ntickers.insert(0, "3")
+        entry_ntickers.grid(row=1, column=3, padx=5, pady=2)
+        
+        # Section 2: Nhóm thông số từng cổ phiếu
+        frame_tickers = tk.LabelFrame(top, text="2. Nhóm thông số từng cổ phiếu (Tối đa 10 mã)", font=("Arial", 10, "bold"), padx=10, pady=10)
+        frame_tickers.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        
+        tk.Label(frame_tickers, text="Mã CP", font=("Arial", 9, "bold")).grid(row=0, column=0, padx=5)
+        tk.Label(frame_tickers, text="Số lượng", font=("Arial", 9, "bold")).grid(row=0, column=1, padx=5)
+        tk.Label(frame_tickers, text="Giá vốn trung bình", font=("Arial", 9, "bold")).grid(row=0, column=2, padx=5)
+        
+        entries = []
+        for i in range(10):
+            e_ticker = tk.Entry(frame_tickers, width=15)
+            e_ticker.grid(row=i+1, column=0, padx=5, pady=2)
+            e_qty = tk.Entry(frame_tickers, width=15)
+            e_qty.bind('<KeyRelease>', format_number)
+            e_qty.grid(row=i+1, column=1, padx=5, pady=2)
+            e_price = tk.Entry(frame_tickers, width=15)
+            e_price.bind('<KeyRelease>', format_number)
+            e_price.grid(row=i+1, column=2, padx=5, pady=2)
+            entries.append((e_ticker, e_qty, e_price))
+            
+        def run_analysis():
+            try:
+                params = {
+                    'nav_total': float(entry_nav.get().replace(',', '')),
+                    'w_target': float(entry_weight.get()),
+                    'r_cl': float(entry_cutloss.get()),
+                    'n_tickers': int(entry_ntickers.get())
+                }
+                tickers_data = []
+                for e_t, e_q, e_p in entries:
+                    t_val = e_t.get().strip().upper()
+                    if t_val:
+                        tickers_data.append({
+                            'ticker': t_val,
+                            'quantity': float(e_q.get().replace(',', '') if e_q.get() else 0),
+                            'avg_price': float(e_p.get().replace(',', '') if e_p.get() else 0)
+                        })
+                
+                if not tickers_data:
+                    messagebox.showwarning("Thiếu dữ liệu", "Vui lòng nhập ít nhất 1 mã cổ phiếu.")
+                    return
+                
+                from tinvest.portfolio_engine import analyze_portfolio
+                result_text = analyze_portfolio(params, tickers_data, self.storage)
+                
+                # Show in new Window
+                res_top = tk.Toplevel(top)
+                res_top.title("Báo Cáo Đánh Giá Danh Mục")
+                res_top.geometry("1100x700")
+                txt = scrolledtext.ScrolledText(res_top, font=("Consolas", 11), wrap=tk.WORD)
+                txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+                txt.insert(tk.END, result_text)
+                txt.config(state=tk.DISABLED)
+                
+            except Exception as e:
+                messagebox.showerror("Lỗi", f"Có lỗi xảy ra khi phân tích: {str(e)}")
+
+        # Frame for action button
+        frame_action = tk.Frame(top)
+        frame_action.pack(fill=tk.X, pady=10)
+        btn_run = tk.Button(frame_action, text="🚀 Khởi chạy", command=run_analysis, bg="#FF5722", fg="white", font=("Arial", 12, "bold"))
+        btn_run.pack(pady=10)
 
     def update_session_ui(self):
 

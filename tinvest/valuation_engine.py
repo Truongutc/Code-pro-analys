@@ -290,7 +290,6 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
         cands_r2 = [v for v in peaks_above if v > p*1.05]
         r2 = min(cands_r2) if cands_r2 else r1 * 1.05
         tp = r2
-        ts = min(p * 1.10, r1)
         low10 = df['Low'].iloc[-10:].min() if len(df) >= 10 else p * 0.95
         
         if source == "MA_PULLBACK":
@@ -315,6 +314,7 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
             s1 = max([v for v in [inds["ma20"], inds["tenkan"], nearest_valley_below] if v and v < p] or [p * 0.97])
 
         sl1, sl2 = s1 * 0.98, s2 * 0.98 if s2 else s1 * 0.95
+        ts = sl1
 
     # ── 4. ADD_2 BUY ──────────────────────────────────────────────────────────
     elif entry_type == "ADD_2":
@@ -323,7 +323,6 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
         cands_r2 = [v for v in peaks_above if v > p * 1.05]
         r2 = min(cands_r2) if cands_r2 else r1 * 1.05
         tp = r2
-        ts = min(r1 * 0.97, p * 1.10)
         
         if source == "HA_REVERSAL":
             s1 = max([v for v in [inds["tenkan"], inds["ma10"], inds["ma20"]] if v < p] or [p * 0.97])
@@ -341,6 +340,7 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
             s1 = max([v for v in [inds["tenkan"], inds["ma10"], inds["ma20"]] if v < p] or [p * 0.97])
             s2 = max([v for v in [inds["kijun"], inds["ma20"], inds["ma50"]] if v < s1] or [s1 * 0.95])
             sl1, sl2 = s1 * 0.97, s2 * 0.97
+        ts = sl1
 
     # ── 5. STRONG BUY ─────────────────────────────────────────────────────────
     elif entry_type == "STRONG" or entry_type == "UNKNOWN":
@@ -349,7 +349,6 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
         cands_r2 = [v for v in peaks_above if v > p * 1.05]
         r2 = min(cands_r2) if cands_r2 else r1 * 1.05
         tp = r2
-        ts = min(r1 * 0.97, p * 1.10)
         
         if source == "PERFECT_MA":
             s1 = inds["ma10"] if p >= inds["ma10"] else inds["ma20"]
@@ -363,6 +362,7 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
         else:
             s1, s2 = inds["ma10"], inds["ma20"]
             sl1, sl2 = s1 * 0.95, s2 * 0.95
+        ts = sl1
 
     # Safeguards & Index Optimization
     if is_index:
@@ -392,6 +392,10 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
     
     if not sl1 or pd.isna(sl1) or sl1 >= p: sl1 = p * 0.97
     if not sl2 or pd.isna(sl2) or sl2 >= sl1: sl2 = sl1 * 0.96
+
+    # Ensure trailing stop is valid (not > current price)
+    if not ts or pd.isna(ts) or ts >= p:
+        ts = sl1
 
     return {
         "s1": float(s1) if s1 else 0.0, "s2": float(s2) if s2 else 0.0, 
