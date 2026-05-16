@@ -234,34 +234,147 @@ def analyze_portfolio(portfolio_params: dict, tickers_data: list, storage) -> st
         # Ghi nhận lại vào state_sig để Bảng tư vấn bên dưới xài chung
         res['state_sig'] = sr_signal.upper()
         
+        # --- BẮT ĐẦU TÍNH TOÁN ACTION SỚM ĐỂ ĐỒNG BỘ ---
+        q_i = res['q']
+        p_avg_vnd = res['p_avg_vnd']
+        p_now_vnd = res['p_now_vnd']
+        p_sup_vnd = res['p_sup_vnd']
+        p_res_vnd = res['p_res_vnd']
+        w_curr = res['w_curr']
+        pl_pct = res['pl_pct']
+        
+        status_desc = val_res.get('tech_health', {}).get('health_rating', 'BT')
+        action = "HOLD"
+        q_action = 0
+        p_action_vnd = 0
+        reason = ""
+        
+        if w_curr > w_target/n_tickers:
+            status_desc = "Quá Tỷ Trọng"
+        elif pl_pct < -0.05:
+            status_desc = "Đang Lỗ/Yếu"
+            
+        sig_upper = sr_signal.upper()
+        _rs = val_core.get("risk_score", 50)
+        anti_trap = m.get("anti_trap_block", False)
+        
+        # Quy tắc 1: Cắt lỗ & Chặn lãi tuyệt đối (Bảo vệ vốn)
+        if p_now_vnd < res['p_sl_vnd']:
+            action = "BÁN HẾT (100%)"
+            q_action = q_i
+            p_action_vnd = p_now_vnd
+            reason = f"Vi phạm điểm cắt lỗ/chặn lãi ({res['sl_source']})."
+            
+        # Quy tắc 2: Đồng bộ Tín hiệu Chốt Lời / Rủi Ro từ AI Lõi
+        # Ưu tiên bỏ qua nếu phân tích đơn lẻ cho thấy vị thế đang khỏe (STRONG/ADD_1/ADD_2) và không quá rủi ro
+        elif ("CHỐT" in sig_upper or "THOÁT" in sig_upper or "CHẠY" in sig_upper or "BLOCK" in sig_upper) and not (state in ("STRONG", "ADD_2", "ADD_1") and _rs <= 75 and not anti_trap):
+            if "BLOCK" in sig_upper or "50%" in sig_upper:
+                action = "CHỐT LỜI (50%)"
+                q_action = q_i * 0.5
+            else:
+                action = "CHỐT LỜI/THOÁT"
+                q_action = q_i
+            p_action_vnd = p_now_vnd
+            reason = f"Đồng bộ AI lõi: {sr_signal}."
+            
+        # Quy tắc 3: Xử lý khi gãy Trend/Downtrend
+        elif h_score <= 20 or "DOWNTREND" in sig_upper or "ĐỨNG NGOÀI" in sig_upper:
+            if pl_pct < 0:
+                action = "CẮT LỖ (Gãy Trend)"
+                q_action = q_i
+                p_action_vnd = p_now_vnd
+                reason = "Cổ phiếu gãy trend/Downtrend. Cắt bỏ dứt khoát."
+            else:
+                action = "CHỐT LỜI/THOÁT"
+                q_action = q_i
+                p_action_vnd = p_now_vnd
+                reason = "Trend đảo chiều xấu, ưu tiên chốt lãi bảo vệ vốn."
+                
+        # Quy tắc 4: Quản trị tỷ trọng (Chặn lãi tỷ trọng)
+        elif w_curr > w_target/n_tickers + 0.05: # Vượt dung sai 5%
+            action = "HẠ TỶ TRỌNG"
+            excess_value = (q_i * p_now_vnd) - v_max_i
+            q_action = excess_value / p_now_vnd
+            p_action_vnd = p_now_vnd
+            if state in ("STRONG", "ADD_2", "ADD_1"):
+                reason = f"Cổ phiếu khỏe ({state}) nhưng tỷ trọng ({w_curr*100:.1f}%) quá lớn, ưu tiên hạ bớt."
+            else:
+                reason = f"Tỷ trọng hiện tại ({w_curr*100:.1f}%) vượt quá mức an toàn."
+
+        # Quy tắc 5: Trung bình giá xuống (Khi đang lỗ)
+        elif pl_pct < -0.04:
+            if pl_pct < -0.10 or (p_now_vnd - p_sup_vnd)/p_now_vnd > 0.10:
+                action = "CẮT LỖ BỚT"
+                q_action = q_i * 0.5
+                p_action_vnd = p_now_vnd
+                reason = "Lỗ > 10% hoặc xa hỗ trợ > 10%. Tuyệt đối không TBG."
+            elif p_now_vnd <= p_sup_vnd * 1.02: # Ở vùng hỗ trợ
+                current_loss_abs = q_i * (p_avg_vnd - p_now_vnd) if p_now_vnd < p_avg_vnd else 0
+                X_max = (risk_max_nav - current_loss_abs) / 0.07
+                
+                if X_max <= 0:
+                    action = "KHÔNG TBG"
+                    reason = "Lỗ hiện tại đã chiếm hết hạn mức rủi ro 3% NAV."
+                elif h_score >= 40: # Có cơ sở bật tăng
+                    q_add_max = X_max / p_sup_vnd
+                    q_action = min(q_add_max, max(0, (v_max_i - q_i * p_now_vnd) / p_sup_vnd))
+                    if q_action > 0:
+                        action = "MUA TBG XUỐNG"
+                        p_action_vnd = p_sup_vnd
+                        reason = f"Về hỗ trợ ({p_sup_vnd/1000:.1f}), Sức khỏe tốt. Mua giảm giá vốn."
+                    else:
+                        action = "CHỜ ĐỢI"
+                        reason = "Đã hết mức tỷ trọng cho phép để trung bình giá."
+                else:
+                    action = "CHỜ ĐỢI"
+                    reason = "Ở hỗ trợ nhưng cổ phiếu yếu (<40đ), rủi ro thủng nền cao."
+            else:
+                action = "CHỜ VỀ HỖ TRỢ"
+                reason = f"Đang lơ lửng, đợi nhúng về vùng {p_sup_vnd/1000:.1f}."
+
+        # Quy tắc 6: Mua gia tăng (Ưu tiên theo đánh giá Vị thế đang cầm cổ từ Phân tích đơn lẻ)
+        elif state in ("STRONG", "ADD_2", "ADD_1") and _rs <= 75 and not anti_trap:
+             if w_curr < (w_target/n_tickers)*0.8:
+                  action = "MUA GIA TĂNG"
+                  q_action = (v_max_i - q_i * p_now_vnd) / p_now_vnd
+                  p_action_vnd = p_now_vnd
+                  reason = f"Phân tích đơn lẻ: Vị thế {state} khỏe. Gia tăng tỷ trọng."
+             else:
+                  action = "HOLD"
+                  reason = "Vị thế đang khỏe nhưng đã đủ tỷ trọng. Gồng lãi."
+                  
+        # Quy tắc 7: Mua gia tăng theo Tín hiệu Lõi (Fallback)
+        elif "MUA" in sig_upper or "GIA TĂNG" in sig_upper or ("TREND" in sig_upper and pl_pct > 0.03 and h_score >= 60):
+             if w_curr < (w_target/n_tickers)*0.8:
+                  action = "MUA GIA TĂNG"
+                  q_action = (v_max_i - q_i * p_now_vnd) / p_now_vnd
+                  p_action_vnd = p_sup_vnd if p_now_vnd > p_sup_vnd * 1.05 else p_now_vnd
+                  reason = f"Đồng bộ AI lõi: {sr_signal}. Nhặt thêm tại {p_action_vnd/1000:.1f}."
+             else:
+                  action = "HOLD"
+                  reason = "Trend khỏe nhưng đã đủ tỷ trọng. Tiếp tục gồng lãi."
+
+        if not reason:
+            reason = "Duy trì vị thế hiện tại, theo dõi thêm."
+
+        # Lưu lại kết quả vào res
+        res['action'] = action
+        res['q_action'] = q_action
+        res['p_action_vnd'] = p_action_vnd
+        res['reason'] = reason
+        res['status_desc'] = status_desc
+        
+        # --- KẾT THÚC TÍNH TOÁN ACTION ---
+
         desc = f"- {t}: Đang chiếm {res['w_curr']*100:.1f}% NAV. Lãi/lỗ: {pl_sign}{res['pl_pct']*100:.1f}%. "
         desc += f"Chất lượng KT: {h_rating} ({h_score}đ). Tín hiệu AI: {sr_signal.upper()}. "
-        
-        # Sinh câu nhận định thông minh, không bị lặp
-        if res['pl_pct'] < -0.05:
-            if res['w_curr'] > w_target/n_tickers:
-                desc += "Mã này đang quá tỷ trọng và đang lỗ, ưu tiên canh nhịp hồi để hạ bớt trước khi xét mua thêm."
-            else:
-                desc += f"Quan sát chặt tại hỗ trợ {res['p_sup_vnd']/1000:.1f}. Tuân thủ tuyệt đối mốc cắt lỗ {res['p_sl_vnd']/1000:.1f}."
-        else:
-            sig_upper = sr_signal.upper()
-            if "MUA" in sig_upper or "GIA TĂNG" in sig_upper or "TREND" in sig_upper or "ÔM TIẾP" in sig_upper:
-                if res['w_curr'] < w_target/n_tickers * 0.8:
-                    desc += f"Cổ phiếu đang có sóng khỏe, có thể canh nhặt thêm quanh vùng {res['p_sup_vnd']/1000:.1f}."
-                else:
-                    desc += "Cổ phiếu đang có sóng khỏe, tiếp tục ôm chặt gồng lãi. Nhớ dời stoploss lên để bảo vệ thành quả."
-            elif "CHỐT" in sig_upper or "THOÁT" in sig_upper or "CHẠY" in sig_upper or "BLOCK" in sig_upper:
-                desc += "Rủi ro ngắn hạn gia tăng (chạm cản/kéo rướn). Cân nhắc chốt lời/hạ tỷ trọng để bảo toàn vốn."
-            elif "ĐỨNG NGOÀI" in sig_upper:
-                desc += "Xu hướng xấu, không bắt đáy. Canh nhịp hồi kỹ thuật để cơ cấu thoát hàng."
-            else:
-                desc += "Trạng thái đi ngang hoặc chưa rõ xu hướng. Giữ tỷ trọng an toàn và kiên nhẫn chờ đợi tín hiệu."
+        desc += f"Hướng xử lý chiến lược: {action} ({reason})."
         
         report_lines.append(desc)
 
     report_lines.append("\n3. BẢNG TƯ VẤN KIẾN NGHỊ XỬ LÝ (ACTION)")
     report_lines.append("-" * 125)
-    header = f"| {'Mã':<6} | {'Lãi/Lỗ %':<9} | {'Trạng Thái':<16} | {'Khuyến Nghị':<18} | {'KL Khuyến Nghị':<15} | {'Giá Bán/Mua':<12} | {'Lý do Kỹ thuật'}"
+    header = f"| {'Mã':<6} | {'Lãi/Lỗ %':<9} | {'Trạng Thái':<12} | {'Khuyến Nghị':<16} | {'KL Hiện Tại':<12} | {'KL Khuyến Nghị':<15} | {'Giá Bán/Mua':<12} | {'Lý do Kỹ thuật'}"
     report_lines.append(header)
     report_lines.append("-" * 125)
 
@@ -284,113 +397,41 @@ def analyze_portfolio(portfolio_params: dict, tickers_data: list, storage) -> st
         tech_weak = res['tech_weak']
         sideways_near_res = res['sideways_near_res']
         
-        status_desc = ""
-        action = "HOLD"
-        q_action = 0
-        p_action_vnd = 0
-        reason = ""
-        
-        # A. Phân loại trạng thái (Sử dụng nhãn của lõi phân tích)
-        val_res = res['val']
-        status_desc = val_res.get('tech_health', {}).get('health_rating', 'BT')
-        h_score = val_res.get('tech_health', {}).get('health_score', 50)
-        
-        # Trích xuất state_sig từ step trên
-        state_sig = res.get('state_sig', 'NONE')
-        
-        if w_curr > w_target/n_tickers:
-            status_desc = "Quá Tỷ Trọng"
-        elif pl_pct < -0.05:
-            status_desc = "Đang Lỗ/Yếu"
-            
-        # Priority Logic - Bộ quy tắc ứng xử AI (Đồng bộ với Tín hiệu Lõi)
-        
-        sig_upper = state_sig.upper()
-        
-        # Quy tắc 1: Cắt lỗ & Chặn lãi tuyệt đối (Bảo vệ vốn)
-        if p_now_vnd < res['p_sl_vnd']:
-            action = "BÁN HẾT (100%)"
-            q_action = q_i
-            p_action_vnd = p_now_vnd
-            reason = f"Vi phạm điểm cắt lỗ/chặn lãi ({res['sl_source']})."
-            
-        # Quy tắc 2: Đồng bộ Tín hiệu Chốt Lời / Rủi Ro từ AI Lõi
-        elif "CHỐT" in sig_upper or "THOÁT" in sig_upper or "CHẠY" in sig_upper or "BLOCK" in sig_upper:
-            if "BLOCK" in sig_upper or "50%" in sig_upper:
-                action = "CHỐT LỜI (50%)"
-                q_action = q_i * 0.5
-            else:
-                action = "CHỐT LỜI/THOÁT"
-                q_action = q_i
-            p_action_vnd = p_now_vnd
-            reason = f"Đồng bộ AI lõi: {state_sig}."
+        # Đọc kết quả đã tính toán ở Bước 2
+        status_desc = res['status_desc']
+        action = res['action']
+        q_action = res['q_action']
+        p_action_vnd = res['p_action_vnd']
+        reason = res['reason']
 
-        # Quy tắc 3: Xử lý khi gãy Trend/Downtrend
-        elif h_score <= 20 or "DOWNTREND" in sig_upper or "ĐỨNG NGOÀI" in sig_upper:
-            if pl_pct < 0:
-                action = "CẮT LỖ (Gãy Trend)"
-                q_action = q_i
-                p_action_vnd = p_now_vnd
-                reason = "Cổ phiếu gãy trend/Downtrend. Cắt bỏ dứt khoát."
-            else:
-                action = "CHỐT LỜI/THOÁT"
-                q_action = q_i
-                p_action_vnd = p_now_vnd
-                reason = "Trend đảo chiều xấu, ưu tiên chốt lãi bảo vệ vốn."
+
+
+
+
                 
-        # Quy tắc 4: Quản trị tỷ trọng (Chặn lãi tỷ trọng)
-        elif w_curr > w_target/n_tickers + 0.05: # Vượt dung sai 5%
-            action = "HẠ TỶ TRỌNG"
-            excess_value = (q_i * p_now_vnd) - v_max_i
-            q_action = excess_value / p_now_vnd
-            p_action_vnd = p_now_vnd
-            reason = f"Tỷ trọng hiện tại ({w_curr*100:.1f}%) vượt quá mức an toàn."
 
-        # Quy tắc 5: Trung bình giá xuống (Khi đang lỗ)
-        elif pl_pct < -0.04:
-            if pl_pct < -0.10 or (p_now_vnd - p_sup_vnd)/p_now_vnd > 0.10:
-                action = "CẮT LỖ BỚT"
-                q_action = q_i * 0.5
-                p_action_vnd = p_now_vnd
-                reason = "Lỗ > 10% hoặc xa hỗ trợ > 10%. Tuyệt đối không TBG."
-            elif p_now_vnd <= p_sup_vnd * 1.02: # Ở vùng hỗ trợ
-                loss_current = q_i * (p_avg_vnd - res['p_sl_vnd'])
-                if loss_current >= risk_max_nav:
-                    action = "KHÔNG TBG"
-                    reason = "Rủi ro deal kịch trần (>= 3% NAV). Giữ nguyên, không mua thêm."
-                elif h_score >= 40: # Có cơ sở bật tăng
-                    q_add_max = (risk_max_nav - loss_current) / (p_sup_vnd - res['p_sl_vnd']) if (p_sup_vnd - res['p_sl_vnd']) > 0 else 0
-                    q_action = min(q_add_max, max(0, (v_max_i - q_i * p_now_vnd) / p_sup_vnd))
-                    if q_action > 0:
-                        action = "MUA TBG XUỐNG"
-                        p_action_vnd = p_sup_vnd
-                        reason = f"Về hỗ trợ ({p_sup_vnd/1000:.1f}), Sức khỏe tốt. Mua giảm giá vốn."
-                    else:
-                        action = "CHỜ ĐỢI"
-                        reason = "Đã hết mức tỷ trọng cho phép để trung bình giá."
-                else:
-                    action = "CHỜ ĐỢI"
-                    reason = f"Ở hỗ trợ nhưng cổ phiếu yếu (<40đ), rủi ro thủng nền cao."
-            else:
-                action = "CHỜ VỀ HỖ TRỢ"
-                reason = f"Đang lơ lửng, đợi nhúng về vùng {p_sup_vnd/1000:.1f}."
 
-        # Quy tắc 6: Mua gia tăng (Đồng bộ Tín hiệu AI lõi)
-        elif "MUA" in sig_upper or "GIA TĂNG" in sig_upper or ("TREND" in sig_upper and pl_pct > 0.03 and h_score >= 60):
-             if w_curr < (w_target/n_tickers)*0.8:
-                 action = "MUA GIA TĂNG"
-                 q_action = (v_max_i - q_i * p_now_vnd) / p_now_vnd
-                 p_action_vnd = p_sup_vnd if p_now_vnd > p_sup_vnd * 1.05 else p_now_vnd
-                 reason = f"Đồng bộ AI lõi: {state_sig}. Nhặt thêm tại {p_action_vnd/1000:.1f}."
-             else:
-                 action = "HOLD"
-                 reason = "Trend khỏe nhưng đã đủ tỷ trọng. Tiếp tục gồng lãi."
+
+
+
+
+                  
+        # Quy tắc 7: Mua gia tăng theo Tín hiệu Lõi (Fallback)
+
+
+
+
 
         pl_str = f"{pl_pct*100:+.1f}%"
-        q_str = f"{int(q_action):,}" if q_action else "-"
+        q_curr_str = f"{int(q_i):,}"
+        
+        # Làm tròn khối lượng khuyến nghị đến hàng trăm theo yêu cầu người dùng
+        q_action_rounded = round(q_action / 100) * 100 if q_action else 0
+        q_str = f"{int(q_action_rounded):,}" if q_action_rounded else "-"
+        
         p_str = f"{p_action_vnd/1000:.1f}" if p_action_vnd else "-"
         
-        row = f"| {ticker:<6} | {pl_str:<9} | {status_desc:<16} | {action:<18} | {q_str:<15} | {p_str:<12} | {reason}"
+        row = f"| {ticker:<6} | {pl_str:<9} | {status_desc:<12} | {action:<16} | {q_curr_str:<12} | {q_str:<15} | {p_str:<12} | {reason}"
         report_lines.append(row)
 
     report_lines.append("-" * 125)
