@@ -222,12 +222,111 @@ def load_cache_worker(args):
     except Exception:
         pass
     return ticker, None, None
+# ==============================================================================
+# CENTRALIZED CUSTOM FILTER RULES (RULE_FILTER)
+# ==============================================================================
+def check_accumulation_breakout(df):
+    """
+    Sideways for 1 month (20 trading days) with max-min range <= 15%,
+    then breaks out of that range in the last 0-2 sessions (index -1, -2, or -3).
+    """
+    if 'High' not in df.columns or 'Low' not in df.columns or 'Close' not in df.columns or len(df) < 21:
+        return False
+    
+    # Check if breakout occurred at session t (where t is -1, -2, or -3)
+    for t in [-1, -2, -3]:
+        idx_start = len(df) + t - 20
+        idx_end = len(df) + t
+        if idx_start < 0:
+            continue
+        
+        sub_high = df['High'].iloc[idx_start:idx_end].max()
+        sub_low = df['Low'].iloc[idx_start:idx_end].min()
+        if sub_low <= 0:
+            continue
+        
+        # Max-Min range <= 15%
+        if (sub_high - sub_low) / sub_low <= 0.15:
+            # Close at session t exceeds the max high of the consolidation range
+            if df['Close'].iloc[t] > sub_high:
+                return True
+    return False
 
 
-
+CUSTOM_RULES = {
+    "RS13_GT_50": {
+        "label": "RS 13 Tuần > 50",
+        "func": lambda df: df['RS13'].iloc[-1] > 50 if 'RS13' in df.columns and len(df) >= 1 else False
+    },
+    "RS52_GT_50": {
+        "label": "RS 52 Tuần > 50",
+        "func": lambda df: df['RS52'].iloc[-1] > 50 if 'RS52' in df.columns and len(df) >= 1 else False
+    },
+    "PRICE_CROSS_MA20": {
+        "label": "Giá cắt lên MA20 (Hôm qua < MA20, nay > MA20)",
+        "func": lambda df: (df['Close'].iloc[-1] > df['MA20'].iloc[-1] and df['Close'].iloc[-2] <= df['MA20'].iloc[-2]) if 'MA20' in df.columns and len(df) >= 2 else False
+    },
+    "PRICE_CROSS_MA50": {
+        "label": "Giá cắt lên MA50 (Hôm qua < MA50, nay > MA50)",
+        "func": lambda df: (df['Close'].iloc[-1] > df['MA50'].iloc[-1] and df['Close'].iloc[-2] <= df['MA50'].iloc[-2]) if 'MA50' in df.columns and len(df) >= 2 else False
+    },
+    "RSI_EXIT_OVERSOLD": {
+        "label": "RSI14 thoát quá bán (Cắt lên 30)",
+        "func": lambda df: (df['RSI'].iloc[-1] > 30 and df['RSI'].iloc[-2] <= 30) if 'RSI' in df.columns and len(df) >= 2 else False
+    },
+    "RSI_CROSS_70": {
+        "label": "RSI14 cắt lên trên 70",
+        "func": lambda df: (df['RSI'].iloc[-1] > 70 and df['RSI'].iloc[-2] <= 70) if 'RSI' in df.columns and len(df) >= 2 else False
+    },
+    "RSI_GT_50": {
+        "label": "RSI14 > 50",
+        "func": lambda df: df['RSI'].iloc[-1] > 50 if 'RSI' in df.columns and len(df) >= 1 else False
+    },
+    "PRICE_ABOVE_MA20": {
+        "label": "Giá nằm trên MA20",
+        "func": lambda df: df['Close'].iloc[-1] > df['MA20'].iloc[-1] if 'MA20' in df.columns and len(df) >= 1 else False
+    },
+    "PRICE_ABOVE_MA50": {
+        "label": "Giá nằm trên MA50",
+        "func": lambda df: df['Close'].iloc[-1] > df['MA50'].iloc[-1] if 'MA50' in df.columns and len(df) >= 1 else False
+    },
+    "MA20_GT_MA50": {
+        "label": "MA20 > MA50",
+        "func": lambda df: df['MA20'].iloc[-1] > df['MA50'].iloc[-1] if 'MA20' in df.columns and 'MA50' in df.columns and len(df) >= 1 else False
+    },
+    "MCDX_RED": {
+        "label": "MCDX có màu đỏ (Banker > 0)",
+        "func": lambda df: df['MCDX_Banker'].iloc[-1] > 0 if 'MCDX_Banker' in df.columns and len(df) >= 1 else False
+    },
+    "PRICE_ABOVE_KIJUN": {
+        "label": "Giá nằm trên Kijun",
+        "func": lambda df: df['Close'].iloc[-1] > df['Kijun'].iloc[-1] if 'Kijun' in df.columns and len(df) >= 1 else False
+    },
+    "PRICE_ABOVE_TENKAN": {
+        "label": "Giá nằm trên Tenkan",
+        "func": lambda df: df['Close'].iloc[-1] > df['Tenkan'].iloc[-1] if 'Tenkan' in df.columns and len(df) >= 1 else False
+    },
+    "MACD_CROSS_SIGNAL": {
+        "label": "MACD cắt lên đường Tín hiệu (Signal)",
+        "func": lambda df: (df['MACD'].iloc[-1] > df['MACD_Signal'].iloc[-1] and df['MACD'].iloc[-2] <= df['MACD_Signal'].iloc[-2]) if 'MACD' in df.columns and 'MACD_Signal' in df.columns and len(df) >= 2 else False
+    },
+    "MACD_ABOVE_SIGNAL": {
+        "label": "MACD nằm trên đường Tín hiệu (Signal)",
+        "func": lambda df: df['MACD'].iloc[-1] > df['MACD_Signal'].iloc[-1] if 'MACD' in df.columns and 'MACD_Signal' in df.columns and len(df) >= 1 else False
+    },
+    "WEEK_HIGH_BREAKOUT": {
+        "label": "Giá vượt đỉnh 1 tuần (5 phiên)",
+        "func": lambda df: df['Close'].iloc[-1] > df['High'].iloc[-6:-1].max() if 'High' in df.columns and len(df) >= 6 else False
+    },
+    "ACCUMULATION_BREAKOUT": {
+        "label": "Vượt vùng tích lũy 1 tháng (biên độ <= 15%, breakout 0-2 phiên gần đây)",
+        "func": check_accumulation_breakout
+    }
+}
 
 
 class TinvestApp:
+
 
 
     def __init__(self, root):
@@ -505,47 +604,30 @@ class TinvestApp:
 
 
 
-        # Row 2: Basic Signals
+        # Row 2: Signals Part 1
         frame_signals_1 = tk.Frame(frame_adv)
         frame_signals_1.pack(fill=tk.X, pady=2)
-        
-        btn_early = tk.Button(frame_signals_1, text="🟢 Mua Sớm", command=lambda: self.run_advanced_scanner("EARLY"), bg="#4CAF50", fg="white", font=("Arial", 10, "bold"))
-        btn_early.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
-        
-        btn_add1 = tk.Button(frame_signals_1, text="🟡 Gia Tăng 1", command=lambda: self.run_advanced_scanner("ADD_1"), bg="#FFC107", fg="black", font=("Arial", 10, "bold"))
-        btn_add1.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
         
         btn_add2 = tk.Button(frame_signals_1, text="🟠 Gia Tăng 2", command=lambda: self.run_advanced_scanner("ADD_2"), bg="#FF9800", fg="white", font=("Arial", 10, "bold"))
         btn_add2.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
         
-        btn_strong = tk.Button(frame_signals_1, text="🔴 Mua Mạnh", command=lambda: self.run_advanced_scanner("STRONG"), bg="#F44336", fg="white", font=("Arial", 10, "bold"))
-        btn_strong.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+        btn_accum = tk.Button(frame_signals_1, text="📦 Tích Lũy", command=lambda: self.run_advanced_scanner("ACCUMULATION"), bg="#9C27B0", fg="white", font=("Arial", 10, "bold"))
+        btn_accum.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
+        btn_ma = tk.Button(frame_signals_1, text="📈 Perfect MA", command=lambda: self.run_advanced_scanner("PERFECT_MA"), bg="#00BCD4", fg="white", font=("Arial", 10, "bold"))
+        btn_ma.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-        
-
-
-        # Row 3: Advanced Filters Part 1
+        # Row 3: Signals Part 2
         frame_signals_2 = tk.Frame(frame_adv)
         frame_signals_2.pack(fill=tk.X, pady=2)
         
-        btn_accum = tk.Button(frame_signals_2, text="📦 Tích Lũy", command=lambda: self.run_advanced_scanner("ACCUMULATION"), bg="#9C27B0", fg="white", font=("Arial", 10, "bold"))
-        btn_accum.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
-
-        btn_ma = tk.Button(frame_signals_2, text="📈 Perfect MA", command=lambda: self.run_advanced_scanner("PERFECT_MA"), bg="#00BCD4", fg="white", font=("Arial", 10, "bold"))
-        btn_ma.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
-
         btn_heikin = tk.Button(frame_signals_2, text="📈 Heikin", command=lambda: self.run_advanced_scanner("HEIKIN_BUY"), bg="#008B8B", fg="white", font=("Arial", 10, "bold"))
         btn_heikin.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-        # Row 4: Advanced Filters Part 2
-        frame_signals_3 = tk.Frame(frame_adv)
-        frame_signals_3.pack(fill=tk.X, pady=2)
-
-        btn_wait = tk.Button(frame_signals_3, text="☁️ UPCLOUD", command=lambda: self.run_advanced_scanner("UPCLOUD"), bg="#1E90FF", fg="white", font=("Arial", 10, "bold"))
+        btn_wait = tk.Button(frame_signals_2, text="☁️ UPCLOUD", command=lambda: self.run_advanced_scanner("UPCLOUD"), bg="#1E90FF", fg="white", font=("Arial", 10, "bold"))
         btn_wait.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-        btn_white_adx = tk.Button(frame_signals_3, text="⚪ Trend ADX", command=lambda: self.run_advanced_scanner("WHITE_ADX"), bg="#FFFFFF", fg="black", font=("Arial", 10, "bold"))
+        btn_white_adx = tk.Button(frame_signals_2, text="⚪ Trend ADX", command=lambda: self.run_advanced_scanner("WHITE_ADX"), bg="#FFFFFF", fg="black", font=("Arial", 10, "bold"))
         btn_white_adx.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
 
@@ -898,21 +980,57 @@ class TinvestApp:
         btn_run = tk.Button(frame_action, text="🚀 Khởi chạy", command=run_analysis, bg="#FF5722", fg="white", font=("Arial", 12, "bold"))
         btn_run.pack(pady=10)
 
+    def precalculate_custom_filter_data(self):
+        """Precalculate RS13 and RS52 for all dataframes in the cache using VNINDEX benchmark."""
+        # Find VNINDEX dataframe
+        vn_key = next((k for k in self.data_dict.keys() if "VNINDEX" in k), None)
+        df_vn = self.data_dict.get(vn_key) if vn_key else None
+        
+        if df_vn is None or df_vn.empty:
+            self.log_sync("Cảnh báo: Không tìm thấy dữ liệu VNINDEX để tính RS13/RS52. Các bộ lọc RS sẽ trả về False.")
+            return
+
+        df_vn_indexed = df_vn.set_index('Date')
+        
+        for ticker, data in self.analysis_cache.items():
+            df = data.get("df")
+            if df is None or df.empty:
+                continue
+            
+            # Map benchmark Close to ticker df based on Date (with forward/backward fill to be robust)
+            bench_close = df['Date'].map(df_vn_indexed['Close']).ffill().bfill()
+            rs_raw = df['Close'] / (bench_close + 1e-10)
+            
+            # RS52: 52 weeks = 260 bars
+            rs52_min = rs_raw.rolling(window=260, min_periods=1).min()
+            rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
+            df['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
+            
+            # RS13: 13 weeks = 65 bars
+            rs13_min = rs_raw.rolling(window=65, min_periods=1).min()
+            rs13_max = rs_raw.rolling(window=65, min_periods=1).max()
+            df['RS13'] = 100 * (rs_raw - rs13_min) / (rs13_max - rs13_min + 0.0001)
+
     def open_custom_filter_dialog(self):
         if not self.analysis_cache:
             messagebox.showwarning("Cảnh báo", "Hệ thống chưa nạp dữ liệu. Hãy bấm '📂 Load Dữ liệu Cũ' hoặc 'Nạp Thêm File CSV'!")
             return
 
+        # Precalculate RS indicators for all cached stock dfs
+        self.precalculate_custom_filter_data()
+
         dialog = tk.Toplevel(self.root)
         dialog.title("Bộ lọc tùy chỉnh (Custom Filter)")
-        dialog.geometry("400x500")
+        dialog.geometry("950x700")
         dialog.resizable(False, False)
         dialog.configure(bg="#222222")
         dialog.transient(self.root)
         dialog.grab_set()
 
-        tk.Label(dialog, text="CHỌN CÁC TIÊU CHÍ LỌC (AND)", font=("Arial", 12, "bold"), fg="gold", bg="#222222", pady=15).pack()
+        # Title at the top
+        tk.Label(dialog, text="CHỌN CÁC TIÊU CHÍ LỌC (LOGICAL AND)", font=("Arial", 12, "bold"), fg="gold", bg="#222222", pady=15).pack(side=tk.TOP)
 
+        # 9 Primary Signals Def (Filter 1)
         filters_def = [
             ("EARLY", "Mua Sớm (EARLY)"),
             ("ADD_1", "Gia Tăng 1 (ADD_1)"),
@@ -925,30 +1043,78 @@ class TinvestApp:
             ("WHITE_ADX", "Trend ADX (WHITE_ADX)")
         ]
 
-        vars_dict = {}
-        frame_chk = tk.Frame(dialog, bg="#222222", padx=30, pady=10)
-        frame_chk.pack(fill=tk.BOTH, expand=True)
-
-        for key, label in filters_def:
-            var = tk.BooleanVar(value=False)
-            vars_dict[key] = var
-            chk = tk.Checkbutton(frame_chk, text=label, variable=var, font=("Arial", 10), anchor="w",
-                                 bg="#222222", fg="white", selectcolor="#333333", activebackground="#222222", activeforeground="white")
-            chk.pack(fill=tk.X, pady=4)
+        vars_categories = {}
+        vars_rules = {}
 
         def run_filter():
-            selected_keys = [k for k, v in vars_dict.items() if v.get()]
-            if not selected_keys:
+            selected_categories = [k for k, v in vars_categories.items() if v.get()]
+            selected_rules = [k for k, v in vars_rules.items() if v.get()]
+            if not selected_categories and not selected_rules:
                 messagebox.showwarning("Cảnh báo", "Vui lòng chọn ít nhất một tiêu chí!")
                 return
             dialog.destroy()
-            self.run_custom_filter(selected_keys)
+            self.run_custom_filter(selected_categories, selected_rules)
 
+        # Launch button at the bottom (guaranteed visibility)
         btn_run = tk.Button(dialog, text="🚀 KHỞI CHẠY", command=run_filter, bg="#009688", fg="white", font=("Arial", 12, "bold"), pady=8)
-        btn_run.pack(fill=tk.X, padx=30, pady=20)
+        btn_run.pack(side=tk.BOTTOM, fill=tk.X, padx=30, pady=15)
 
-    def run_custom_filter(self, selected_keys):
-        self.log_sync(f"Đang chạy bộ lọc tùy chỉnh với các tiêu chí: {', '.join(selected_keys)}...", clear=True)
+        # Two-column layout in the middle
+        frame_columns = tk.Frame(dialog, bg="#222222")
+        frame_columns.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=20)
+
+        # Left Column: Primary categories
+        frame_left = tk.LabelFrame(frame_columns, text="1. TÍN HIỆU GIAO DỊCH CHÍNH", font=("Arial", 10, "bold"), fg="gold", bg="#222222", padx=15, pady=10)
+        frame_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
+
+        for key, label in filters_def:
+            var = tk.BooleanVar(value=False)
+            vars_categories[key] = var
+            chk = tk.Checkbutton(frame_left, text=label, variable=var, font=("Arial", 10), anchor="w",
+                                 bg="#222222", fg="white", selectcolor="#333333", activebackground="#222222", activeforeground="white")
+            chk.pack(fill=tk.X, pady=4)
+
+        # Right Column: Custom rules with a scrollbar
+        frame_right_container = tk.LabelFrame(frame_columns, text="2. TIÊU CHÍ KỸ THUẬT BỔ TRỢ", font=("Arial", 10, "bold"), fg="gold", bg="#222222", padx=5, pady=5)
+        frame_right_container.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10)
+
+        canvas = tk.Canvas(frame_right_container, bg="#222222", highlightthickness=0)
+        scrollbar = tk.Scrollbar(frame_right_container, orient="vertical", command=canvas.yview)
+        frame_right = tk.Frame(canvas, bg="#222222")
+
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        canvas_frame = canvas.create_window((0, 0), window=frame_right, anchor="nw")
+
+        def configure_scroll(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        frame_right.bind("<Configure>", configure_scroll)
+
+        def configure_width(event):
+            canvas.itemconfig(canvas_frame, width=event.width)
+        canvas.bind("<Configure>", configure_width)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        def on_dialog_destroy(event):
+            if event.widget == dialog:
+                canvas.unbind_all("<MouseWheel>")
+        dialog.bind("<Destroy>", on_dialog_destroy)
+
+        # Populate custom rules into scrollable right frame
+        for key, r_def in CUSTOM_RULES.items():
+            var = tk.BooleanVar(value=False)
+            vars_rules[key] = var
+            chk = tk.Checkbutton(frame_right, text=r_def["label"], variable=var, font=("Arial", 10), anchor="w",
+                                 bg="#222222", fg="white", selectcolor="#333333", activebackground="#222222", activeforeground="white")
+            chk.pack(fill=tk.X, pady=3)
+
+    def run_custom_filter(self, selected_categories, selected_rules):
+        self.log_sync(f"Đang chạy bộ lọc tùy chỉnh với các tiêu chí: {', '.join(selected_categories + [CUSTOM_RULES[k]['label'] for k in selected_rules])}...", clear=True)
         self.root.update()
 
         try:
@@ -968,60 +1134,80 @@ class TinvestApp:
                 ma_trend = data.get("ma_trend") or data.get("ma") or {}
                 val = data.get("valuation") or data.get("val") or {}
 
-                all_match = True
-                for key in selected_keys:
-                    if key == "ACCUMULATION":
-                        if not accum.get("is_accumulation", False):
-                            all_match = False
-                            break
-                    elif key == "PERFECT_MA":
-                        if not ma_trend.get("is_perfect_uptrend", False):
-                            all_match = False
-                            break
-                    elif key == "HEIKIN_BUY":
-                        buy_2 = False
-                        if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
-                            buy_2 = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
-                        if not buy_2:
-                            all_match = False
-                            break
-                    elif key == "UPCLOUD":
-                        last = df.iloc[-1]
-                        current_price = last['Close']
-                        span_a = last.get('SpanA', 0)
-                        span_b = last.get('SpanB', 0)
-                        tenkan = last.get('Tenkan', 0)
-                        kijun = last.get('Kijun', 0)
-                        ma10 = last.get('MA10', 0)
-                        ma20 = last.get('MA20', 0)
-                        
-                        future_span_a = (tenkan + kijun) / 2
-                        h52 = df['High'].iloc[-52:].max() if len(df) >= 52 else df['High'].max()
-                        l52 = df['Low'].iloc[-52:].min() if len(df) >= 52 else df['Low'].min()
-                        future_span_b = (h52 + l52) / 2
-                        
-                        c1 = (current_price > span_a) and (current_price > span_b) if span_a > 0 else False
-                        c2 = (future_span_a > future_span_b)
-                        c3 = (tenkan > kijun)
-                        c4 = (ma10 > ma20)
-                        if not (c1 and c2 and c3 and c4):
-                            all_match = False
-                            break
-                    elif key == "WHITE_ADX":
-                        adx_color = str(df['ADX_Color'].iloc[-1]).upper() if 'ADX_Color' in df.columns else "N/A"
-                        if adx_color != "WHITE":
-                            all_match = False
-                            break
-                    else:  # EARLY, ADD_1, ADD_2, STRONG
-                        if res.get("entry_type") != key:
-                            all_match = False
+                # 1. Filter 1 matching logic (selected categories)
+                # If selected_categories is empty, it matches (True).
+                # Otherwise, it matches if it satisfies at least one of the selected categories (logical OR).
+                matches_filter1 = True
+                if selected_categories:
+                    matches_filter1 = False
+                    for key in selected_categories:
+                        if key == "ACCUMULATION":
+                            if accum.get("is_accumulation", False):
+                                matches_filter1 = True
+                                break
+                        elif key == "PERFECT_MA":
+                            if ma_trend.get("is_perfect_uptrend", False):
+                                matches_filter1 = True
+                                break
+                        elif key == "HEIKIN_BUY":
+                            buy_2 = False
+                            if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
+                                buy_2 = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                            if buy_2:
+                                matches_filter1 = True
+                                break
+                        elif key == "UPCLOUD":
+                            if len(df) > 0 and 'High' in df.columns and 'Low' in df.columns:
+                                last = df.iloc[-1]
+                                current_price = last['Close']
+                                span_a = last.get('SpanA', 0)
+                                span_b = last.get('SpanB', 0)
+                                tenkan = last.get('Tenkan', 0)
+                                kijun = last.get('Kijun', 0)
+                                ma10 = last.get('MA10', 0)
+                                ma20 = last.get('MA20', 0)
+                                
+                                future_span_a = (tenkan + kijun) / 2
+                                h52 = df['High'].iloc[-52:].max() if len(df) >= 52 else df['High'].max()
+                                l52 = df['Low'].iloc[-52:].min() if len(df) >= 52 else df['Low'].min()
+                                future_span_b = (h52 + l52) / 2
+                                
+                                c1 = (current_price > span_a) and (current_price > span_b) if span_a > 0 else False
+                                c2 = (future_span_a > future_span_b)
+                                c3 = (tenkan > kijun)
+                                c4 = (ma10 > ma20)
+                                if c1 and c2 and c3 and c4:
+                                    matches_filter1 = True
+                                    break
+                        elif key == "WHITE_ADX":
+                            adx_color = str(df['ADX_Color'].iloc[-1]).upper() if 'ADX_Color' in df.columns else "N/A"
+                            if adx_color == "WHITE":
+                                matches_filter1 = True
+                                break
+                        else:  # EARLY, ADD_1, ADD_2, STRONG
+                            if res.get("entry_type") == key:
+                                matches_filter1 = True
+                                break
+
+                if not matches_filter1:
+                    continue
+
+                # 2. Filter 2 matching logic (selected rules)
+                # If selected_rules is empty, it matches (True).
+                # Otherwise, it must satisfy all selected rules (logical AND).
+                matches_filter2 = True
+                if selected_rules:
+                    for r_key in selected_rules:
+                        rule_func = CUSTOM_RULES[r_key]["func"]
+                        if not rule_func(df):
+                            matches_filter2 = False
                             break
 
-                if not all_match:
+                if not matches_filter2:
                     continue
 
                 # Risk limit check
-                risk_limit = 20.0 if "WHITE_ADX" in selected_keys else 15.0
+                risk_limit = 20.0 if "WHITE_ADX" in selected_categories else 15.0
                 if val.get("is_valid", True) is False or val.get("risk_pct", 0) > risk_limit:
                     continue
 
@@ -1033,19 +1219,48 @@ class TinvestApp:
                 val_score = val.get("risk_score", 0)
 
                 reasons = []
-                for key in selected_keys:
-                    if key == "ACCUMULATION":
+                for key in selected_categories:
+                    if key == "ACCUMULATION" and accum.get("is_accumulation", False):
                         reasons.append(f"Tích Lũy ({accum.get('base_quality', 'N/A')})")
-                    elif key == "PERFECT_MA":
+                    elif key == "PERFECT_MA" and ma_trend.get("is_perfect_uptrend", False):
                         reasons.append("Perfect MA")
                     elif key == "HEIKIN_BUY":
-                        reasons.append("Heikin Buy")
+                        buy_2 = False
+                        if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
+                            buy_2 = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                        if buy_2:
+                            reasons.append("Heikin Buy")
                     elif key == "UPCLOUD":
-                        reasons.append("UpCloud")
+                        if len(df) > 0 and 'High' in df.columns and 'Low' in df.columns:
+                            last = df.iloc[-1]
+                            current_price = last['Close']
+                            span_a = last.get('SpanA', 0)
+                            span_b = last.get('SpanB', 0)
+                            tenkan = last.get('Tenkan', 0)
+                            kijun = last.get('Kijun', 0)
+                            ma10 = last.get('MA10', 0)
+                            ma20 = last.get('MA20', 0)
+                            
+                            future_span_a = (tenkan + kijun) / 2
+                            h52 = df['High'].iloc[-52:].max() if len(df) >= 52 else df['High'].max()
+                            l52 = df['Low'].iloc[-52:].min() if len(df) >= 52 else df['Low'].min()
+                            future_span_b = (h52 + l52) / 2
+                            
+                            c1 = (current_price > span_a) and (current_price > span_b) if span_a > 0 else False
+                            c2 = (future_span_a > future_span_b)
+                            c3 = (tenkan > kijun)
+                            c4 = (ma10 > ma20)
+                            if c1 and c2 and c3 and c4:
+                                reasons.append("UpCloud")
                     elif key == "WHITE_ADX":
-                        reasons.append("ADX Trắng")
-                    else:
+                        adx_color = str(df['ADX_Color'].iloc[-1]).upper() if 'ADX_Color' in df.columns else "N/A"
+                        if adx_color == "WHITE":
+                            reasons.append("ADX Trắng")
+                    elif res.get("entry_type") == key:
                         reasons.append(key)
+
+                for r_key in selected_rules:
+                    reasons.append(CUSTOM_RULES[r_key]["label"])
 
                 results.append({
                     "Ticker": ticker,
@@ -2320,16 +2535,41 @@ class TinvestApp:
                 df_full = enrich_dataframe(df_full)
                 self.data_dict[ticker] = df_full
 
+            # --- CALCULATE RS13 & RS52 ---
+            if 'RS13' not in df_full.columns or 'RS52' not in df_full.columns:
+                df_vn = None
+                if hasattr(self, 'data_dict'):
+                    vn_key = next((k for k in self.data_dict.keys() if "VNINDEX" in k), None)
+                    df_vn = self.data_dict.get(vn_key) if vn_key else None
+                if df_vn is not None and not df_vn.empty:
+                    df_vn_indexed = df_vn.set_index('Date')
+                    bench_close = df_full['Date'].map(df_vn_indexed['Close']).ffill().bfill()
+                    rs_raw = df_full['Close'] / (bench_close + 1e-10)
+                    
+                    # RS52: 52 weeks = 260 bars
+                    rs52_min = rs_raw.rolling(window=260, min_periods=1).min()
+                    rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
+                    df_full['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
+                    
+                    # RS13: 13 weeks = 65 bars
+                    rs13_min = rs_raw.rolling(window=65, min_periods=1).min()
+                    rs13_max = rs_raw.rolling(window=65, min_periods=1).max()
+                    df_full['RS13'] = 100 * (rs_raw - rs13_min) / (rs13_max - rs13_min + 0.0001)
+                else:
+                    df_full['RS13'] = 50.0
+                    df_full['RS52'] = 50.0
+
             # 1. Prepare Data (Last 150 bars)
             count = 150
             df = df_full.tail(count).copy().reset_index(drop=True)
             x_idx = np.arange(len(df))
             
-            # 2. Setup Figure with 2 subplots
-            fig, (ax, ax2) = plt.subplots(2, 1, figsize=(15, 11), sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+            # 2. Setup Figure with 3 subplots
+            fig, (ax, ax2, ax3) = plt.subplots(3, 1, figsize=(15, 12), sharex=True, gridspec_kw={'height_ratios': [2, 1, 1]})
             fig.patch.set_facecolor('black') 
             ax.set_facecolor('black')
             ax2.set_facecolor('black')
+            ax3.set_facecolor('black')
             
             # --- TOP SUBPLOT: GREENPINK ---
             # 3. Plot Cloud (E14 vs E21)
@@ -2390,12 +2630,18 @@ class TinvestApp:
             ax2.fill_between(x_idx, df['OCT_BB_Bot'], df['OCT_BB_Top'], color='#ADD8E6', alpha=0.2, label='Octopus Band')
             ax2.axhline(0, color='white', linewidth=0.5, alpha=0.5)
 
+            # --- THIRD SUBPLOT: RS CHART ---
+            ax3.plot(x_idx, df['RS13'], color='white', linewidth=2.0, label='RS13')
+            ax3.plot(x_idx, df['RS52'], color='yellow', linewidth=2.0, label='RS52')
+            ax3.axhline(50, color='red', linewidth=0.8, linestyle='--', alpha=0.5)
+
             # 7. Formatting
             ax.set_title(f"GP & OCTOPUS CHART (HHV-LLV + McGinley): {ticker}", color='gold', fontsize=15, fontweight='bold', pad=12)
             ax.set_ylabel("Price", color='white', fontweight='bold')
             ax2.set_ylabel("Octopus MACD", color='white', fontweight='bold')
+            ax3.set_ylabel("RS Rating", color='white', fontweight='bold')
             
-            for axis in [ax, ax2]:
+            for axis in [ax, ax2, ax3]:
                 axis.grid(True, color='#222222', linestyle=':', alpha=0.5)
                 axis.tick_params(colors='white')
                 for spine in axis.spines.values():
@@ -2403,10 +2649,11 @@ class TinvestApp:
             
             date_labels = df['Date'].dt.strftime('%d/%m/%y').tolist()
             import matplotlib.ticker as ticker_lib
-            ax2.xaxis.set_major_formatter(ticker_lib.FuncFormatter(lambda x, pos: date_labels[int(round(x))] if 0 <= int(round(x)) < len(date_labels) else ""))
+            ax3.xaxis.set_major_formatter(ticker_lib.FuncFormatter(lambda x, pos: date_labels[int(round(x))] if 0 <= int(round(x)) < len(date_labels) else ""))
             
             ax.legend(loc='lower left', facecolor='black', edgecolor='#00FF00', labelcolor='white', fontsize=8)
             ax2.legend(loc='lower left', facecolor='black', edgecolor='#FF69B4', labelcolor='white', fontsize=8)
+            ax3.legend(loc='lower left', facecolor='black', edgecolor='yellow', labelcolor='white', fontsize=8)
             
             plt.tight_layout()
             plt.show(block=False)
@@ -2615,7 +2862,7 @@ class TinvestApp:
                 # Flexible key mapping for signal and accumulation
                 res = data.get("adv") or data.get("advanced_entry") or data.get("entry_signal") or {}
                 accum = data.get("accum") or data.get("accumulation") or {}
-
+                ma_trend = data.get("ma_trend") or data.get("ma") or {}
 
                 # Ensure backward compatibility for valuation key
                 val = data.get("valuation") or data.get("val") or {}
@@ -2771,10 +3018,47 @@ class TinvestApp:
                     # Skip if risk is too high or explicitly invalid data
                     risk_limit = 20.0 if entry_target == "WHITE_ADX" else 15.0
                     # For compatibility, if 'is_valid' is missing (None), we treat it as True
-                    # Skip if risk is too high or explicitly invalid data
-                    risk_limit = 20.0 if entry_target == "WHITE_ADX" else 15.0
-                    # For compatibility, if 'is_valid' is missing (None), we treat it as True
                     if val.get("is_valid", True) is False or val.get("risk_pct", 0) > risk_limit:
+                        continue 
+
+                    # Filter final output table to only display the 6 specified categories:
+                    # Gia Tang 2 (ADD_2), Tich Luy (ACCUMULATION), Perfect MA (PERFECT_MA), Heikin (HEIKIN_BUY), UPCLOUD (UPCLOUD), Trend ADX (WHITE_ADX)
+                    has_add2 = (res.get("entry_type") == "ADD_2")
+                    has_accum = accum.get("is_accumulation", False)
+                    has_perfect_ma = ma_trend.get("is_perfect_uptrend", False)
+                    
+                    has_heikin = False
+                    if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
+                        has_heikin = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                    
+                    has_upcloud = False
+                    if len(df) > 0 and 'High' in df.columns and 'Low' in df.columns:
+                        last = df.iloc[-1]
+                        current_price = last['Close']
+                        span_a = last.get('SpanA', 0)
+                        span_b = last.get('SpanB', 0)
+                        tenkan = last.get('Tenkan', 0)
+                        kijun = last.get('Kijun', 0)
+                        ma10 = last.get('MA10', 0)
+                        ma20 = last.get('MA20', 0)
+                        
+                        future_span_a = (tenkan + kijun) / 2
+                        h52 = df['High'].iloc[-52:].max() if len(df) >= 52 else df['High'].max()
+                        l52 = df['Low'].iloc[-52:].min() if len(df) >= 52 else df['Low'].min()
+                        future_span_b = (h52 + l52) / 2
+                        
+                        c1 = (current_price > span_a) and (current_price > span_b) if span_a > 0 else False
+                        c2 = (future_span_a > future_span_b)
+                        c3 = (tenkan > kijun)
+                        c4 = (ma10 > ma20)
+                        has_upcloud = (c1 and c2 and c3 and c4)
+                        
+                    has_trend_adx = False
+                    if 'ADX_Color' in df.columns:
+                        adx_color = str(df['ADX_Color'].iloc[-1]).upper()
+                        has_trend_adx = (adx_color == "WHITE")
+                        
+                    if not (has_add2 or has_accum or has_perfect_ma or has_heikin or has_upcloud or has_trend_adx):
                         continue 
 
 
