@@ -220,7 +220,7 @@ _COLUMN_ALIASES = {
     "ticker": ["ticker", "symbol", "ma_ck", "mã_ck", "stock", "code"],
 }
 
-MIN_ROWS = 2
+MIN_ROWS = 200
 
 
 def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -329,6 +329,8 @@ def load_data(file_path: "str | list[str]") -> "pd.DataFrame | dict[str, pd.Data
             logger.info(f"Loading data from: {file_path}")
             raw = pd.read_csv(file_path)
             
+    except FileNotFoundError:
+        raise
     except Exception as exc:
         raise ValueError(f"Failed to read CSV(s): {exc}") from exc
 

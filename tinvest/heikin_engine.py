@@ -238,13 +238,11 @@ def analyze_heikin(df: pd.DataFrame) -> pd.DataFrame:
     # --- Trend Color Part ---
     tc_out = analyze_trendcolor(df)
     for col in tc_out.columns:
-        if col not in out.columns:
-            out[col] = tc_out[col]
+        out[col] = tc_out[col]
 
     # --- 2trend Part ---
     t2_out = analyze_2trend(df)
     for col in t2_out.columns:
-        if col not in out.columns:
-            out[col] = t2_out[col]
+        out[col] = t2_out[col]
 
     return out

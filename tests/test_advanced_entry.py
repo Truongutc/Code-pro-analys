@@ -27,9 +27,13 @@ def create_dead_df():
     df['Kijun'] = 60
     df['Kijun65'] = 70
     df['CloudTop'] = 500
+    df['CloudBottom'] = 450
     df['SpanA'] = 450
     df['SpanB'] = 500
     df['HA_Color'] = 'Red'
+    df['Spread'] = df['High'] - df['Low']
+    df['Chikou'] = df['Close'].shift(-26)
+    df['SwingLow'] = 0.0
     return df
 
 def test_early_ma_trigger():
@@ -41,6 +45,12 @@ def test_early_ma_trigger():
     df.loc[df.index[idx-1], "MA20"] = 99 # Up
     df.loc[df.index[idx], "Volume"] = 1000000 # High vol to pass noise filter
     df.loc[df.index[idx], "AvgVolume20"] = 500000
+    
+    # Satisfy new early buy logic (requires cross_ma10/cross_tk and higher swing low)
+    df.loc[df.index[idx], "MA10"] = 100
+    df.loc[df.index[idx-1], "MA10"] = 105
+    df.loc[df.index[idx-10], "SwingLow"] = 90
+    df.loc[df.index[idx-5], "SwingLow"] = 95
     
     res = _eval_day(df, idx)
     assert res is not None
@@ -102,6 +112,8 @@ def test_strong_priority():
     df.loc[df.index[idx], "AvgVolume20"] = 500000
     # Chikou Confirm
     df.loc[df.index[idx-26], "Close"] = 100
+    df.loc[df.index[idx], "SpanA"] = 500
+    df.loc[df.index[idx], "SpanB"] = 500
     
     res = _eval_day(df, idx)
     assert res["type"] == "STRONG"

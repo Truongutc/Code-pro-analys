@@ -555,6 +555,9 @@ class TinvestApp:
         
         btn_analys = tk.Button(frame_portfolio, text="🔍 Analys (Đánh Giá Danh Mục)", command=self.open_portfolio_dialog, bg="#673AB7", fg="white", font=("Arial", 10, "bold"))
         btn_analys.pack(side=tk.LEFT, padx=5)
+        
+        btn_filter = tk.Button(frame_portfolio, text="🔍 Filter (Bộ Lọc Tùy Chọn)", command=self.open_custom_filter_dialog, bg="#009688", fg="white", font=("Arial", 10, "bold"))
+        btn_filter.pack(side=tk.LEFT, padx=5)
 
         # --- Bottom Frame: Output / Results ---
 
@@ -894,6 +897,178 @@ class TinvestApp:
         frame_action.pack(fill=tk.X, pady=10)
         btn_run = tk.Button(frame_action, text="🚀 Khởi chạy", command=run_analysis, bg="#FF5722", fg="white", font=("Arial", 12, "bold"))
         btn_run.pack(pady=10)
+
+    def open_custom_filter_dialog(self):
+        if not self.analysis_cache:
+            messagebox.showwarning("Cảnh báo", "Hệ thống chưa nạp dữ liệu. Hãy bấm '📂 Load Dữ liệu Cũ' hoặc 'Nạp Thêm File CSV'!")
+            return
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Bộ lọc tùy chỉnh (Custom Filter)")
+        dialog.geometry("400x500")
+        dialog.resizable(False, False)
+        dialog.configure(bg="#222222")
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        tk.Label(dialog, text="CHỌN CÁC TIÊU CHÍ LỌC (AND)", font=("Arial", 12, "bold"), fg="gold", bg="#222222", pady=15).pack()
+
+        filters_def = [
+            ("EARLY", "Mua Sớm (EARLY)"),
+            ("ADD_1", "Gia Tăng 1 (ADD_1)"),
+            ("ADD_2", "Gia Tăng 2 (ADD_2)"),
+            ("STRONG", "Mua Mạnh (STRONG)"),
+            ("ACCUMULATION", "Tích Lũy (ACCUMULATION)"),
+            ("PERFECT_MA", "Perfect MA (PERFECT_MA)"),
+            ("HEIKIN_BUY", "Heikin (HEIKIN_BUY)"),
+            ("UPCLOUD", "UPCLOUD"),
+            ("WHITE_ADX", "Trend ADX (WHITE_ADX)")
+        ]
+
+        vars_dict = {}
+        frame_chk = tk.Frame(dialog, bg="#222222", padx=30, pady=10)
+        frame_chk.pack(fill=tk.BOTH, expand=True)
+
+        for key, label in filters_def:
+            var = tk.BooleanVar(value=False)
+            vars_dict[key] = var
+            chk = tk.Checkbutton(frame_chk, text=label, variable=var, font=("Arial", 10), anchor="w",
+                                 bg="#222222", fg="white", selectcolor="#333333", activebackground="#222222", activeforeground="white")
+            chk.pack(fill=tk.X, pady=4)
+
+        def run_filter():
+            selected_keys = [k for k, v in vars_dict.items() if v.get()]
+            if not selected_keys:
+                messagebox.showwarning("Cảnh báo", "Vui lòng chọn ít nhất một tiêu chí!")
+                return
+            dialog.destroy()
+            self.run_custom_filter(selected_keys)
+
+        btn_run = tk.Button(dialog, text="🚀 KHỞI CHẠY", command=run_filter, bg="#009688", fg="white", font=("Arial", 12, "bold"), pady=8)
+        btn_run.pack(fill=tk.X, padx=30, pady=20)
+
+    def run_custom_filter(self, selected_keys):
+        self.log_sync(f"Đang chạy bộ lọc tùy chỉnh với các tiêu chí: {', '.join(selected_keys)}...", clear=True)
+        self.root.update()
+
+        try:
+            results = []
+            for ticker, data in self.analysis_cache.items():
+                df = data.get("df")
+                if df is None or (hasattr(df, 'empty') and df.empty):
+                    continue
+
+                # Volume check
+                current_vol = df['Volume'].iloc[-1] if 'Volume' in df.columns else 0
+                if current_vol < 200000:
+                    continue
+
+                res = data.get("adv") or data.get("advanced_entry") or data.get("entry_signal") or {}
+                accum = data.get("accum") or data.get("accumulation") or {}
+                ma_trend = data.get("ma_trend") or data.get("ma") or {}
+                val = data.get("valuation") or data.get("val") or {}
+
+                all_match = True
+                for key in selected_keys:
+                    if key == "ACCUMULATION":
+                        if not accum.get("is_accumulation", False):
+                            all_match = False
+                            break
+                    elif key == "PERFECT_MA":
+                        if not ma_trend.get("is_perfect_uptrend", False):
+                            all_match = False
+                            break
+                    elif key == "HEIKIN_BUY":
+                        buy_2 = False
+                        if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
+                            buy_2 = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                        if not buy_2:
+                            all_match = False
+                            break
+                    elif key == "UPCLOUD":
+                        last = df.iloc[-1]
+                        current_price = last['Close']
+                        span_a = last.get('SpanA', 0)
+                        span_b = last.get('SpanB', 0)
+                        tenkan = last.get('Tenkan', 0)
+                        kijun = last.get('Kijun', 0)
+                        ma10 = last.get('MA10', 0)
+                        ma20 = last.get('MA20', 0)
+                        
+                        future_span_a = (tenkan + kijun) / 2
+                        h52 = df['High'].iloc[-52:].max() if len(df) >= 52 else df['High'].max()
+                        l52 = df['Low'].iloc[-52:].min() if len(df) >= 52 else df['Low'].min()
+                        future_span_b = (h52 + l52) / 2
+                        
+                        c1 = (current_price > span_a) and (current_price > span_b) if span_a > 0 else False
+                        c2 = (future_span_a > future_span_b)
+                        c3 = (tenkan > kijun)
+                        c4 = (ma10 > ma20)
+                        if not (c1 and c2 and c3 and c4):
+                            all_match = False
+                            break
+                    elif key == "WHITE_ADX":
+                        adx_color = str(df['ADX_Color'].iloc[-1]).upper() if 'ADX_Color' in df.columns else "N/A"
+                        if adx_color != "WHITE":
+                            all_match = False
+                            break
+                    else:  # EARLY, ADD_1, ADD_2, STRONG
+                        if res.get("entry_type") != key:
+                            all_match = False
+                            break
+
+                if not all_match:
+                    continue
+
+                # Risk limit check
+                risk_limit = 20.0 if "WHITE_ADX" in selected_keys else 15.0
+                if val.get("is_valid", True) is False or val.get("risk_pct", 0) > risk_limit:
+                    continue
+
+                current_p = float(df['Close'].iloc[-1]) * 1000
+                last_vol = float(df["Volume"].iloc[-1])
+                ep = val.get("price", 0)
+                tp = val.get("tp1", 0)
+                rr_ratio = val.get("rr_ratio", 0)
+                val_score = val.get("risk_score", 0)
+
+                reasons = []
+                for key in selected_keys:
+                    if key == "ACCUMULATION":
+                        reasons.append(f"Tích Lũy ({accum.get('base_quality', 'N/A')})")
+                    elif key == "PERFECT_MA":
+                        reasons.append("Perfect MA")
+                    elif key == "HEIKIN_BUY":
+                        reasons.append("Heikin Buy")
+                    elif key == "UPCLOUD":
+                        reasons.append("UpCloud")
+                    elif key == "WHITE_ADX":
+                        reasons.append("ADX Trắng")
+                    else:
+                        reasons.append(key)
+
+                results.append({
+                    "Ticker": ticker,
+                    "Price": f"{current_p:,.0f}",
+                    "Volume": f"{last_vol:,.0f}",
+                    "Entry": f"{ep*1000:,.0f}" if ep > 0 else "N/A",
+                    "Target": f"{tp*1000:,.0f}" if tp > 0 else "N/A",
+                    "RR": f"{round(rr_ratio, 1)}/1" if rr_ratio > 0 else "N/A",
+                    "Risk Score": f"{int(val_score)}",
+                    "Criteria": " + ".join(reasons)
+                })
+
+            if not results:
+                self.log_sync("Hoàn tất: Không có mã nào đạt đầy đủ các tiêu chí lọc tùy chỉnh trên.")
+            else:
+                self.log_sync(f"Hoàn tất: Tìm thấy {len(results)} mã thỏa mãn.\n")
+                df_res = pd.DataFrame(results).sort_values("Ticker")
+                table_str = df_res.to_string(index=False, justify="left")
+                self.log_sync(table_str)
+                self.log_sync("\n" + "="*70)
+                self.log_sync("Thông tin: Hệ thống đã quét với toàn bộ thanh khoản thị trường.")
+        except Exception as e:
+            self.log_sync(f"Lỗi: {str(e)}")
 
     def update_session_ui(self):
 
@@ -2160,10 +2335,11 @@ class TinvestApp:
             # 3. Plot Cloud (E14 vs E21)
             e14 = df['GP_E14']
             e21 = df['GP_E21']
-            for i in range(1, len(df)):
-                c = df.loc[i, 'Close']
-                color = '#00FF00' if (c > e14[i] and c > e21[i]) else '#FF69B4' # Hot Pink
-                ax.fill_between(x_idx[i-1:i+1], e14[i-1:i+1], e21[i-1:i+1], color=color, alpha=0.3, linewidth=0)
+            c = df['Close']
+            green_mask = (c > e14) & (c > e21)
+            pink_mask = ~green_mask
+            ax.fill_between(x_idx, e14, e21, where=green_mask, color='#00FF00', alpha=0.3, interpolate=True, linewidth=0)
+            ax.fill_between(x_idx, e14, e21, where=pink_mask, color='#FF69B4', alpha=0.3, interpolate=True, linewidth=0)
 
             # 4. Plot xFast and xSlow
             ax.plot(x_idx, df['GP_xFast'], color='lime', linewidth=2.5, label='xFast (Green)')
@@ -2175,22 +2351,37 @@ class TinvestApp:
             ax.fill_between(x_idx, df['GP_BB_Bot'], df['GP_BB_Top'], color='blue', alpha=0.1)
 
             # 6. Plot Candlesticks
-            for i in range(len(df)):
-                color = '#00FF00' if df.loc[i, 'Close'] >= df.loc[i, 'Open'] else '#FF0000'
-                ax.vlines(x_idx[i], df.loc[i, 'Low'], df.loc[i, 'High'], color=color, linewidth=1.0)
-                if df.loc[i, 'Close'] >= df.loc[i, 'Open']:
-                    ax.bar(x_idx[i], df.loc[i, 'Close'] - df.loc[i, 'Open'], bottom=df.loc[i, 'Open'], color=color, width=0.6)
-                else:
-                    ax.bar(x_idx[i], df.loc[i, 'Open'] - df.loc[i, 'Close'], bottom=df.loc[i, 'Close'], color=color, width=0.6)
+            close_val = df['Close']
+            open_val = df['Open']
+            high_val = df['High']
+            low_val = df['Low']
+            up_mask = close_val >= open_val
+            down_mask = ~up_mask
+            if up_mask.any():
+                ax.vlines(x_idx[up_mask], low_val[up_mask], high_val[up_mask], color='#00FF00', linewidth=1.0)
+                ax.bar(x_idx[up_mask], close_val[up_mask] - open_val[up_mask], bottom=open_val[up_mask], color='#00FF00', width=0.6)
+            if down_mask.any():
+                ax.vlines(x_idx[down_mask], low_val[down_mask], high_val[down_mask], color='#FF0000', linewidth=1.0)
+                ax.bar(x_idx[down_mask], open_val[down_mask] - close_val[down_mask], bottom=close_val[down_mask], color='#FF0000', width=0.6)
 
             # --- BOTTOM SUBPLOT: OCTOPUS (MACD MCGINLEY) ---
             ax2.plot(x_idx, df['OCT_A1'], color='white', linewidth=0.8, alpha=0.3) # Reference line
             
             # Plot A1 and B1 (Mirror) with dynamic color dots/line
-            for i in range(1, len(df)):
-                color = df.loc[i, 'OCT_Color']
-                ax2.plot(x_idx[i-1:i+1], df.loc[i-1:i, 'OCT_A1'], color=color, linewidth=2.5)
-                ax2.plot(x_idx[i-1:i+1], df.loc[i-1:i, 'OCT_B1'], color=color, linewidth=2.5)
+            from matplotlib.collections import LineCollection
+            oct_colors = df['OCT_Color'].iloc[1:].tolist()
+            
+            a1_np = df['OCT_A1'].to_numpy()
+            points_a1 = np.array([x_idx, a1_np]).T.reshape(-1, 1, 2)
+            segments_a1 = np.concatenate([points_a1[:-1], points_a1[1:]], axis=1)
+            lc_a1 = LineCollection(segments_a1, colors=oct_colors, linewidths=2.5)
+            ax2.add_collection(lc_a1)
+            
+            b1_np = df['OCT_B1'].to_numpy()
+            points_b1 = np.array([x_idx, b1_np]).T.reshape(-1, 1, 2)
+            segments_b1 = np.concatenate([points_b1[:-1], points_b1[1:]], axis=1)
+            lc_b1 = LineCollection(segments_b1, colors=oct_colors, linewidths=2.5)
+            ax2.add_collection(lc_b1)
 
             
             # Plot Bollinger Bands Cloud on A1
@@ -2275,31 +2466,40 @@ class TinvestApp:
             ax.fill_between(x_idx, mh, sh, where=(mh <= sh), color='red', alpha=0.1)
 
             # 3.1. Trend Color Line (EMA 13)
+            from matplotlib.collections import LineCollection
             tc_trend = df['TC_Trend']
-            tc_t_color = df['TC_TrendColor']
-            for i in range(1, len(df)):
-                ax.plot(x_idx[i-1:i+1], tc_trend.iloc[i-1:i+1], color=tc_t_color.iloc[i], linewidth=2.5, alpha=0.9)
+            tc_t_color = df['TC_TrendColor'].fillna('#434651')
+            tc_trend_np = tc_trend.to_numpy()
+            points_tc = np.array([x_idx, tc_trend_np]).T.reshape(-1, 1, 2)
+            segments_tc = np.concatenate([points_tc[:-1], points_tc[1:]], axis=1)
+            tc_colors = tc_t_color.iloc[1:].tolist()
+            lc_tc = LineCollection(segments_tc, colors=tc_colors, linewidths=2.5, alpha=0.9)
+            ax.add_collection(lc_tc)
             
             # 3.2. Stop Line (ATR Stop)
             tc_stop = df['TC_StopLine']
-            tc_s_color = df['TC_StopColor']
-            ax.scatter(x_idx, tc_stop, color=tc_s_color, s=10, marker='_')
+            tc_s_color = df['TC_StopColor'].fillna('#434651')
+            ax.scatter(x_idx, tc_stop, c=tc_s_color, s=10, marker='_')
 
             # 4. Plot NW Trailing Stop
             nw = df['HK_NW']
             trend = df['HK_Trend']
-            for i in range(1, len(df)):
-                color = '#00FF00' if trend.iloc[i] == 1 else '#FF0000'
-                ax.plot(x_idx[i-1:i+1], nw.iloc[i-1:i+1], color=color, linewidth=2)
+            nw_np = nw.to_numpy()
+            points_nw = np.array([x_idx, nw_np]).T.reshape(-1, 1, 2)
+            segments_nw = np.concatenate([points_nw[:-1], points_nw[1:]], axis=1)
+            nw_colors = ['#00FF00' if trend.iloc[i] == 1 else '#FF0000' for i in range(1, len(df))]
+            lc_nw = LineCollection(segments_nw, colors=nw_colors, linewidths=2)
+            ax.add_collection(lc_nw)
 
             # 5. Plot Smoothed Heikin Ashi Candles
             ho, hh, hl, hc = df['HK_Flower_Open'], df['HK_Flower_High'], df['HK_Flower_Low'], df['HK_Flower_Close']
             bar_colors = df['HK_BarColor']
             color_map = {'brightGreen': '#00FF00', 'red': '#FF0000', 'white': '#FFFFFF'}
-            for i in range(len(df)):
-                c = color_map.get(bar_colors.iloc[i], '#FFFFFF')
-                ax.vlines(x_idx[i], hl.iloc[i], hh.iloc[i], color=c, linewidth=1)
-                ax.bar(x_idx[i], abs(hc.iloc[i] - ho.iloc[i]) + 0.001, bottom=min(ho.iloc[i], hc.iloc[i]), color=c, width=0.6, alpha=0.8)
+            for color_name, color_hex in color_map.items():
+                mask = bar_colors == color_name
+                if mask.any():
+                    ax.vlines(x_idx[mask], hl[mask], hh[mask], color=color_hex, linewidth=1)
+                    ax.bar(x_idx[mask], abs(hc[mask] - ho[mask]) + 0.001, bottom=np.minimum(ho[mask], hc[mask]), color=color_hex, width=0.6, alpha=0.8)
 
             # 6. Plot Signal Shapes
             buys = df[df['HK_BuySignal'] | df['HK_BuyManh']]
@@ -2312,17 +2512,24 @@ class TinvestApp:
             # --- BOTTOM SUBPLOT: NORMAL CANDLES & 2TREND ---
             # 7. Plot Normal Candlesticks
             o, h, l, c_val = df['Open'], df['High'], df['Low'], df['Close']
-            for i in range(len(df)):
-                color = '#00FF00' if c_val.iloc[i] >= o.iloc[i] else '#FF0000'
-                ax2.vlines(x_idx[i], l.iloc[i], h.iloc[i], color=color, linewidth=1)
-                ax2.bar(x_idx[i], abs(c_val.iloc[i] - o.iloc[i]) + 0.001, bottom=min(o.iloc[i], c_val.iloc[i]), color=color, width=0.6)
+            up_mask = c_val >= o
+            down_mask = ~up_mask
+            if up_mask.any():
+                ax2.vlines(x_idx[up_mask], l[up_mask], h[up_mask], color='#00FF00', linewidth=1)
+                ax2.bar(x_idx[up_mask], abs(c_val[up_mask] - o[up_mask]) + 0.001, bottom=np.minimum(o[up_mask], c_val[up_mask]), color='#00FF00', width=0.6)
+            if down_mask.any():
+                ax2.vlines(x_idx[down_mask], l[down_mask], h[down_mask], color='#FF0000', linewidth=1)
+                ax2.bar(x_idx[down_mask], abs(c_val[down_mask] - o[down_mask]) + 0.001, bottom=np.minimum(o[down_mask], c_val[down_mask]), color='#FF0000', width=0.6)
 
             # 8. Plot 2Trend SMA
             t2_sma = df['T2_SMA']
             t2_trend = df['T2_SMA_Trend']
-            for i in range(1, len(df)):
-                color = '#00ffaa' if t2_trend.iloc[i] == 1 else '#ff0000'
-                ax2.plot(x_idx[i-1:i+1], t2_sma.iloc[i-1:i+1], color=color, linewidth=3)
+            t2_sma_np = t2_sma.to_numpy()
+            points_t2 = np.array([x_idx, t2_sma_np]).T.reshape(-1, 1, 2)
+            segments_t2 = np.concatenate([points_t2[:-1], points_t2[1:]], axis=1)
+            t2_colors = ['#00ffaa' if t2_trend.iloc[i] == 1 else '#ff0000' for i in range(1, len(df))]
+            lc_t2 = LineCollection(segments_t2, colors=t2_colors, linewidths=3)
+            ax2.add_collection(lc_t2)
 
             # 9. Plot 2Trend Supertrend Bands
             st_upper = df['T2_ST_Upper']
@@ -3256,9 +3463,9 @@ class TinvestApp:
                         "valuation": val,
                         "state_rules": state_rules,
                         "heatmap_eval": heatmap_eval,
-                        "elliott_eval": elliott_eval,
+                        "elliott_eval": "N/A",
                         "mcdx_eval": mcdx_eval,
-                        "date": idx_df['Date'].iloc[-1].strftime("%Y-%m-%d") if 'Date' in idx_df.columns else "N/A"
+                        "date": pd.to_datetime(idx_df['Date'].iloc[-1]).strftime("%Y-%m-%d") if ('Date' in idx_df.columns and idx_df['Date'].iloc[-1] is not None and not pd.isna(idx_df['Date'].iloc[-1])) else "N/A"
                     }
 
 
@@ -3592,14 +3799,18 @@ class TinvestApp:
 
                 report = []
                 report.append("\n" + "="*60)
-                report.append(f"💎 ĐÁNH GIÁ TỔNG QUAN THỊ TRƯỜNG - {vn_full['date']} - AIC code! 💎")
+                vn_date_str = vn_full['date'] if vn_full else "N/A"
+                report.append(f"💎 ĐÁNH GIÁ TỔNG QUAN THỊ TRƯỜNG - {vn_date_str} - AIC code! 💎")
                 report.append(f"A. ĐỘ RỘNG THỊ TRƯỜNG (BREADTH): {breadth_res['breadth_label']}")
                 report.append(f" - Tổng mã quét: {breadth_res['total_scanned']}")
                 report.append(f" - Tỷ lệ mã > MA20: {breadth_res.get('strong_stocks_ma20_pct', 'N/A')}%")
                 report.append(f" - Tỷ lệ mã > MA50: {breadth_res['strong_stocks_pct']}%")
                 
                 report.append("\n" + "="*60)
-                report.append(format_index(vn_key, vn_full, prefix="B. "))
+                if vn_full:
+                    report.append(format_index(vn_key, vn_full, prefix="B. "))
+                else:
+                    report.append(f"\n--- TỔNG QUAN VNINDEX: Không tìm thấy dữ liệu.")
                 if hn_full:
                     report.append("\n" + "="*60)
                     report.append(format_index(hn_key, hn_full, prefix="C. "))
