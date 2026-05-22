@@ -352,6 +352,35 @@ def run_sync_and_update():
             except Exception:
                 pass
                 
+        # VSA Analysis
+        from tinvest.vsa_engine import analyze_vsa
+        vsa_res = analyze_vsa(df)
+        vsa_dominant = vsa_res.get("dominant", "neutral")
+        vsa_score = vsa_res.get("score", 0)
+        
+        # MCDX Analysis
+        from tinvest.mcdx_engine import evaluate_mcdx_rules
+        mcdx_eval = evaluate_mcdx_rules(df)
+        
+        banker_val = float(df['MCDX_Banker'].iloc[-1]) if 'MCDX_Banker' in df.columns else 0.0
+        hot_val = float(df['MCDX_HotMoney'].iloc[-1]) if 'MCDX_HotMoney' in df.columns else 0.0
+        
+        banker_aligned = banker_val
+        hot_aligned = min(20.0 - banker_aligned, hot_val)
+        retailer_aligned = max(0.0, 20.0 - banker_aligned - hot_val)
+        
+        banker_pct = round((banker_aligned / 20.0) * 100, 1)
+        hot_pct = round((hot_aligned / 20.0) * 100, 1)
+        retailer_pct = round((retailer_aligned / 20.0) * 100, 1)
+        
+        # History (last 30 trading days) for mini charts
+        recent_df = df.tail(30)
+        history = {
+            "dates": [pd.to_datetime(d).strftime("%Y-%m-%d") if not pd.isna(d) else "N/A" for d in recent_df['Date']],
+            "closes": [float(c) * 1000 for c in recent_df['Close']],
+            "volumes": [int(v) for v in recent_df['Volume']]
+        }
+
         # Create ticker record
         ticker_record = {
             "Ticker": ticker,
@@ -365,7 +394,49 @@ def run_sync_and_update():
             "RiskPct": float(risk_pct),
             "Action": action,
             "Categories": matched_categories,
-            "Rules": matched_rules
+            "Rules": matched_rules,
+            
+            # Extended attributes for lookup
+            "CutlossFull": int(val.get("cutloss_full", 0) * 1000) if val.get("cutloss_full", 0) > 0 else None,
+            "TrailingStop": int(val.get("trailing_stop", 0) * 1000) if val.get("trailing_stop", 0) > 0 else None,
+            "OpportunityScore": int(val.get("opp_score", 0)),
+            "OpportunityDesc": str(val.get("opp_desc", "N/A")),
+            "SafetyRating": int(val.get("topup_safety", 0)),
+            "TopupPrice": int(val.get("topup_price", 0) * 1000) if val.get("topup_price", 0) > 0 else None,
+            "TopupDesc": str(val.get("topup_desc", "N/A")),
+            "AccumulationQuality": str(accum.get("base_quality", "NONE")),
+            "AccumulationNotes": accum.get("notes", []),
+            "AccumulationRangePct": float(accum.get("range_pct", 0.0)),
+            "ReadyToBreak": bool(accum.get("ready_to_break", False)),
+            
+            # MCDX Cash Flow
+            "MCDX": {
+                "banker_pct": banker_pct,
+                "hot_pct": hot_pct,
+                "retailer_pct": retailer_pct,
+                "status": str(mcdx_eval.get("status", "N/A")),
+                "action": str(mcdx_eval.get("action", "N/A")),
+                "details": str(mcdx_eval.get("details", "N/A"))
+            },
+            
+            # Technical Diagnostics Table
+            "Diagnostics": {
+                "rsi": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("rsi", {}).get("status", "N/A")), 
+                        "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("rsi", {}).get("action", "N/A"))},
+                "macd": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("macd", {}).get("status", "N/A")), 
+                         "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("macd", {}).get("action", "N/A"))},
+                "adx": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("adx", {}).get("status", "N/A")), 
+                        "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("adx", {}).get("action", "N/A"))},
+                "ichimoku": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("ichimoku", {}).get("status", "N/A")), 
+                             "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("ichimoku", {}).get("action", "N/A"))},
+                "ma": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("ma", {}).get("status", "N/A")), 
+                       "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("ma", {}).get("action", "N/A"))},
+                "vsa": {"status": f"VSA Dominant: {vsa_dominant.upper()}", 
+                        "action": f"VSA Score: {vsa_score}/4"}
+            },
+            
+            # History for Chart.js
+            "History": history
         }
         
         tickers_analysis.append(ticker_record)
@@ -375,6 +446,154 @@ def run_sync_and_update():
             filtered_results[cat].append(ticker)
         for rule_key in matched_rules:
             filtered_results[rule_key].append(ticker)
+
+    # Calculate Market Indices Analysis
+    market_indices = {}
+    breadth_ma20 = 50.0
+    breadth_ma50 = 50.0
+    if market_breadth_data and "MA20" in market_breadth_data and market_breadth_data["MA20"]:
+        breadth_ma20 = market_breadth_data["MA20"][-1]
+    if market_breadth_data and "MA50" in market_breadth_data and market_breadth_data["MA50"]:
+        breadth_ma50 = market_breadth_data["MA50"][-1]
+
+    for index_ticker in ["VNINDEX", "HNX-INDEX"]:
+        idx_df = data_dict.get(index_ticker)
+        if idx_df is not None and not idx_df.empty:
+            try:
+                from tinvest.market_engine import analyze_market_index, analyze_momentum_divergence
+                from tinvest.ichimoku_engine import analyze_ichimoku
+                from tinvest.vsa_engine import analyze_vsa
+                from tinvest.ma_engine import analyze_ma_trend
+                from tinvest.data_loader import enrich_dataframe
+                from tinvest.advanced_entry import classify_entry
+                from tinvest.valuation_engine import evaluate_stock_valuation
+                from tinvest.state_engine import evaluate_state_rules
+                from tinvest.analyzer import evaluate_heatmap
+                from tinvest.mcdx_engine import evaluate_mcdx_rules
+                
+                df_rich = enrich_dataframe(idx_df.copy())
+                mom = analyze_momentum_divergence(idx_df)
+                signals = classify_entry(df_rich)
+                val = evaluate_stock_valuation("INDEX", df_rich, signals)
+                sr = {"s1": float(val.get("s1", 0)), "s2": float(val.get("s2", 0)),
+                      "r1": float(val.get("r1", 0)), "r2": float(val.get("r2", 0))}
+                
+                state_rules = evaluate_state_rules(df_rich)
+                heatmap_eval = evaluate_heatmap(df_rich)
+                mcdx_eval = evaluate_mcdx_rules(df_rich)
+                
+                res_regime = analyze_market_index(idx_df, breadth_pct_ma20=breadth_ma20, breadth_pct_ma50=breadth_ma50, momentum_data=mom)
+                
+                st_pri_raw = state_rules.get('primary', '')
+                ftd_on = res_regime.get('ftd_active', False)
+                dist_n = res_regime.get('distribution_count', 0)
+                
+                alloc = "10-30%"
+                alloc_note = "Chưa xác định rõ"
+                
+                if st_pri_raw in ['UPTREND', 'UPTREND_START']:
+                    if ftd_on and dist_n <= 2:
+                        alloc = "80-100%"
+                        alloc_note = "Xu hướng mạnh, FTD xác nhận, phân phối ít -> ALL IN được"
+                    elif ftd_on and dist_n > 2:
+                        alloc = "60-80%"
+                        alloc_note = "Xu hướng tăng nhưng phân phối đang tăng -> vẫn giữ tỷ trọng cao nhưng sẵn sàng hạ"
+                    else:
+                        alloc = "60-80%"
+                        alloc_note = "Xu hướng tăng nhưng chưa có FTD xác nhận -> chưa nên full"
+                elif st_pri_raw == 'WEAK_UPTREND':
+                    if ftd_on:
+                        alloc = "50-70%"
+                        alloc_note = "Tăng yếu dần nhưng FTD còn sống -> canh giữ, giảm dần nếu chớm gãy"
+                    else:
+                        alloc = "30-50%"
+                        alloc_note = "Tăng yếu dần, không có FTD -> cẩn thận chuyển giao"
+                elif st_pri_raw in ['RANGE', 'SQUEEZE', 'SIDEWAY', 'NEUTRAL']:
+                    if ftd_on:
+                        alloc = "50-70%"
+                        alloc_note = "Đang tích lũy/chuyển giao trong nhịp hồi có FTD -> ưu tiên nắm giữ cổ phiếu Leader"
+                    else:
+                        alloc = "20-40%"
+                        alloc_note = "Chưa rõ xu hướng, đang tích lũy/trung tính -> giữ tiền mặt chờ xác nhận"
+                elif st_pri_raw == 'WEAK_DOWNTREND':
+                    if ftd_on:
+                        alloc = "40-60%"
+                        alloc_note = "Nhịp điều chỉnh/nghỉ chân trong đà hồi phục có FTD -> CƠ HỘI GOM HÀNG"
+                    elif dist_n >= 3:
+                        alloc = "0-15%"
+                        alloc_note = "Giảm nhẹ + phân phối nhiều -> RỦI RO CAO, BÁN HẠ TỶ TRỌNG gấp"
+                    else:
+                        alloc = "15-30%"
+                        alloc_note = "Điều chỉnh bình thường -> giữ ít, chờ xem có giữ nền không"
+                elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START']:
+                    alloc = "0-10%"
+                    alloc_note = "Gãy xu hướng xác nhận -> BÁN SẠCH, RA NGOÀI"
+                elif st_pri_raw == 'RECOVERY':
+                    if ftd_on:
+                        alloc = "50-75%"
+                        alloc_note = "Hồi phục ổn định có FTD -> ưu tiên nắm giữ & quan sát điểm gia tăng"
+                    else:
+                        alloc = "20-40%"
+                        alloc_note = "Hồi phục kỹ thuật, chưa có FTD -> chỉ nên test tỷ trọng nhỏ"
+                else:
+                    reg_str = res_regime.get('regime', 'UNKNOWN')
+                    if reg_str == "STABLE_RECOVERY":
+                        alloc, alloc_note = "50-75%", "Hồi phục ổn định trên MA20"
+                    elif reg_str == "RECOVERY":
+                        alloc, alloc_note = "30-50%", "Đang nỗ lực hồi phục"
+                    else:
+                        alloc = "10-30%"
+                        alloc_note = "Chưa xác định rõ -> giữ ít phòng thủ"
+                        
+                st_avoid = state_rules.get('avoid_entry', False)
+                if st_avoid:
+                    if st_pri_raw in ['UPTREND', 'UPTREND_START'] and ftd_on:
+                        if alloc == "80-100%": alloc = "60-80%"
+                        elif alloc == "60-80%": alloc = "40-60%"
+                        alloc_note = "⚠️ CẢNH BÁO: Thị trường quá nhiệt / MCDX phân phối -> Ưu tiên nắm giữ, hạn chế mua đuổi"
+                    elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START', 'MARKET_WEAKENING']:
+                        alloc = "0-10%"
+                        alloc_note = "Bộ Lọc Rủi Ro đang BẬT -> CẤM MUA MỚI"
+                    else:
+                        alloc = "10-20%"
+                        alloc_note = "Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp"
+
+                cleaned_sr = {k: float(v) for k, v in sr.items()}
+                
+                market_indices[index_ticker] = {
+                    "price": float(idx_df['Close'].iloc[-1]) * 1000,
+                    "date": pd.to_datetime(idx_df['Date'].iloc[-1]).strftime("%Y-%m-%d") if not pd.isna(idx_df['Date'].iloc[-1]) else "N/A",
+                    "regime": str(res_regime.get("regime", "UNKNOWN")),
+                    "action": str(res_regime.get("action", "WAIT")),
+                    "ftd_active": bool(res_regime.get("ftd_active", False)),
+                    "ftd_date": str(res_regime.get("ftd_date", "N/A")),
+                    "ftd_quality": str(res_regime.get("ftd_quality", "N/A")),
+                    "ra_day": int(res_regime.get("ra_day", 0)),
+                    "distribution_count": int(res_regime.get("distribution_count", 0)),
+                    "support_resistance": cleaned_sr,
+                    "alloc": str(alloc),
+                    "alloc_note": str(alloc_note),
+                    "diagnostics": {
+                        "ma": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("ma", {}).get("status", "N/A")), 
+                               "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("ma", {}).get("action", "N/A"))},
+                        "ichimoku": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("ichimoku", {}).get("status", "N/A")), 
+                                     "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("ichimoku", {}).get("action", "N/A"))},
+                        "rsi": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("rsi", {}).get("status", "N/A")), 
+                                "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("rsi", {}).get("action", "N/A"))},
+                        "macd": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("macd", {}).get("status", "N/A")), 
+                                 "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("macd", {}).get("action", "N/A"))},
+                        "adx": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("adx", {}).get("status", "N/A")), 
+                                "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("adx", {}).get("action", "N/A"))}
+                    },
+                    "heatmap_eval": str(heatmap_eval),
+                    "mcdx_eval": {
+                        "status": str(mcdx_eval.get("status", "N/A")),
+                        "action": str(mcdx_eval.get("action", "N/A")),
+                        "details": str(mcdx_eval.get("details", "N/A"))
+                    }
+                }
+            except Exception as e_idx:
+                logger.error(f"⚠️ Lỗi phân tích Index {index_ticker}: {e_idx}")
 
     # 9. Output to JSON file
     output_dir = os.path.join(base_path, "Output")
@@ -389,6 +608,7 @@ def run_sync_and_update():
     final_output = {
         "last_update": last_update_str,
         "market_breadth": market_breadth_data,
+        "market_indices": market_indices,
         "categories_meta": categories_meta,
         "rules_meta": rules_meta,
         "tickers_analysis": tickers_analysis,
@@ -471,12 +691,30 @@ def compute_market_breadth(data_dict):
         mb['%MA50'] = (grouped['>MA50'] / valid_counts) * 100
         mb = mb.sort_index()
         
-        logger.info(f"✅ Tính xong Độ rộng Độ rộng từ {processed_count} mã cổ phiếu.")
+        # Align VNINDEX Closes
+        vn_closes = []
+        vn_key = next((k for k in data_dict.keys() if "VNINDEX" in k), "VNINDEX")
+        df_vn = data_dict.get(vn_key)
+        if df_vn is not None and not df_vn.empty:
+            df_vn_aligned = df_vn.copy()
+            df_vn_aligned['Date'] = pd.to_datetime(df_vn_aligned['Date'])
+            df_vn_aligned = df_vn_aligned.set_index('Date')
+            
+            for d in mb.index:
+                if d in df_vn_aligned.index:
+                    vn_closes.append(float(df_vn_aligned.loc[d, 'Close']) * 1000)
+                else:
+                    vn_closes.append(vn_closes[-1] if vn_closes else 0.0)
+        else:
+            vn_closes = [0.0] * len(mb)
+
+        logger.info(f"✅ Tính xong Độ rộng từ {processed_count} mã cổ phiếu.")
         return {
             "dates": [d.strftime("%Y-%m-%d") for d in mb.index],
             "MA10": mb['%MA10'].round(2).tolist(),
             "MA20": mb['%MA20'].round(2).tolist(),
-            "MA50": mb['%MA50'].round(2).tolist()
+            "MA50": mb['%MA50'].round(2).tolist(),
+            "VNINDEX_Closes": vn_closes
         }
     return {}
 
