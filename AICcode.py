@@ -539,7 +539,19 @@ class TinvestApp:
         self.root = root
 
 
-        self.root.title("AIC code = AI + cơm! - Hệ thống Phân tích Chứng khoán | Contact Zalo - 0988.94.84.67 | AIC PRO 2.0")
+        # Determine version name dynamically based on executable name
+        version_name = "AIC PRO 2.0"
+        try:
+            import sys
+            if getattr(sys, 'frozen', False):
+                exe_name = os.path.basename(sys.executable)
+                name_without_ext, _ = os.path.splitext(exe_name)
+                if name_without_ext:
+                    version_name = name_without_ext
+        except Exception:
+            pass
+
+        self.root.title(f"AIC code = AI + cơm! - Hệ thống Phân tích Chứng khoán | Contact Zalo - 0988.94.84.67 | {version_name}")
 
 
         self.root.geometry("850x650")
