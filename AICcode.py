@@ -253,7 +253,211 @@ def check_accumulation_breakout(df):
     return False
 
 
+def check_rsi_bullish_divergence(df):
+    """
+    RSI Bullish Divergence check:
+    - price2 < price1 and rsi2 > rsi1 and idx2 - idx1 >= 5 and rsi1 < 40 and (rsi2 - rsi1) > 5 and (price1 - price2)/price1 > 0.02
+    - Confirm the pivot low using right=3.
+    - Signal must be recent (idx2 >= len(df) - 10) and support not broken (min Low since idx2 >= price2).
+    - Current close must be above the bottom low (Close[-1] > price2).
+    """
+    if 'Low' not in df.columns or 'RSI' not in df.columns or 'Close' not in df.columns or len(df) < 20:
+        return False
+
+    def pivot_low(series, left=3, right=3):
+        pivots = []
+        vals = series.values
+        n = len(vals)
+        for i in range(left, n - right):
+            is_pivot = True
+            for j in range(1, left + 1):
+                if vals[i] >= vals[i - j]:
+                    is_pivot = False
+                    break
+            if not is_pivot:
+                continue
+            for j in range(1, right + 1):
+                if vals[i] >= vals[i + j]:
+                    is_pivot = False
+                    break
+            if is_pivot:
+                pivots.append(i)
+        return pivots
+
+    pivots = pivot_low(df['Low'])
+    if len(pivots) < 2:
+        return False
+
+    # Scan backwards to find the most recent divergence
+    for i in range(len(pivots) - 1, 0, -1):
+        idx1 = pivots[i - 1]
+        idx2 = pivots[i]
+
+        price1 = float(df['Low'].iloc[idx1])
+        price2 = float(df['Low'].iloc[idx2])
+
+        rsi1 = float(df['RSI'].iloc[idx1])
+        rsi2 = float(df['RSI'].iloc[idx2])
+
+        if (
+            price2 < price1 and
+            rsi2 > rsi1 and
+            idx2 - idx1 >= 5 and
+            rsi1 < 40 and
+            (rsi2 - rsi1) > 5 and
+            (price1 - price2) / price1 > 0.02
+        ):
+            # Recency: pivot low index must be within last 10 bars
+            if len(df) - 1 - idx2 <= 10:
+                current_close = float(df['Close'].iloc[-1])
+                if current_close > price2:
+                    # Check that the support at price2 has not been broken since idx2
+                    if float(df['Low'].iloc[idx2:].min()) >= price2:
+                        return True
+    return False
+
+
+def check_macd_bullish_divergence(df):
+    """
+    MACD Bullish Divergence check:
+    - price2 < price1 and macd2 > macd1 and macd1 < 0 and macd2 < 0 and idx2 - idx1 >= 5 and (price1 - price2)/price1 > 0.02
+    - Confirm the pivot low using right=3.
+    - Signal must be recent (idx2 >= len(df) - 10) and support not broken (min Low since idx2 >= price2).
+    - Current close must be above the bottom low (Close[-1] > price2).
+    """
+    if 'Low' not in df.columns or 'MACD' not in df.columns or 'Close' not in df.columns or len(df) < 20:
+        return False
+
+    def pivot_low(series, left=3, right=3):
+        pivots = []
+        vals = series.values
+        n = len(vals)
+        for i in range(left, n - right):
+            is_pivot = True
+            for j in range(1, left + 1):
+                if vals[i] >= vals[i - j]:
+                    is_pivot = False
+                    break
+            if not is_pivot:
+                continue
+            for j in range(1, right + 1):
+                if vals[i] >= vals[i + j]:
+                    is_pivot = False
+                    break
+            if is_pivot:
+                pivots.append(i)
+        return pivots
+
+    pivots = pivot_low(df['Low'])
+    if len(pivots) < 2:
+        return False
+
+    # Scan backwards to find the most recent divergence
+    for i in range(len(pivots) - 1, 0, -1):
+        idx1 = pivots[i - 1]
+        idx2 = pivots[i]
+
+        price1 = float(df['Low'].iloc[idx1])
+        price2 = float(df['Low'].iloc[idx2])
+
+        macd1 = float(df['MACD'].iloc[idx1])
+        macd2 = float(df['MACD'].iloc[idx2])
+
+        if (
+            price2 < price1 and
+            macd2 > macd1 and
+            macd1 < 0 and
+            macd2 < 0 and
+            idx2 - idx1 >= 5 and
+            (price1 - price2) / price1 > 0.02
+        ):
+            # Recency: pivot low index must be within last 10 bars
+            if len(df) - 1 - idx2 <= 10:
+                current_close = float(df['Close'].iloc[-1])
+                if current_close > price2:
+                    # Check that the support at price2 has not been broken since idx2
+                    if float(df['Low'].iloc[idx2:].min()) >= price2:
+                        return True
+    return False
+
+
+def check_macd_hist_bullish_divergence(df):
+    """
+    MACD Histogram Bullish Divergence check:
+    - price2 < price1 and hist2 > hist1 and hist1 < 0 and hist2 < 0 and abs(hist2) < abs(hist1)
+    - Confirm the pivot low using right=3.
+    - Signal must be recent (idx2 >= len(df) - 10) and support not broken (min Low since idx2 >= price2).
+    - Current close must be above the bottom low (Close[-1] > price2).
+    """
+    hist_col = 'MACD_Hist' if 'MACD_Hist' in df.columns else 'Hist'
+    if 'Low' not in df.columns or hist_col not in df.columns or 'Close' not in df.columns or len(df) < 20:
+        return False
+
+    def pivot_low(series, left=3, right=3):
+        pivots = []
+        vals = series.values
+        n = len(vals)
+        for i in range(left, n - right):
+            is_pivot = True
+            for j in range(1, left + 1):
+                if vals[i] >= vals[i - j]:
+                    is_pivot = False
+                    break
+            if not is_pivot:
+                continue
+            for j in range(1, right + 1):
+                if vals[i] >= vals[i + j]:
+                    is_pivot = False
+                    break
+            if is_pivot:
+                pivots.append(i)
+        return pivots
+
+    pivots = pivot_low(df['Low'])
+    if len(pivots) < 2:
+        return False
+
+    # Scan backwards to find the most recent divergence
+    for i in range(len(pivots) - 1, 0, -1):
+        idx1 = pivots[i - 1]
+        idx2 = pivots[i]
+
+        price1 = float(df['Low'].iloc[idx1])
+        price2 = float(df['Low'].iloc[idx2])
+
+        hist1 = float(df[hist_col].iloc[idx1])
+        hist2 = float(df[hist_col].iloc[idx2])
+
+        if (
+            price2 < price1 and
+            hist2 > hist1 and
+            hist1 < 0 and
+            hist2 < 0 and
+            abs(hist2) < abs(hist1)
+        ):
+            # Recency: pivot low index must be within last 10 bars
+            if len(df) - 1 - idx2 <= 10:
+                current_close = float(df['Close'].iloc[-1])
+                if current_close > price2:
+                    # Check that the support at price2 has not been broken since idx2
+                    if float(df['Low'].iloc[idx2:].min()) >= price2:
+                        return True
+    return False
+
+
 CUSTOM_RULES = {
+    "RSI_BULLISH_DIVERGENCE": {
+        "label": "RSI Phân kỳ tăng giá (Bullish Divergence)",
+        "func": check_rsi_bullish_divergence
+    },
+    "MACD_BULLISH_DIVERGENCE": {
+        "label": "MACD Phân kỳ tăng giá (Bullish Divergence)",
+        "func": check_macd_bullish_divergence
+    },
+    "MACD_HIST_BULLISH_DIVERGENCE": {
+        "label": "MACD Histogram Phân kỳ tăng giá (Bullish Divergence)",
+        "func": check_macd_hist_bullish_divergence
+    },
     "RS13_GT_50": {
         "label": "RS 13 Tuần > 50",
         "func": lambda df: df['RS13'].iloc[-1] > 50 if 'RS13' in df.columns and len(df) >= 1 else False
@@ -335,7 +539,7 @@ class TinvestApp:
         self.root = root
 
 
-        self.root.title("AIC code = AI + cơm! - Hệ thống Phân tích Chứng khoán | Contact Zalo - 0988.94.84.67")
+        self.root.title("AIC code = AI + cơm! - Hệ thống Phân tích Chứng khoán | Contact Zalo - 0988.94.84.67 | AIC PRO 2.0")
 
 
         self.root.geometry("850x650")

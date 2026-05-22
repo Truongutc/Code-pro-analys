@@ -135,6 +135,145 @@ class TestCustomDisplayFilter(unittest.TestCase):
         # TCK_RS_FAIL should be filtered out
         self.assertNotIn("TCK_RS_FAIL", output_text)
 
+    def test_rsi_divergence_custom_filter(self):
+        app = MockApp()
+        
+        # 1. Mock a stock that has a valid RSI Bullish Divergence
+        lows_pass = [110, 108, 105, 103, 102, 100, 105, 104, 103, 102, 101, 100, 99, 97, 95, 97, 98, 99, 100, 102]
+        rsis_pass = [45] * 20
+        rsis_pass[5] = 30.0
+        rsis_pass[14] = 38.0
+        closes_pass = [x + 1 for x in lows_pass]
+        df_pass = pd.DataFrame({
+            "Date": pd.date_range("2026-01-01", periods=20),
+            "Low": lows_pass,
+            "RSI": rsis_pass,
+            "Close": closes_pass,
+            "Volume": [250000] * 20,
+        })
+        app.analysis_cache["TCK_DIV_PASS"] = {
+            "df": df_pass,
+            "adv": {"entry_type": "EARLY"},
+            "accum": {"is_accumulation": False},
+            "ma_trend": {"is_perfect_uptrend": False},
+            "valuation": {"is_valid": True, "risk_pct": 5.0, "price": 10.0, "tp1": 12.0, "rr_ratio": 2.0, "risk_score": 10}
+        }
+
+        # 2. Mock a stock that does NOT have RSI Bullish Divergence (flat RSI)
+        df_fail = df_pass.copy()
+        df_fail.loc[14, "RSI"] = 34.0  # slope <= 5
+        app.analysis_cache["TCK_DIV_FAIL"] = {
+            "df": df_fail,
+            "adv": {"entry_type": "EARLY"},
+            "accum": {"is_accumulation": False},
+            "ma_trend": {"is_perfect_uptrend": False},
+            "valuation": {"is_valid": True, "risk_pct": 5.0, "price": 10.0, "tp1": 12.0, "rr_ratio": 2.0, "risk_score": 10}
+        }
+
+        # Run custom filter with the RSI_BULLISH_DIVERGENCE rule
+        app.run_custom_filter([], ["RSI_BULLISH_DIVERGENCE"])
+        
+        output_text = "\n".join(app.logged_messages)
+        print("RSI Divergence Filter Test Output:\n", output_text)
+        
+        # TCK_DIV_PASS should be in the results
+        self.assertIn("TCK_DIV_PASS", output_text)
+        # TCK_DIV_FAIL should be filtered out
+        self.assertNotIn("TCK_DIV_FAIL", output_text)
+
+    def test_macd_divergence_custom_filter(self):
+        app = MockApp()
+        
+        # 1. Mock a stock that has a valid MACD Bullish Divergence
+        lows_pass = [110, 108, 105, 103, 102, 100, 105, 104, 103, 102, 101, 100, 99, 97, 95, 97, 98, 99, 100, 102]
+        macds_pass = [-1.5] * 20
+        macds_pass[5] = -1.2
+        macds_pass[14] = -0.5
+        closes_pass = [x + 1 for x in lows_pass]
+        df_pass = pd.DataFrame({
+            "Date": pd.date_range("2026-01-01", periods=20),
+            "Low": lows_pass,
+            "MACD": macds_pass,
+            "Close": closes_pass,
+            "Volume": [250000] * 20,
+        })
+        app.analysis_cache["TCK_MACD_PASS"] = {
+            "df": df_pass,
+            "adv": {"entry_type": "EARLY"},
+            "accum": {"is_accumulation": False},
+            "ma_trend": {"is_perfect_uptrend": False},
+            "valuation": {"is_valid": True, "risk_pct": 5.0, "price": 10.0, "tp1": 12.0, "rr_ratio": 2.0, "risk_score": 10}
+        }
+
+        # 2. Mock a stock that does NOT have MACD Bullish Divergence (MACD positive)
+        df_fail = df_pass.copy()
+        df_fail.loc[14, "MACD"] = 0.1
+        app.analysis_cache["TCK_MACD_FAIL"] = {
+            "df": df_fail,
+            "adv": {"entry_type": "EARLY"},
+            "accum": {"is_accumulation": False},
+            "ma_trend": {"is_perfect_uptrend": False},
+            "valuation": {"is_valid": True, "risk_pct": 5.0, "price": 10.0, "tp1": 12.0, "rr_ratio": 2.0, "risk_score": 10}
+        }
+
+        # Run custom filter with the MACD_BULLISH_DIVERGENCE rule
+        app.run_custom_filter([], ["MACD_BULLISH_DIVERGENCE"])
+        
+        output_text = "\n".join(app.logged_messages)
+        print("MACD Divergence Filter Test Output:\n", output_text)
+        
+        # TCK_MACD_PASS should be in the results
+        self.assertIn("TCK_MACD_PASS", output_text)
+        # TCK_MACD_FAIL should be filtered out
+        self.assertNotIn("TCK_MACD_FAIL", output_text)
+
+    def test_macd_hist_divergence_custom_filter(self):
+        app = MockApp()
+        
+        # 1. Mock a stock that has a valid MACD Histogram Bullish Divergence
+        lows_pass = [110, 108, 105, 103, 102, 100, 105, 104, 103, 102, 101, 100, 99, 97, 95, 97, 98, 99, 100, 102]
+        hists_pass = [-1.5] * 20
+        hists_pass[5] = -1.2
+        hists_pass[14] = -0.5
+        closes_pass = [x + 1 for x in lows_pass]
+        df_pass = pd.DataFrame({
+            "Date": pd.date_range("2026-01-01", periods=20),
+            "Low": lows_pass,
+            "MACD_Hist": hists_pass,
+            "Close": closes_pass,
+            "Volume": [250000] * 20,
+        })
+        app.analysis_cache["TCK_HIST_PASS"] = {
+            "df": df_pass,
+            "adv": {"entry_type": "EARLY"},
+            "accum": {"is_accumulation": False},
+            "ma_trend": {"is_perfect_uptrend": False},
+            "valuation": {"is_valid": True, "risk_pct": 5.0, "price": 10.0, "tp1": 12.0, "rr_ratio": 2.0, "risk_score": 10}
+        }
+
+        # 2. Mock a stock that does NOT have MACD Histogram Bullish Divergence (positive)
+        df_fail = df_pass.copy()
+        df_fail.loc[14, "MACD_Hist"] = 0.1
+        app.analysis_cache["TCK_HIST_FAIL"] = {
+            "df": df_fail,
+            "adv": {"entry_type": "EARLY"},
+            "accum": {"is_accumulation": False},
+            "ma_trend": {"is_perfect_uptrend": False},
+            "valuation": {"is_valid": True, "risk_pct": 5.0, "price": 10.0, "tp1": 12.0, "rr_ratio": 2.0, "risk_score": 10}
+        }
+
+        # Run custom filter with the MACD_HIST_BULLISH_DIVERGENCE rule
+        app.run_custom_filter([], ["MACD_HIST_BULLISH_DIVERGENCE"])
+        
+        output_text = "\n".join(app.logged_messages)
+        print("MACD Histogram Divergence Filter Test Output:\n", output_text)
+        
+        # TCK_HIST_PASS should be in the results
+        self.assertIn("TCK_HIST_PASS", output_text)
+        # TCK_HIST_FAIL should be filtered out
+        self.assertNotIn("TCK_HIST_FAIL", output_text)
+
+
     def test_advanced_scanner_display_filtering(self):
         app = MockApp()
         
