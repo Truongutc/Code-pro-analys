@@ -620,6 +620,40 @@ def run_sync_and_update():
         json.dump(final_output, f, ensure_ascii=False, indent=2)
         
     logger.info(f"✅ HOÀN TẤT CẬP NHẬT! Đã xuất {len(tickers_analysis)} mã cổ phiếu.")
+    
+    # 10. Export VNINDEX Charts (GP & Heikin-Ashi) for Web Dashboard
+    logger.info("📈 Đang xuất biểu đồ VNINDEX cho Web Dashboard...")
+    try:
+        from tinvest.chart_exporter import export_greenpink_chart, export_heikin_chart
+        
+        vn_df = data_dict.get("VNINDEX")
+        if vn_df is not None and not vn_df.empty:
+            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+            
+            # Export GP Chart (with timestamp + fixed name)
+            gp_ts_path = os.path.join(output_dir, f"vnindex_gp_{ts}.png")
+            gp_fixed_path = os.path.join(output_dir, "vnindex_gp.png")
+            export_greenpink_chart("VNINDEX", vn_df, vn_df, gp_ts_path)
+            # Copy to fixed name for web dashboard
+            import shutil
+            if os.path.exists(gp_ts_path):
+                shutil.copy2(gp_ts_path, gp_fixed_path)
+                logger.info(f"   ✅ GP Chart: {gp_ts_path} → {gp_fixed_path}")
+            
+            # Export Heikin Chart (with timestamp + fixed name)
+            hk_ts_path = os.path.join(output_dir, f"vnindex_heikin_{ts}.png")
+            hk_fixed_path = os.path.join(output_dir, "vnindex_heikin.png")
+            export_heikin_chart("VNINDEX", vn_df, hk_ts_path)
+            if os.path.exists(hk_ts_path):
+                shutil.copy2(hk_ts_path, hk_fixed_path)
+                logger.info(f"   ✅ Heikin Chart: {hk_ts_path} → {hk_fixed_path}")
+        else:
+            logger.warning("⚠️ Không có dữ liệu VNINDEX để xuất biểu đồ.")
+    except Exception as e_chart:
+        logger.error(f"⚠️ Lỗi xuất biểu đồ VNINDEX: {e_chart}")
+        import traceback
+        traceback.print_exc()
+    
     logger.info("==================================================")
 
 def compute_market_breadth(data_dict):
