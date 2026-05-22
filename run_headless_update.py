@@ -114,24 +114,32 @@ def run_sync_and_update():
         logger.info(f"\n--- [Ngày {i+1}/{len(missing_dates)}] TẢI DỮ LIỆU: {d} ---")
         
         # HOSE=1, HNX=2, UPCOM=3
+        is_any_limited = False
         for cat_id, cat_name in [(1, "HSX"), (2, "HNX"), (3, "UPCOM")]:
             try:
                 logger.info(f"   [+] Đang nạp sàn {cat_name}...")
                 raw, is_limited = client.fetch_market_day(cat_id, d)
+                if is_limited:
+                    is_any_limited = True
                 if raw:
                     day_total.extend(raw)
                     logger.info(f"   ---> ✅ Đã tải: {len(raw)} mã {cat_name}")
             except Exception as e:
                 logger.error(f"   ! Lỗi tải sàn {cat_name} ngày {d}: {e}")
                 
+        if is_any_limited:
+            logger.error("❌ THẤT BẠI: Phát hiện token/cookie Vietstock bị giới hạn hoặc hết hạn. Vui lòng cập nhật cURL mới!")
+            sys.exit(1)
+            
         if day_total:
             total_raw = len(day_total)
             df_day = client.format_to_df(day_total)
             
             # Skip if total rows is too low
             if total_raw < 1200:
-                logger.error(f"❌ HỦY BỎ ngày {d}: Chỉ có {total_raw} mã (Yêu cầu >= 1200)")
-                continue
+                logger.error(f"❌ HỦY BỎ ngày {d}: Chỉ có {total_raw} mã (Yêu cầu >= 1200).")
+                logger.error("Dữ liệu thô thiếu hụt nghiêm trọng, nghi ngờ phiên kết nối không hợp lệ.")
+                sys.exit(1)
                 
             # Stagnant Bluechips check
             if 'MarketCap' in df_day.columns:

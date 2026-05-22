@@ -365,7 +365,8 @@ class VietstockClient:
                     break
                 time.sleep(0.3) # Avoid spamming
             
-            is_limited = (len(all_stocks) == 200) # If still 200, bypass failed
+            expected_min = 300 if cat_id in [1, 3] else 150
+            is_limited = (len(all_stocks) < expected_min) or (len(all_stocks) == 200)
             return all_stocks, is_limited
         else:
             # Full data received in page 1
@@ -388,7 +389,9 @@ class VietstockClient:
                      else: break
                      time.sleep(0.3)
                      
-            return all_stocks, False
+            expected_min = 300 if cat_id in [1, 3] else 150
+            is_limited = (len(all_stocks) < expected_min)
+            return all_stocks, is_limited
 
     def fetch_index_day(self, ticker, cat_id, stock_id, date_str):
         """Fetch index data for a given date."""

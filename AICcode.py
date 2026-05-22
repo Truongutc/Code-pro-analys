@@ -2127,13 +2127,13 @@ class TinvestApp:
                 
 
 
-                # Fetch Markets (HOSE=1, HNX=2, UPCOM=3)
-
-
+                is_any_limited = False
                 for cat_id, cat_name in [(1, "HSX"), (2, "HNX"), (3, "UPCOM")]:
                     try:
                         self.log_sync(f"   [+] Đang nạp sàn {cat_name}...")
                         raw, is_limited = self.vs_client.fetch_market_day(cat_id, d)
+                        if is_limited:
+                            is_any_limited = True
                         
                         if raw:
                             day_total.extend(raw)
@@ -2141,6 +2141,17 @@ class TinvestApp:
 
                     except Exception as e:
                         self.log_sync(f"   ! Lỗi {cat_name}: {e}")
+
+                if is_any_limited:
+                    msg = "❌ PHÁT HIỆN TOKEN/COOKIE BỊ GIỚI HẠN HOẶC HẾT HẠN:\nVietstock đang chặn tài khoản của bạn (chỉ tải được tối đa 50-200 mã).\nHủy bỏ toàn bộ quá trình tải dữ liệu."
+                    self.log_sync(msg)
+                    
+                    def handle_limit_gui():
+                        messagebox.showerror("Token Hết Hạn / Bị Chặn", msg + "\n\nVui lòng dán cURL mới vào cửa sổ cấu hình.")
+                        self.open_settings()
+                        
+                    self.root.after(0, handle_limit_gui)
+                    break
 
                 if day_total:
                     total_raw = len(day_total)
