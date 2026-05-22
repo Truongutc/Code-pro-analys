@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIC PRO Dashboard - Hệ thống Phân tích Chứng khoán</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-purple: #8b5cf6;
+            --accent-teal: #14b8a6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f59e0b;
+            --accent-blue: #3b82f6;
+            --glass-blur: blur(12px);
+            --glow-purple: rgba(139, 92, 246, 0.15);
+            --glow-teal: rgba(20, 184, 166, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 40px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, var(--glow-purple) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, var(--glow-teal) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 20px;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a78bfa 0%, #2dd4bf 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-section h1 span {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            -webkit-text-fill-color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+        }
+
+        .update-badge {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .update-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 24px auto;
+            padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-sm.active, .btn-sm:hover {
+            background: var(--accent-purple);
+            color: white;
+            border-color: var(--accent-purple);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 220px;
+            width: 100%;
+        }
+
+        .search-filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .search-bar {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 12px 16px 12px 40px;
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-teal);
+            box-shadow: 0 0 10px rgba(20, 184, 166, 0.15);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+            font-size: 1.1rem;
+        }
+
+        .filter-tabs-wrapper {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 8px;
+            margin: 0 -4px;
+            scrollbar-width: none; /* Firefox */
+        }
+        .filter-tabs-wrapper::-webkit-scrollbar {
+            display: none; /* Safari and Chrome */
+        }
+
+        .filter-tabs {
+            display: inline-flex;
+            gap: 8px;
+            padding: 0 4px;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--accent-purple) 0%, #6366f1 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+        }
+
+        .badge-count {
+            background: rgba(255, 255, 255, 0.15);
+            font-size: 0.75rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .ticker-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s, border-color 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ticker-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .ticker-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ticker-symbol {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .action-badge.buy {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .action-badge.wait {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .action-badge.sell {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .price-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .price-val {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .vol-val {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .metric-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.01);
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            text-align: center;
+        }
+
+        .metric-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .metric-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .metric-value.target {
+            color: var(--accent-green);
+        }
+
+        .metric-value.stop {
+            color: var(--accent-red);
+        }
+
+        .extra-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .risk-rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .risk-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .risk-dot.green { background-color: var(--accent-green); }
+        .risk-dot.orange { background-color: var(--accent-orange); }
+        .risk-dot.red { background-color: var(--accent-red); }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .tag {
+            font-size: 0.65rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .tag.alert-tag {
+            background: rgba(139, 92, 246, 0.08);
+            color: #c084fc;
+            border-color: rgba(139, 92, 246, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .load-more-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 12px;
+            border-radius: 12px;
+            width: 100%;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+
+        .load-more-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-purple);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <header>
+        <div class="header-container">
+            <div class="logo-section">
+                <h1>AIC PRO <span>WEB</span></h1>
+            </div>
+            <div class="update-badge">
+                <span class="update-dot"></span>
+                <span id="updateTimeText">Đang tải...</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Market Breadth Card -->
+        <section class="card">
+            <div class="card-title">
+                <span>Độ Rộng Thị Trường (MA Lines)</span>
+                <div class="chart-controls">
+                    <button class="btn-sm active" onclick="setChartRange(30)">30N</button>
+                    <button class="btn-sm" onclick="setChartRange(90)">90N</button>
+                    <button class="btn-sm" onclick="setChartRange(180)">180N</button>
+                    <button class="btn-sm" onclick="setChartRange(9999)">Tất cả</button>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="breadthChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Main Workspace: Tickers List -->
+        <section class="search-filter-section">
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" class="search-input" placeholder="Tìm kiếm mã cổ phiếu (FPT, HPG, SSI...)" oninput="handleSearch()">
+            </div>
+
+            <!-- Categories and Divergence Rules Tabs -->
+            <div class="filter-tabs-wrapper">
+                <div class="filter-tabs" id="filterTabs">
+                    <button class="tab-btn active" id="tab-all" onclick="selectFilter('all')">
+                        Tất cả <span class="badge-count" id="count-all">0</span>
+                    </button>
+                    <!-- Tabs loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Grid Results -->
+        <section>
+            <div class="grid-container" id="tickersGrid">
+                <!-- Ticker cards dynamically loaded -->
+            </div>
+            <button class="load-more-btn" id="loadMoreBtn" style="display: none;" onclick="loadMore()">Xem thêm cổ phiếu</button>
+        </section>
+    </main>
+
+    <script>
+        let rawData = null;
+        let activeFilter = 'all';
+        let searchQuery = '';
+        let breadthChart = null;
+        let currentChartRange = 30;
+        
+        // Pagination logic
+        let displayedCount = 0;
+        const PAGE_SIZE = 24;
+        let filteredTickersList = [];
+
+        // Formatting utilities
+        function formatPrice(p) {
+            if (p === null || p === undefined) return "N/A";
+            return (p / 1000).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        }
+
+        function formatVolume(v) {
+            if (!v) return "0";
+            if (v >= 1000000) {
+                return (v / 1000000).toFixed(1) + "M";
+            }
+            return (v / 1000).toFixed(0) + "k";
+        }
+
+        // Fetch analysis data from local Output folder
+        async function loadData() {
+            try {
+                const response = await fetch('./Output/analysis_results.json');
+                rawData = await response.json();
+                
+                // Set update time
+                document.getElementById('updateTimeText').innerText = `Cập nhật: ${rawData.last_update}`;
+                
+                // Initialize Breadth Chart
+                initBreadthChart();
+
+                // Setup Filter Tabs
+                buildFilterTabs();
+
+                // Filter & Render
+                applyFilters();
+
+                // Hide loading screen
+                document.getElementById('loadingOverlay').style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                }, 300);
+
+            } catch (error) {
+                console.error("Error loading JSON:", error);
+                document.getElementById('updateTimeText').innerText = "Lỗi kết nối dữ liệu";
+                document.getElementById('tickersGrid').innerHTML = `
+                    <div class="empty-state">
+                        <p style="color: var(--accent-red); font-weight: 600;">Không thể tải dữ liệu phân tích</p>
+                        <p style="font-size: 0.85rem; margin-top: 8px;">Vui lòng kiểm tra lại file Output/analysis_results.json trên kho GitHub của bạn.</p>
+                    </div>
+                `;
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        }
+
+        // Build interactive Chart.js line graph
+        function initBreadthChart() {
+            const ctx = document.getElementById('breadthChart').getContext('2d');
+            const data = rawData.market_breadth;
+            if (!data || !data.dates) return;
+
+            const sliceLength = currentChartRange;
+            const labels = data.dates.slice(-sliceLength);
+            const ma10 = data.MA10.slice(-sliceLength);
+            const ma20 = data.MA20.slice(-sliceLength);
+            const ma50 = data.MA50.slice(-sliceLength);
+
+            if (breadthChart) {
+                breadthChart.destroy();
+            }
+
+            breadthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '% > MA10',
+                            data: ma10,
+                            borderColor: '#8b5cf6',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: false
+                        },
+                        {
+                            label: '% > MA20',
+                            data: ma20,
+                            borderColor: '#14b8a6',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: false
+                        },
+                        {
+                            label: '% > MA50',
+                            data: ma50,
+                            borderColor: '#3b82f6',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#9ca3af',
+                                font: { size: 10, family: 'Inter' },
+                                boxWidth: 12
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                            titleColor: '#f3f4f6',
+                            bodyColor: '#d1d5db',
+                            borderColor: 'rgba(255,255,255,0.08)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#6b7280',
+                                font: { size: 9 },
+                                maxTicksLimit: 6
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#6b7280',
+                                font: { size: 9 },
+                                callback: val => val + '%'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Change chart range view
+        function setChartRange(days) {
+            currentChartRange = days;
+            
+            // Toggle active button style
+            const buttons = document.querySelectorAll('.chart-controls button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            const eventTarget = window.event ? window.event.target : null;
+            if (eventTarget) {
+                eventTarget.classList.add('active');
+            }
+            
+            initBreadthChart();
+        }
+
+        // Setup filter badges dynamically
+        function buildFilterTabs() {
+            const tabsContainer = document.getElementById('filterTabs');
+            
+            // Clear dynamic elements, keep only the "All" tab
+            const allTab = document.getElementById('tab-all');
+            tabsContainer.innerHTML = '';
+            tabsContainer.appendChild(allTab);
+
+            // Ticker counts
+            document.getElementById('count-all').innerText = rawData.tickers_analysis.length;
+
+            // Load Categories Meta
+            for (const [key, label] of Object.entries(rawData.categories_meta)) {
+                const list = rawData.filtered_results[key] || [];
+                if (list.length === 0) continue;
+                
+                const btn = document.createElement('button');
+                btn.className = `tab-btn ${activeFilter === key ? 'active' : ''}`;
+                btn.id = `tab-${key}`;
+                btn.onclick = () => selectFilter(key);
+                btn.innerHTML = `${label} <span class="badge-count">${list.length}</span>`;
+                tabsContainer.appendChild(btn);
+            }
+
+            // Separator
+            const divider = document.createElement('span');
+            divider.style.width = '1px';
+            divider.style.background = 'var(--border-color)';
+            divider.style.margin = '4px 0';
+            tabsContainer.appendChild(divider);
+
+            // Load Custom Rules Meta (Divergences)
+            for (const [key, label] of Object.entries(rawData.rules_meta)) {
+                const list = rawData.filtered_results[key] || [];
+                if (list.length === 0) continue;
+
+                // Format labels nicely
+                let shortLabel = label.split(' (')[0];
+                
+                const btn = document.createElement('button');
+                btn.className = `tab-btn ${activeFilter === key ? 'active' : ''}`;
+                btn.id = `tab-${key}`;
+                btn.onclick = () => selectFilter(key);
+                btn.innerHTML = `${shortLabel} <span class="badge-count">${list.length}</span>`;
+                tabsContainer.appendChild(btn);
+            }
+        }
+
+        // Handle tab selection
+        function selectFilter(filterKey) {
+            activeFilter = filterKey;
+            
+            // Update active styles
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            
+            const activeBtn = document.getElementById(`tab-${filterKey}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            applyFilters();
+        }
+
+        // Handle Search input
+        function handleSearch() {
+            searchQuery = document.getElementById('searchInput').value.trim().toUpperCase();
+            applyFilters();
+        }
+
+        // Apply dynamic search and filters on dataset
+        function applyFilters() {
+            let list = [...rawData.tickers_analysis];
+
+            // 1. Apply category or custom rule filter
+            if (activeFilter !== 'all') {
+                const allowedTickers = rawData.filtered_results[activeFilter] || [];
+                list = list.filter(t => allowedTickers.includes(t.Ticker));
+            }
+
+            // 2. Apply text search query
+            if (searchQuery) {
+                list = list.filter(t => t.Ticker.includes(searchQuery));
+            }
+
+            // Sort BUY actions first, then wait, then alphabetical symbol
+            list.sort((a, b) => {
+                const actionMap = { 'BUY': 1, 'WAIT': 2, 'SELL': 3 };
+                const actA = actionMap[a.Action] || 99;
+                const actB = actionMap[b.Action] || 99;
+                
+                if (actA !== actB) return actA - actB;
+                return a.Ticker.localeCompare(b.Ticker);
+            });
+
+            filteredTickersList = list;
+            displayedCount = 0;
+            document.getElementById('tickersGrid').innerHTML = '';
+            
+            loadMore();
+        }
+
+        // Render paginated ticker cards
+        function loadMore() {
+            const grid = document.getElementById('tickersGrid');
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            
+            if (filteredTickersList.length === 0) {
+                grid.innerHTML = `<div class="empty-state">Không tìm thấy cổ phiếu nào khớp điều kiện.</div>`;
+                loadMoreBtn.style.display = 'none';
+                return;
+            }
+
+            const nextBatchLimit = Math.min(displayedCount + PAGE_SIZE, filteredTickersList.length);
+            
+            for (let i = displayedCount; i < nextBatchLimit; i++) {
+                const t = filteredTickersList[i];
+                
+                // Get labels
+                const labels = [];
+                // Add categories (exclude Early/Add/Strong inside tags to avoid duplication with entry layout)
+                t.Categories.forEach(cat => {
+                    if (!['EARLY', 'ADD_1', 'ADD_2', 'STRONG'].includes(cat)) {
+                        labels.push({ text: rawData.categories_meta[cat] || cat, isAlert: false });
+                    }
+                });
+                
+                // Add matched divergence alerts
+                t.Rules.forEach(rule => {
+                    if (rule.includes('DIVERGENCE')) {
+                        const ruleLabel = rawData.rules_meta[rule] || rule;
+                        labels.push({ text: ruleLabel.split(' (')[0], isAlert: true });
+                    }
+                });
+
+                // Risk rating HSL
+                let riskClass = 'green';
+                if (t.RiskScore >= 7) riskClass = 'red';
+                else if (t.RiskScore >= 4) riskClass = 'orange';
+
+                const card = document.createElement('div');
+                card.className = 'ticker-card';
+                card.innerHTML = `
+                    <div class="ticker-card-header">
+                        <div class="ticker-symbol">
+                            ${t.Ticker}
+                        </div>
+                        <span class="action-badge ${t.Action.toLowerCase()}">${t.Action}</span>
+                    </div>
+
+                    <div class="price-section">
+                        <div class="price-val">${(t.Price / 1000).toFixed(2)}</div>
+                        <div class="vol-val">Vol: ${formatVolume(t.Volume)}</div>
+                    </div>
+
+                    <div class="metric-row">
+                        <div class="metric-item">
+                            <span class="metric-label">Điểm Mua</span>
+                            <span class="metric-value">${formatPrice(t.Entry)}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Mục Tiêu</span>
+                            <span class="metric-value target">${formatPrice(t.Target)}</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Cắt Lỗ</span>
+                            <span class="metric-value stop">${formatPrice(t.StopLoss)}</span>
+                        </div>
+                    </div>
+
+                    <div class="extra-stats">
+                        <span>Tỷ lệ R:R: <strong style="color: white">${t.RR}</strong></span>
+                        <div class="risk-rating">
+                            <span>Rủi ro:</span>
+                            <span class="risk-dot ${riskClass}"></span>
+                            <strong style="color: white">${t.RiskScore}/10</strong>
+                        </div>
+                    </div>
+
+                    ${labels.length > 0 ? `
+                        <div class="tags-container">
+                            ${labels.map(l => `<span class="tag ${l.isAlert ? 'alert-tag' : ''}">${l.text}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                `;
+                grid.appendChild(card);
+            }
+
+            displayedCount = nextBatchLimit;
+            
+            // Toggle "Load More" visibility
+            if (displayedCount < filteredTickersList.length) {
+                loadMoreBtn.style.display = 'block';
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
+        }
+
+        // Initialize App on load
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>
