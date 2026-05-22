@@ -691,6 +691,9 @@ class TinvestApp:
         btn_vs = tk.Button(frame_btns, text="🌐 Update", command=self.run_vietstock_update, bg="#2196F3", fg="white", font=("Arial", 9, "bold"), padx=8)
         btn_vs.pack(side=tk.RIGHT, padx=2)
 
+        btn_push = tk.Button(frame_btns, text="🌐 Đồng bộ Web", command=self.git_push_to_web, bg="#9C27B0", fg="white", font=("Arial", 9, "bold"), padx=8)
+        btn_push.pack(side=tk.RIGHT, padx=2)
+
         btn_reset = tk.Button(frame_btns, text="🗑️ Reset Dữ liệu", command=self.reset_data_cache, bg="#FF5722", fg="white", font=("Arial", 9, "bold"), padx=8)
         btn_reset.pack(side=tk.RIGHT, padx=2)
 
@@ -1925,6 +1928,7 @@ class TinvestApp:
             status_text = f"Dữ liệu: {loaded_total} mã ({analyzed_total} đã phân tích)"
             self.root.after(0, self.lbl_file.config, {"text": status_text, "fg": "#1A237E"})
             self.log_sync(f"✅ Hoàn tất! Đã nạp {loaded_total} mã (trong đó {analyzed_total} mã đã có kết quả phân tích).")
+            self.export_web_json()
 
             
             # Check for missing indicators in the loaded cache
@@ -2499,6 +2503,7 @@ class TinvestApp:
             self._update_breadth_from_cache()
             self.root.after(0, self.lbl_file.config, {"text": f"Dữ liệu: {len(self.analysis_cache)} mã", "fg": "blue"})
             self.log_sync("✅ Cập nhật hoàn tất!")
+            self.export_web_json()
 
         except Exception as e:
             self.log_sync(f"❌ Lỗi xử lý: {e}")
@@ -2595,6 +2600,216 @@ class TinvestApp:
             self.log_sync(f"✅ Đã cập nhật Biểu đồ Độ rộng từ {processed_count} mã cổ phiếu.")
         else:
             self.log_sync("⚠️ Cảnh báo: Không có đủ dữ liệu hợp lệ để tính độ rộng.")
+
+    def export_web_json(self):
+        """Export current analysis cache to Output/analysis_results.json for web dashboard."""
+        try:
+            import json
+            self.log_sync("[*] Đang xuất dữ liệu ra JSON cho Web dashboard...")
+            if not self.analysis_cache:
+                self.log_sync("⚠️ Không có dữ liệu phân tích để xuất.")
+                return False
+                
+            categories_meta = {
+                "ACCUMULATION": "Tích lũy",
+                "PERFECT_MA": "Perfect MA (Xu hướng tăng mạnh)",
+                "HEIKIN_BUY": "Heikin Buy (Tín hiệu mua Heikin Ashi)",
+                "UPCLOUD": "UpCloud (Xu hướng tăng trên mây)",
+                "WHITE_ADX": "ADX Trắng (Đầu chu kỳ xu hướng)",
+                "EARLY": "Điểm mua EARLY (Mua sớm)",
+                "ADD_1": "Điểm mua gia tăng 1 (ADD_1)",
+                "ADD_2": "Điểm mua gia tăng 2 (ADD_2)",
+                "STRONG": "Điểm mua MẠNH (STRONG)"
+            }
+            
+            rules_meta = {k: v["label"] for k, v in CUSTOM_RULES.items()}
+            
+            filtered_results = {cat: [] for cat in categories_meta.keys()}
+            for rule_key in rules_meta.keys():
+                filtered_results[rule_key] = []
+                
+            tickers_analysis = []
+            
+            for ticker, data in list(self.analysis_cache.items()):
+                df = data.get("df")
+                if df is None or df.empty:
+                    continue
+                    
+                current_vol = int(df['Volume'].iloc[-1]) if 'Volume' in df.columns else 0
+                if current_vol < 20000:
+                    continue
+                    
+                res = data.get("adv") or {}
+                accum = data.get("accum") or {}
+                ma_trend = data.get("ma_trend") or {}
+                val = data.get("valuation") or {}
+                
+                current_p = float(df['Close'].iloc[-1]) * 1000
+                ep = val.get("price", 0)
+                tp = val.get("tp1", 0)
+                sl = val.get("cutloss_partial", 0)
+                rr_ratio = val.get("rr_ratio", 0)
+                val_score = val.get("risk_score", 0)
+                risk_pct = val.get("risk_pct", 0)
+                action = val.get("action", "WAIT")
+                
+                matched_categories = []
+                if accum.get("is_accumulation", False):
+                    matched_categories.append("ACCUMULATION")
+                if ma_trend.get("is_perfect_uptrend", False):
+                    matched_categories.append("PERFECT_MA")
+                    
+                buy_2 = False
+                if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
+                    buy_2 = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                if buy_2:
+                    matched_categories.append("HEIKIN_BUY")
+                    
+                if len(df) > 0 and 'High' in df.columns and 'Low' in df.columns:
+                    last = df.iloc[-1]
+                    current_price = last['Close']
+                    span_a = last.get('SpanA', 0)
+                    span_b = last.get('SpanB', 0)
+                    tenkan = last.get('Tenkan', 0)
+                    kijun = last.get('Kijun', 0)
+                    ma10 = last.get('MA10', 0)
+                    ma20 = last.get('MA20', 0)
+                    
+                    future_span_a = (tenkan + kijun) / 2
+                    h52 = df['High'].iloc[-52:].max() if len(df) >= 52 else df['High'].max()
+                    l52 = df['Low'].iloc[-52:].min() if len(df) >= 52 else df['Low'].min()
+                    future_span_b = (h52 + l52) / 2
+                    
+                    c1 = (current_price > span_a) and (current_price > span_b) if span_a > 0 else False
+                    c2 = (future_span_a > future_span_b)
+                    c3 = (tenkan > kijun)
+                    c4 = (ma10 > ma20)
+                    if c1 and c2 and c3 and c4:
+                        matched_categories.append("UPCLOUD")
+                        
+                adx_color = str(df['ADX_Color'].iloc[-1]).upper() if 'ADX_Color' in df.columns else "N/A"
+                if adx_color == "WHITE":
+                    matched_categories.append("WHITE_ADX")
+                    
+                entry_type = res.get("entry_type")
+                if entry_type in ["EARLY", "ADD_1", "ADD_2", "STRONG"]:
+                    matched_categories.append(entry_type)
+                    
+                matched_rules = []
+                for rule_key, r_def in CUSTOM_RULES.items():
+                    try:
+                        if r_def["func"](df):
+                            matched_rules.append(rule_key)
+                    except:
+                        pass
+                        
+                ticker_record = {
+                    "Ticker": ticker,
+                    "Price": int(current_p),
+                    "Volume": int(current_vol),
+                    "Entry": int(ep * 1000) if ep > 0 else None,
+                    "Target": int(tp * 1000) if tp > 0 else None,
+                    "StopLoss": int(sl * 1000) if sl > 0 else None,
+                    "RR": f"{round(rr_ratio, 1)}/1" if rr_ratio > 0 else "N/A",
+                    "RiskScore": int(val_score),
+                    "RiskPct": float(risk_pct),
+                    "Action": action,
+                    "Categories": matched_categories,
+                    "Rules": matched_rules
+                }
+                tickers_analysis.append(ticker_record)
+                
+                for cat in matched_categories:
+                    filtered_results[cat].append(ticker)
+                for rule_key in matched_rules:
+                    filtered_results[rule_key].append(ticker)
+            
+            # Format market breadth
+            mb_data = {}
+            if hasattr(self, 'market_breadth') and self.market_breadth is not None and not self.market_breadth.empty:
+                mb = self.market_breadth
+                mb_data = {
+                    "dates": [d.strftime("%Y-%m-%d") for d in mb.index],
+                    "MA10": mb['%MA10'].round(2).tolist(),
+                    "MA20": mb['%MA20'].round(2).tolist(),
+                    "MA50": mb['%MA50'].round(2).tolist()
+                }
+            
+            # Write to Output/analysis_results.json
+            app_dir = os.path.dirname(os.path.abspath(__file__))
+            output_dir = os.path.join(app_dir, "Output")
+            os.makedirs(output_dir, exist_ok=True)
+            output_file = os.path.join(output_dir, "analysis_results.json")
+            
+            from datetime import timezone
+            ict_time = datetime.now(timezone.utc) + timedelta(hours=7)
+            last_update_str = ict_time.strftime("%Y-%m-%d %H:%M:%S")
+            
+            final_output = {
+                "last_update": last_update_str,
+                "market_breadth": mb_data,
+                "categories_meta": categories_meta,
+                "rules_meta": rules_meta,
+                "tickers_analysis": tickers_analysis,
+                "filtered_results": filtered_results
+            }
+            
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(final_output, f, ensure_ascii=False, indent=2)
+                
+            self.log_sync(f"✅ Đã xuất {len(tickers_analysis)} mã ra {output_file}.")
+            return True
+        except Exception as e:
+            self.log_sync(f"❌ Lỗi xuất dữ liệu Web JSON: {e}")
+            return False
+
+    def git_push_to_web(self):
+        """Automatically stage, commit, and push Output/analysis_results.json to GitHub."""
+        def run_push():
+            try:
+                self.log_sync("\n--- ĐANG ĐỒNG BỘ LÊN GITHUB PAGES... ---")
+                
+                # Make sure file exists first
+                self.export_web_json()
+                
+                import subprocess
+                app_dir = os.path.dirname(os.path.abspath(__file__))
+                
+                # Git status check
+                res = subprocess.run(["git", "status"], cwd=app_dir, capture_output=True, text=True)
+                if res.returncode != 0:
+                    self.log_sync("❌ Thư mục không phải Git repository hoặc Git chưa được cài đặt.")
+                    return
+                
+                # Git add Output/analysis_results.json
+                self.log_sync("   [+] Đang thêm file dữ liệu vào Git...")
+                subprocess.run(["git", "add", "Output/analysis_results.json"], cwd=app_dir, check=True)
+                
+                # Git commit
+                self.log_sync("   [+] Đang tạo commit...")
+                commit_msg = f"Update web dashboard data: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                diff_res = subprocess.run(["git", "diff", "--quiet", "--cached"], cwd=app_dir)
+                if diff_res.returncode == 0:
+                    self.log_sync("ℹ️ Không có thay đổi nào mới để commit. Tiến hành push...")
+                else:
+                    subprocess.run(["git", "commit", "-m", commit_msg], cwd=app_dir, check=True)
+                
+                # Git push
+                self.log_sync("   [+] Đang push lên GitHub (vui lòng chờ)...")
+                push_res = subprocess.run(["git", "push"], cwd=app_dir, capture_output=True, text=True)
+                
+                if push_res.returncode == 0:
+                    self.log_sync("🎉 ĐỒNG BỘ THÀNH CÔNG! Dashboard web sẽ được cập nhật sau vài giây.")
+                    messagebox.showinfo("Đồng Bộ Web", "Đã đồng bộ dữ liệu lên web thành công!\nBạn có thể truy cập dashboard trên điện thoại.")
+                else:
+                    self.log_sync(f"❌ Git Push thất bại:\n{push_res.stderr}")
+                    messagebox.showerror("Lỗi Đồng Bộ", f"Git Push thất bại:\n{push_res.stderr}\n\nVui lòng kiểm tra quyền truy cập/SSH key hoặc mạng internet.")
+                    
+            except Exception as e:
+                self.log_sync(f"❌ Lỗi đồng bộ GitHub: {e}")
+                messagebox.showerror("Lỗi Hệ Thống", f"Lỗi đồng bộ GitHub: {e}")
+                
+        threading.Thread(target=run_push, daemon=True).start()
 
 
 

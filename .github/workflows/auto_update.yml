@@ -49,7 +49,23 @@ jobs:
       - name: Run Update Script
         env:
           PYTHONPATH: .
+          VIETSTOCK_CURL: ${{ secrets.VIETSTOCK_CURL }}
         run: |
+          python -c '
+          import os
+          from tinvest.config_manager import ConfigManager
+          curl_str = os.environ.get("VIETSTOCK_CURL")
+          if curl_str and len(curl_str.strip()) > 10:
+              print("Found VIETSTOCK_CURL secret. Parsing and updating config...")
+              mgr = ConfigManager()
+              success = mgr.parse_input(curl_str)
+              if success:
+                  print("Config successfully updated with new cURL credentials!")
+              else:
+                  print("Failed to parse cURL credentials.")
+          else:
+              print("No VIETSTOCK_CURL secret provided or it is too short. Proceeding with existing config.")
+          '
           python run_headless_update.py
 
       - name: Commit and Push Changes
