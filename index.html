@@ -1539,175 +1539,193 @@
             background: rgba(139, 92, 246, 0.05);
         }
         /* =====================================================
-           INTERACTIVE CHART PANEL (Replaces PNG images)
+           INTERACTIVE CHART SYSTEM (4-panel grid + fullscreen)
            ===================================================== */
 
-        /* Chart type tab selector */
-        .chart-type-tabs {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-        .chart-type-tab {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-secondary);
-            padding: 6px 14px;
-            font-size: 0.78rem;
-            font-weight: 600;
-            font-family: 'Outfit', sans-serif;
-            cursor: pointer;
-            transition: all 0.18s ease;
-            white-space: nowrap;
-        }
-        .chart-type-tab.active {
-            background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 3px 10px rgba(124,58,237,0.3);
-        }
-        .chart-type-tab:hover:not(.active) {
-            background: rgba(255,255,255,0.07);
-            color: var(--text-primary);
-        }
-
-        /* Range button bar */
-        .chart-range-bar {
-            display: flex;
-            gap: 5px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .chart-range-label {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            margin-right: 4px;
-        }
-        .range-btn {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .range-btn.active {
-            background: var(--accent-teal);
-            color: #000;
-            border-color: var(--accent-teal);
-        }
-        .range-btn:hover:not(.active) {
-            background: rgba(255,255,255,0.08);
-            color: white;
-        }
-
         /* Chart container wrapper */
-        .interactive-chart-section {
-            margin-top: 20px;
-        }
+        .interactive-chart-section { margin-top: 20px; }
         .chart-panel-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
+            align-items: center;
+            margin-bottom: 14px;
         }
         .chart-panel-title {
             font-family: 'Outfit', sans-serif;
             font-size: 1rem;
             font-weight: 700;
             color: var(--text-primary);
+        }
+        .chart-hint {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
+        }
+        .chart-hint span { opacity: 0.7; }
+
+        /* 2×2 Grid */
+        .chart-grid-4 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        @media (max-width: 900px) {
+            .chart-grid-4 { grid-template-columns: 1fr; }
+        }
+
+        /* Single chart cell */
+        .chart-cell {
+            background: #08101c;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.2s;
+        }
+        .chart-cell:hover { border-color: rgba(124,58,237,0.35); }
+
+        .chart-cell-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.025);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            flex-shrink: 0;
+        }
+        .chart-cell-label {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #c4c8d8;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .chart-expand-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-secondary);
+            padding: 3px 9px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.68rem;
+            font-weight: 600;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .chart-expand-btn:hover {
+            background: rgba(124,58,237,0.25);
+            border-color: #7c3aed;
+            color: white;
+        }
+        .chart-cell-body {
+            flex: 1;
+            position: relative;
+            min-height: 380px;
         }
 
         /* LightweightCharts host divs */
-        .lwc-wrapper {
-            position: relative;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            background: #0a0e1a;
-        }
-        .lwc-host {
-            width: 100%;
-        }
-        /* Main price chart */
-        .lwc-host.main { height: 340px; }
-        /* Sub-panes (MACD, ADX, Octopus, RS…) */
-        .lwc-host.sub  { height: 150px; border-top: 1px solid rgba(255,255,255,0.05); }
-        /* Heatmap bottom sub-pane */
-        .lwc-host.sub-sm { height: 120px; border-top: 1px solid rgba(255,255,255,0.05); }
+        .lwc-host { width: 100%; }
+        .lwc-host.main { height: 220px; }
+        .lwc-host.sub  { height: 95px;  border-top: 1px solid rgba(255,255,255,0.04); }
 
-        /* Loading / error overlay inside chart wrapper */
-        .lwc-overlay {
-            position: absolute;
-            inset: 0;
+        /* Pane stack inside a cell */
+        .chart-pane-stack {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        .chart-pane-stack .lwc-host {
+            border-radius: 0;
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+        .chart-pane-stack .lwc-host:first-child { border-top: none; }
+
+        /* Loading spinner inside a cell */
+        .lwc-spinner {
+            width: 26px; height: 26px;
+            border: 3px solid rgba(255,255,255,0.08);
+            border-top-color: #14b8a6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: auto;
+        }
+        .lwc-loading {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            background: rgba(8,11,19,0.85);
-            z-index: 5;
-            border-radius: 12px;
-            transition: opacity 0.2s;
-        }
-        .lwc-overlay.hidden { opacity: 0; pointer-events: none; }
-        .lwc-spinner {
-            width: 28px; height: 28px;
-            border: 3px solid rgba(255,255,255,0.1);
-            border-top-color: var(--accent-teal);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        .lwc-overlay-msg {
-            font-size: 0.8rem;
+            height: 100%;
             color: var(--text-secondary);
+            font-size: 0.78rem;
         }
 
-        /* Chart section grid for multi-pane stacking */
-        .chart-pane-stack {
-            display: flex;
+        /* ---- FULLSCREEN MODAL ---- */
+        .chart-fs-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            background: rgba(4,8,16,0.96);
+            backdrop-filter: blur(8px);
             flex-direction: column;
-            gap: 0;
+            padding: 16px 20px 20px;
+        }
+        .chart-fs-modal.open { display: flex; }
+        .chart-fs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+        .chart-fs-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chart-fs-close {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: white;
+            padding: 7px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: background 0.15s;
+        }
+        .chart-fs-close:hover { background: rgba(239,68,68,0.25); border-color: #ef4444; }
+        .chart-fs-body {
+            flex: 1;
+            background: #08101c;
             border-radius: 12px;
             overflow: hidden;
-            border: 1px solid var(--border-color);
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.07);
         }
-        .chart-pane-stack .lwc-host { border-radius: 0; border: none; border-top: 1px solid rgba(255,255,255,0.04); }
-        .chart-pane-stack .lwc-host:first-child { border-top: none; }
-
-        /* Legend tooltip bar */
-        .lwc-legend {
-            position: absolute;
-            top: 8px;
-            left: 12px;
+        #chartFsMount {
+            width: 100%;
+            height: 100%;
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            z-index: 4;
-            pointer-events: none;
+            flex-direction: column;
         }
-        .lwc-legend-item {
-            font-size: 0.68rem;
-            font-family: 'Inter', monospace;
-            font-weight: 600;
-            padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(8,11,19,0.75);
-            backdrop-filter: blur(4px);
-            color: white;
-            white-space: nowrap;
-        }
+        #chartFsMount .lwc-host.main { flex: 3; height: auto; }
+        #chartFsMount .lwc-host.sub  { flex: 1; height: auto; border-top: 1px solid rgba(255,255,255,0.04); }
     </style>
+    </style>
+
 </head>
 <body>
 
@@ -1781,29 +1799,46 @@
                     <!-- Loaded dynamically -->
                 </div>
 
-                <!-- Interactive Chart Panel (replaces PNG images) -->
+                <!-- 4-Panel Interactive Chart Grid -->
                 <section class="card interactive-chart-section">
                     <div class="chart-panel-header">
                         <span class="chart-panel-title" id="marketChartTitle">📈 Biểu đồ Phân tích VNINDEX</span>
-                        <div class="chart-range-bar" id="marketChartRangeBar">
-                            <span class="chart-range-label">Khoảng:</span>
-                            <button class="range-btn" onclick="setMarketChartRange(30)">1M</button>
-                            <button class="range-btn" onclick="setMarketChartRange(90)">3M</button>
-                            <button class="range-btn active" onclick="setMarketChartRange(250)">1Y</button>
-                            <button class="range-btn" onclick="setMarketChartRange(9999)">Tất cả</button>
+                        <span class="chart-hint"><span>🖱️ Cuộn để zoom · Kéo để pan · Nhấn ⛶ để toàn màn hình</span></span>
+                    </div>
+                    <div class="chart-grid-4" id="marketChartGrid">
+                        <div class="chart-cell">
+                            <div class="chart-cell-header">
+                                <span class="chart-cell-label">🌿 GreenPink + Octopus</span>
+                                <button class="chart-expand-btn" onclick="expandChart('market','gp')">⛶ Mở rộng</button>
+                            </div>
+                            <div class="chart-cell-body" id="marketMount-gp"></div>
+                        </div>
+                        <div class="chart-cell">
+                            <div class="chart-cell-header">
+                                <span class="chart-cell-label">🕯️ Heikin-Ashi + 2Trend</span>
+                                <button class="chart-expand-btn" onclick="expandChart('market','heikin')">⛶ Mở rộng</button>
+                            </div>
+                            <div class="chart-cell-body" id="marketMount-heikin"></div>
+                        </div>
+                        <div class="chart-cell">
+                            <div class="chart-cell-header">
+                                <span class="chart-cell-label">🔥 Bản đồ nhiệt</span>
+                                <button class="chart-expand-btn" onclick="expandChart('market','heatmap')">⛶ Mở rộng</button>
+                            </div>
+                            <div class="chart-cell-body" id="marketMount-heatmap"></div>
+                        </div>
+                        <div class="chart-cell">
+                            <div class="chart-cell-header">
+                                <span class="chart-cell-label">📊 Báo cáo Kỹ thuật</span>
+                                <button class="chart-expand-btn" onclick="expandChart('market','techreport')">⛶ Mở rộng</button>
+                            </div>
+                            <div class="chart-cell-body" id="marketMount-techreport"></div>
                         </div>
                     </div>
-                    <div class="chart-type-tabs" id="marketChartTypeTabs">
-                        <button class="chart-type-tab active" data-chart="gp" onclick="switchMarketChart('gp',this)">🌿 GreenPink + Octopus</button>
-                        <button class="chart-type-tab" data-chart="heikin" onclick="switchMarketChart('heikin',this)">🕯️ Heikin-Ashi + 2Trend</button>
-                        <button class="chart-type-tab" data-chart="heatmap" onclick="switchMarketChart('heatmap',this)">🔥 Bản đồ nhiệt</button>
-                        <button class="chart-type-tab" data-chart="techreport" onclick="switchMarketChart('techreport',this)">📊 Báo cáo Kỹ thuật</button>
-                    </div>
-                    <!-- Chart pane mount point -->
-                    <div id="marketChartMount"></div>
                 </section>
             </div>
         </div>
+
 
         <!-- Tab 2: Tra cứu Cổ phiếu đơn lẻ -->
         <div class="tab-content" id="lookup-tab">
@@ -1967,6 +2002,17 @@
         <div class="modal-content">
             <span class="modal-close" onclick="closeTickerDetailsModal()">&times;</span>
             <div id="modalStockDetailsContainer"></div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Chart Modal -->
+    <div id="chartFsModal" class="chart-fs-modal">
+        <div class="chart-fs-header">
+            <span class="chart-fs-title" id="chartFsTitle">📈 Biểu đồ</span>
+            <button class="chart-fs-close" onclick="closeChartFullscreen()">✕ Đóng (Esc)</button>
+        </div>
+        <div class="chart-fs-body">
+            <div id="chartFsMount"></div>
         </div>
     </div>
 
@@ -2738,34 +2784,49 @@
                     </div>
                 </div>
 
-                <!-- Interactive Chart Panel (Lightweight Charts) -->
+                <!-- 4-Panel Interactive Chart Grid -->
                 <section class="card interactive-chart-section" style="margin-top: 20px;">
                     <div class="chart-panel-header">
                         <span class="chart-panel-title">📈 Biểu đồ Phân tích ${t.Ticker}</span>
-                        <div class="chart-range-bar" id="${containerId}-rangeBar">
-                            <span class="chart-range-label">Khoảng:</span>
-                            <button class="range-btn" onclick="stockChartSetRange('${containerId}',30,this)">1M</button>
-                            <button class="range-btn" onclick="stockChartSetRange('${containerId}',90,this)">3M</button>
-                            <button class="range-btn active" onclick="stockChartSetRange('${containerId}',250,this)">1Y</button>
-                            <button class="range-btn" onclick="stockChartSetRange('${containerId}',9999,this)">Tất cả</button>
+                        <span class="chart-hint"><span>🖥️ Cuộn zoom · Kéo pan · ⛶ Toàn màn hình</span></span>
+                    </div>
+                    <div class="chart-grid-4" id="${containerId}-chartGrid" data-ticker="${t.Ticker}">
+                        <div class="chart-cell">
+                            <div class="chart-cell-header">
+                                <span class="chart-cell-label">🌿 GP + Octopus</span>
+                                <button class="chart-expand-btn" onclick="expandChart('${containerId}','gp')">⛶ Mở rộng</button>
+                            </div>
+                            <div class="chart-cell-body" id="${containerId}-mount-gp"></div>
+                        </div>
+                        <div class="chart-cell">
+                            <div class="chart-cell-header">
+                                <span class="chart-cell-label">🕯️ Heikin + 2Trend</span>
+                                <button class="chart-expand-btn" onclick="expandChart('${containerId}','heikin')">⛶ Mở rộng</button>
+                            </div>
+                            <div class="chart-cell-body" id="${containerId}-mount-heikin"></div>
+                        </div>
+                        <div class="chart-cell">
+                            <div class="chart-cell-header">
+                                <span class="chart-cell-label">🔥 Heatmap</span>
+                                <button class="chart-expand-btn" onclick="expandChart('${containerId}','heatmap')">⛶ Mở rộng</button>
+                            </div>
+                            <div class="chart-cell-body" id="${containerId}-mount-heatmap"></div>
+                        </div>
+                        <div class="chart-cell">
+                            <div class="chart-cell-header">
+                                <span class="chart-cell-label">📊 Kỹ thuật</span>
+                                <button class="chart-expand-btn" onclick="expandChart('${containerId}','techreport')">⛶ Mở rộng</button>
+                            </div>
+                            <div class="chart-cell-body" id="${containerId}-mount-techreport"></div>
                         </div>
                     </div>
-                    <div class="chart-type-tabs" id="${containerId}-chartTabs">
-                        <button class="chart-type-tab active" onclick="stockSwitchChart('${containerId}','gp','${t.Ticker}',this)">🌿 GP + Octopus</button>
-                        <button class="chart-type-tab" onclick="stockSwitchChart('${containerId}','heikin','${t.Ticker}',this)">🕯️ Heikin + 2Trend</button>
-                        <button class="chart-type-tab" onclick="stockSwitchChart('${containerId}','heatmap','${t.Ticker}',this)">🔥 Heatmap</button>
-                        <button class="chart-type-tab" onclick="stockSwitchChart('${containerId}','techreport','${t.Ticker}',this)">📊 Kỹ thuật</button>
-                    </div>
-                    <div id="${containerId}-chartMount"></div>
                 </section>
             `;
 
-            // Render mini trend chart + lazy-load full history for interactive charts
+            // Render mini chart + all 4 interactive charts simultaneously
             setTimeout(() => {
                 renderMiniTrendChart(t, `${containerId}-miniChart`);
-                // Render default chart type (gp) with lazy-loaded history JSON
-                stockSwitchChart(containerId, 'gp', t.Ticker, 
-                    document.querySelector(`#${containerId}-chartTabs .chart-type-tab`));
+                renderAll4Charts(containerId, t.Ticker);
             }, 100);
         }
 
@@ -3109,698 +3170,604 @@
             alert("Để cập nhật dữ liệu mới nhất, vui lòng chạy lệnh:\npython run_headless_update.py\ntrong terminal của bạn.");
         });
 
-        // Initialize App on DOM Content Loaded
-        window.addEventListener('DOMContentLoaded', loadData);
 
         // ============================================================
-        //   LIGHTWEIGHT CHARTS ENGINE
-        //   Replaces all Matplotlib PNG exports with interactive charts
+        //   LIGHTWEIGHT CHARTS ENGINE v2
+        //   4 charts shown simultaneously, free zoom/pan (TradingView style)
+        //   All panes synced — scroll one, all follow
         // ============================================================
 
-        // --- State ---
-        const historyCache = {};       // { ticker: data }
-        const lwcInstances = {};       // { mountId: [chartInstance,...] }
-        let marketChartTicker = 'VNINDEX';
-        let marketChartType  = 'gp';
-        let marketChartRange = 250;
-        const stockChartState = {};    // { containerId: { ticker, type, range } }
+        // State
+        const historyCache  = {};  // { ticker: rawData }
+        const lwcInstances  = {};  // { mountId: [{chart,ro},...] }
+        let   fsInstances   = [];  // chart instances inside fullscreen
+        let   marketChartTicker = 'VNINDEX';
 
-        // -------------------------------------------------------
-        // LWC THEME
-        // -------------------------------------------------------
-        const LWC_THEME = {
-            layout: { background: { color: '#0a0e1a' }, textColor: '#9ca3af' },
-            grid:   { vertLines: { color: 'rgba(255,255,255,0.03)' },
-                      horzLines: { color: 'rgba(255,255,255,0.05)' } },
-            crosshair: { mode: 1 },
-            timeScale: { borderColor: 'rgba(255,255,255,0.1)',
-                         timeVisible: true, secondsVisible: false,
-                         fixLeftEdge: false, fixRightEdge: false }
+        // Labels for fullscreen title
+        const CHART_LABELS = {
+            gp:         '🌿 GreenPink + Octopus',
+            heikin:     '🕯️ Heikin-Ashi + 2Trend',
+            heatmap:    '🔥 Bản đồ nhiệt',
+            techreport: '📊 Báo cáo Kỹ thuật'
         };
 
-        // -------------------------------------------------------
-        // UTILITIES
-        // -------------------------------------------------------
-        function dateToTs(dateStr) {
-            // 'YYYY-MM-DD' → Unix timestamp (seconds, UTC midnight)
-            return Math.floor(new Date(dateStr + 'T00:00:00Z').getTime() / 1000);
-        }
+        // ── LWC base theme (TradingView dark) ──
+        const LWC_THEME = {
+            layout:    { background: { color: '#08101c' }, textColor: '#7a8599' },
+            grid:      { vertLines: { color: 'rgba(255,255,255,0.025)' },
+                         horzLines: { color: 'rgba(255,255,255,0.04)'  } },
+            crosshair: { mode: 1 },
+            timeScale: { borderColor: 'rgba(255,255,255,0.08)',
+                         timeVisible: true, secondsVisible: false,
+                         fixLeftEdge: false, fixRightEdge: false },
+            rightPriceScale: { borderColor: 'rgba(255,255,255,0.08)' }
+        };
 
-        function buildOHLCV(data, limit) {
-            const n = data.dates.length;
-            const start = limit >= 9999 ? 0 : Math.max(0, n - limit);
-            const result = [];
-            for (let i = start; i < n; i++) {
-                const ts = dateToTs(data.dates[i]);
-                if (!data.opens[i] || !data.closes[i]) continue;
-                result.push({
-                    time: ts,
-                    open:  data.opens[i]  * 1000,
-                    high:  data.highs[i]  * 1000,
-                    low:   data.lows[i]   * 1000,
-                    close: data.closes[i] * 1000
-                });
+        // ── Utility: date string → Unix seconds ──
+        function d2ts(s) { return Math.floor(new Date(s + 'T00:00:00Z').getTime() / 1000); }
+
+        // ── Build OHLCV array from history data ──
+        function ohlcv(data) {
+            const out = [];
+            for (let i = 0; i < data.dates.length; i++) {
+                const o = data.opens[i], c = data.closes[i],
+                      h = data.highs[i], l = data.lows[i];
+                if (!o || !c) continue;
+                out.push({ time: d2ts(data.dates[i]),
+                    open: o*1000, high: h*1000, low: l*1000, close: c*1000 });
             }
-            return result;
+            return out;
         }
 
-        function buildLine(data, col, limit, scale = 1000) {
-            const n = data.dates.length;
-            const start = limit >= 9999 ? 0 : Math.max(0, n - limit);
-            const result = [];
-            for (let i = start; i < n; i++) {
-                const v = data[col] && data[col][i];
+        // ── Build line series data from a named column ──
+        function lineData(data, col, scale = 1000) {
+            const out = [];
+            if (!data[col]) return out;
+            for (let i = 0; i < data.dates.length; i++) {
+                const v = data[col][i];
                 if (v === null || v === undefined) continue;
-                result.push({ time: dateToTs(data.dates[i]), value: v * scale });
+                out.push({ time: d2ts(data.dates[i]), value: v * scale });
             }
-            return result;
+            return out;
         }
 
-        function buildVolume(data, limit) {
-            const n = data.dates.length;
-            const start = limit >= 9999 ? 0 : Math.max(0, n - limit);
-            const result = [];
-            for (let i = start; i < n; i++) {
-                const v = data.volumes[i];
-                if (v === null || v === undefined) continue;
-                const up = (data.closes[i] || 0) >= (data.opens[i] || 0);
-                result.push({
-                    time:  dateToTs(data.dates[i]),
-                    value: v,
-                    color: up ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'
-                });
-            }
-            return result;
+        // ── Lazy-fetch per-ticker history JSON ──
+        async function fetchHistory(ticker) {
+            if (historyCache[ticker]) return historyCache[ticker];
+            const r = await fetch(`./Output/history/${ticker}.json`);
+            if (!r.ok) throw new Error(`HTTP ${r.status} for ${ticker}`);
+            historyCache[ticker] = await r.json();
+            return historyCache[ticker];
         }
 
-        // Create a single LWC pane, return { chart, mount }
-        function createChartPane(mountId, heightClass = 'main', opts = {}) {
+        // ── Show loading state in a cell ──
+        function cellLoading(mountId, msg = 'Đang tải...') {
             const el = document.getElementById(mountId);
-            if (!el) return null;
+            if (el) el.innerHTML =
+                `<div class="lwc-loading"><div class="lwc-spinner"></div><span>${msg}</span></div>`;
+        }
+        function cellError(mountId, msg) {
+            const el = document.getElementById(mountId);
+            if (el) el.innerHTML =
+                `<div class="lwc-loading" style="color:#6b7280;font-size:0.75rem;text-align:center;padding:12px;">⚠️ ${msg}</div>`;
+        }
 
-            // Create host div
-            const host = document.createElement('div');
-            host.className = `lwc-host ${heightClass}`;
-            el.appendChild(host);
-
-            const chart = LightweightCharts.createChart(host, {
-                ...LWC_THEME,
-                width:  host.clientWidth,
-                height: host.offsetHeight || (heightClass === 'main' ? 340 : 150),
-                ...opts
+        // ── Destroy all LWC instances in a mount ──
+        function destroyMount(mountId) {
+            (lwcInstances[mountId] || []).forEach(item => {
+                try { item.ro && item.ro.disconnect(); } catch(e){}
+                try { item.chart && item.chart.remove();  } catch(e){}
             });
-
-            // Resize on window resize
-            const ro = new ResizeObserver(() => {
-                chart.resize(host.clientWidth, host.offsetHeight);
-            });
-            ro.observe(host);
-
-            return { chart, host, ro };
-        }
-
-        // Show loading overlay in mount
-        function showChartLoading(mountId, msg = 'Đang tải dữ liệu...') {
-            const el = document.getElementById(mountId);
-            if (!el) return;
-            el.innerHTML = `
-                <div class="lwc-overlay" style="position:relative;height:200px;border-radius:12px;background:#0a0e1a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
-                    <div class="lwc-spinner"></div>
-                    <div class="lwc-overlay-msg">${msg}</div>
-                </div>`;
-        }
-
-        function showChartError(mountId, msg) {
-            const el = document.getElementById(mountId);
-            if (!el) return;
-            el.innerHTML = `
-                <div style="height:160px;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:0.82rem;border-radius:12px;background:#0a0e1a;border:1px solid rgba(255,255,255,0.05);">
-                    ⚠️ ${msg}
-                </div>`;
-        }
-
-        // Destroy existing charts in a mount
-        function destroyCharts(mountId) {
-            if (lwcInstances[mountId]) {
-                lwcInstances[mountId].forEach(item => {
-                    try { item.ro && item.ro.disconnect(); } catch(e){}
-                    try { item.chart && item.chart.remove(); } catch(e){}
-                });
-                delete lwcInstances[mountId];
-            }
+            delete lwcInstances[mountId];
             const el = document.getElementById(mountId);
             if (el) el.innerHTML = '';
         }
 
-        // -------------------------------------------------------
-        // LAZY FETCH HISTORY JSON
-        // -------------------------------------------------------
-        async function fetchHistory(ticker) {
-            if (historyCache[ticker]) return historyCache[ticker];
-            const url = `./Output/history/${ticker}.json`;
-            const resp = await fetch(url);
-            if (!resp.ok) throw new Error(`HTTP ${resp.status} for ${ticker}`);
-            const data = await resp.json();
-            historyCache[ticker] = data;
-            return data;
-        }
-
-        // -------------------------------------------------------
-        // SET CHART RANGE (range button handler)
-        // -------------------------------------------------------
-        function setActiveRangeBtn(bar, activeBtn) {
-            if (!bar) return;
-            bar.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
-            if (activeBtn) activeBtn.classList.add('active');
-        }
-
-        function stockChartSetRange(containerId, range, btn) {
-            if (!stockChartState[containerId]) return;
-            stockChartState[containerId].range = range;
-            const bar = document.getElementById(`${containerId}-rangeBar`);
-            setActiveRangeBtn(bar, btn);
-            const { ticker, type } = stockChartState[containerId];
-            renderInteractiveChart(`${containerId}-chartMount`, type, ticker, range);
-        }
-
-        function setMarketChartRange(range, btn) {
-            marketChartRange = range;
-            const bar = document.getElementById('marketChartRangeBar');
-            // Find the clicked button if not passed
-            if (!btn && event && event.target) btn = event.target;
-            setActiveRangeBtn(bar, btn);
-            renderInteractiveChart('marketChartMount', marketChartType, marketChartTicker, range);
-        }
-
-        // -------------------------------------------------------
-        // CHART TYPE SWITCHERS
-        // -------------------------------------------------------
-        function switchMarketChart(type, btn) {
-            marketChartType = type;
-            document.querySelectorAll('#marketChartTypeTabs .chart-type-tab').forEach(t => t.classList.remove('active'));
-            if (btn) btn.classList.add('active');
-            renderInteractiveChart('marketChartMount', type, marketChartTicker, marketChartRange);
-        }
-
-        function stockSwitchChart(containerId, type, ticker, btn) {
-            if (!stockChartState[containerId]) {
-                stockChartState[containerId] = { ticker, type, range: 250 };
-            }
-            stockChartState[containerId].type = type;
-            stockChartState[containerId].ticker = ticker;
-            const tabs = document.getElementById(`${containerId}-chartTabs`);
-            if (tabs) tabs.querySelectorAll('.chart-type-tab').forEach(t => t.classList.remove('active'));
-            if (btn) btn.classList.add('active');
-            renderInteractiveChart(`${containerId}-chartMount`, type, ticker, stockChartState[containerId].range);
-        }
-
-        // -------------------------------------------------------
-        // MAIN RENDER DISPATCHER
-        // -------------------------------------------------------
-        async function renderInteractiveChart(mountId, chartType, ticker, range) {
-            destroyCharts(mountId);
-            showChartLoading(mountId, `Đang tải lịch sử ${ticker}...`);
-            try {
-                const data = await fetchHistory(ticker);
-                destroyCharts(mountId); // clear loading state
-                const el = document.getElementById(mountId);
-                if (!el) return;
-                el.innerHTML = ''; // clear
-
-                const instances = [];
-                switch (chartType) {
-                    case 'gp':         renderGPChart(mountId, data, range, instances); break;
-                    case 'heikin':     renderHeikinChart(mountId, data, range, instances); break;
-                    case 'heatmap':    renderHeatmapChart(mountId, data, range, instances); break;
-                    case 'techreport': renderTechReportChart(mountId, data, range, instances); break;
-                    default:           renderGPChart(mountId, data, range, instances);
-                }
-                lwcInstances[mountId] = instances;
-            } catch (err) {
-                showChartError(mountId, `Không tải được dữ liệu ${ticker}. Hãy chạy cập nhật dữ liệu trước. (${err.message})`);
-            }
-        }
-
-        // -------------------------------------------------------
-        // CHART 1: GREENPINK + OCTOPUS + RS13/RS52
-        // -------------------------------------------------------
-        function renderGPChart(mountId, data, range, instances) {
-            const el = document.getElementById(mountId);
-            // Create stacked wrapper
-            el.innerHTML = `<div class="chart-pane-stack">
-                <div id="${mountId}-p1" class="lwc-host main"></div>
-                <div id="${mountId}-p2" class="lwc-host sub"></div>
-                <div id="${mountId}-p3" class="lwc-host sub"></div>
-            </div>`;
-
-            // ---- PANE 1: Price + GreenPink cloud + xFast/xSlow + BB ----
-            const c1 = LightweightCharts.createChart(document.getElementById(`${mountId}-p1`), {
-                ...LWC_THEME, width: el.clientWidth, height: 340,
-                rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' }
+        // ── Create a LWC chart inside a cell-body div ──
+        function mkChart(hostEl, h, extraOpts = {}) {
+            hostEl.style.height = h + 'px';
+            const chart = LightweightCharts.createChart(hostEl, {
+                ...LWC_THEME, width: hostEl.clientWidth, height: h, ...extraOpts
             });
-            instances.push({ chart: c1, ro: attachResize(c1, `${mountId}-p1`) });
-
-            // Candlestick
-            const cs = c1.addCandlestickSeries({
-                upColor: '#00ff6a', downColor: '#ff3b3b',
-                borderUpColor: '#00ff6a', borderDownColor: '#ff3b3b',
-                wickUpColor: '#00ff6a', wickDownColor: '#ff3b3b'
-            });
-            cs.setData(buildOHLCV(data, range));
-
-            // xFast (lime), xSlow (red)
-            if (data.GP_xFast) {
-                const lf = c1.addLineSeries({ color: '#39ff14', lineWidth: 2, title: 'xFast' });
-                lf.setData(buildLine(data, 'GP_xFast', range));
-            }
-            if (data.GP_xSlow) {
-                const ls = c1.addLineSeries({ color: '#ff4444', lineWidth: 2, title: 'xSlow' });
-                ls.setData(buildLine(data, 'GP_xSlow', range));
-            }
-            // BB top/bot
-            if (data.GP_BB_Top) {
-                const bt = c1.addLineSeries({ color: '#4488ff', lineWidth: 1, lineStyle: 2, title: 'BB Top' });
-                bt.setData(buildLine(data, 'GP_BB_Top', range));
-            }
-            if (data.GP_BB_Bot) {
-                const bb = c1.addLineSeries({ color: '#4488ff', lineWidth: 1, lineStyle: 2, title: 'BB Bot' });
-                bb.setData(buildLine(data, 'GP_BB_Bot', range));
-            }
-
-            // ---- PANE 2: Octopus MACD (A1 colored line + B1 mirror) ----
-            const c2 = LightweightCharts.createChart(document.getElementById(`${mountId}-p2`), {
-                ...LWC_THEME, width: el.clientWidth, height: 150,
-            });
-            instances.push({ chart: c2, ro: attachResize(c2, `${mountId}-p2`) });
-
-            if (data.OCT_A1) {
-                const oct = c2.addLineSeries({ color: '#14b8a6', lineWidth: 2, title: 'Octopus A1' });
-                oct.setData(buildLine(data, 'OCT_A1', range, 1));
-            }
-            if (data.OCT_B1) {
-                const octb = c2.addLineSeries({ color: '#a78bfa', lineWidth: 2, title: 'Octopus B1', lineStyle: 2 });
-                octb.setData(buildLine(data, 'OCT_B1', range, 1));
-            }
-            c2.addLineSeries({ color: 'rgba(255,255,255,0.2)', lineWidth: 1 })
-              .setData([{ time: dateToTs(data.dates[0]), value: 0 },
-                        { time: dateToTs(data.dates[data.dates.length-1]), value: 0 }]);
-
-            // ---- PANE 3: RS13 / RS52 ----
-            const c3 = LightweightCharts.createChart(document.getElementById(`${mountId}-p3`), {
-                ...LWC_THEME, width: el.clientWidth, height: 150,
-            });
-            instances.push({ chart: c3, ro: attachResize(c3, `${mountId}-p3`) });
-
-            if (data.RS13) {
-                const rs13 = c3.addLineSeries({ color: '#ffffff', lineWidth: 2, title: 'RS13' });
-                rs13.setData(buildLine(data, 'RS13', range, 1));
-            }
-            if (data.RS52) {
-                const rs52 = c3.addLineSeries({ color: '#fbbf24', lineWidth: 2, title: 'RS52' });
-                rs52.setData(buildLine(data, 'RS52', range, 1));
-            }
-            // 50 reference line
-            const n = data.dates.length;
-            const start = range >= 9999 ? 0 : Math.max(0, n - range);
-            c3.addLineSeries({ color: 'rgba(239,68,68,0.5)', lineWidth: 1, lineStyle: 1 })
-              .setData([{ time: dateToTs(data.dates[start]), value: 50 },
-                        { time: dateToTs(data.dates[n-1]), value: 50 }]);
-
-            // Sync time scales (scroll together)
-            syncTimeScales([c1, c2, c3]);
-            c1.timeScale().fitContent();
+            const ro = new ResizeObserver(() =>
+                chart.resize(hostEl.clientWidth, hostEl.offsetHeight || h));
+            ro.observe(hostEl);
+            return { chart, ro };
         }
 
-        // -------------------------------------------------------
-        // CHART 2: HEIKIN-ASHl + 2TREND
-        // -------------------------------------------------------
-        function renderHeikinChart(mountId, data, range, instances) {
-            const el = document.getElementById(mountId);
-            el.innerHTML = `<div class="chart-pane-stack">
-                <div id="${mountId}-p1" class="lwc-host main"></div>
-                <div id="${mountId}-p2" class="lwc-host main"></div>
-            </div>`;
-
-            // ---- PANE 1: Heikin-Ashi candles + Hull cloud + NW trailing ----
-            const c1 = LightweightCharts.createChart(document.getElementById(`${mountId}-p1`), {
-                ...LWC_THEME, width: el.clientWidth, height: 320,
-            });
-            instances.push({ chart: c1, ro: attachResize(c1, `${mountId}-p1`) });
-
-            // Heikin-Ashi candles
-            if (data.HK_Flower_Open) {
-                const hk = c1.addCandlestickSeries({
-                    upColor: '#00ff6a', downColor: '#ff3b3b',
-                    borderUpColor: '#00ff6a', borderDownColor: '#ff3b3b',
-                    wickUpColor: '#00ff6a', wickDownColor: '#ff3b3b'
+        // ── Sync visible range across an array of charts ──
+        function syncCharts(charts) {
+            let busy = false;
+            charts.forEach((c, i) => {
+                c.timeScale().subscribeVisibleLogicalRangeChange(r => {
+                    if (busy || !r) return;
+                    busy = true;
+                    charts.forEach((o, j) => {
+                        if (j !== i) try { o.timeScale().setVisibleLogicalRange(r); } catch(e){}
+                    });
+                    busy = false;
                 });
-                const n = data.dates.length;
-                const start = range >= 9999 ? 0 : Math.max(0, n - range);
-                const hkData = [];
-                for (let i = start; i < n; i++) {
-                    const ho = data.HK_Flower_Open[i], hh = data.HK_Flower_High[i],
-                          hl = data.HK_Flower_Low[i],  hc = data.HK_Flower_Close[i];
-                    if (!ho || !hc) continue;
-                    const up = hc >= ho;
-                    const color = data.HK_BarColor && data.HK_BarColor[i];
-                    const c = color === 'brightGreen' ? '#00ff6a' : color === 'red' ? '#ff3b3b' : '#ffffff';
-                    hkData.push({ time: dateToTs(data.dates[i]),
-                        open: ho*1000, high: hh*1000, low: hl*1000, close: hc*1000,
-                        color: c, wickColor: c, borderColor: c });
-                }
-                hk.setData(hkData);
-            }
-
-            // Hull MA cloud (MHull vs SHull)
-            if (data.HK_MHull) {
-                const mh = c1.addLineSeries({ color: 'rgba(0,255,106,0.5)', lineWidth: 1, title: 'MHull' });
-                mh.setData(buildLine(data, 'HK_MHull', range));
-            }
-            if (data.HK_SHull) {
-                const sh = c1.addLineSeries({ color: 'rgba(255,59,59,0.5)', lineWidth: 1, title: 'SHull' });
-                sh.setData(buildLine(data, 'HK_SHull', range));
-            }
-            // NW Trailing Stop
-            if (data.HK_NW) {
-                const nw = c1.addLineSeries({ color: '#38bdf8', lineWidth: 2, title: 'NW Stop' });
-                nw.setData(buildLine(data, 'HK_NW', range));
-            }
-            // TC Trend line
-            if (data.TC_Trend) {
-                const tc = c1.addLineSeries({ color: '#f59e0b', lineWidth: 2.5, title: 'TC Trend' });
-                tc.setData(buildLine(data, 'TC_Trend', range));
-            }
-
-            // Buy/sell markers
-            if (data.HK_BuySignal || data.HK_BuyManh) {
-                const cs2 = c1.addCandlestickSeries({ visible: false });
-                const markers = [];
-                const n = data.dates.length;
-                const start = range >= 9999 ? 0 : Math.max(0, n - range);
-                for (let i = start; i < n; i++) {
-                    const buy = (data.HK_BuySignal && data.HK_BuySignal[i]) || (data.HK_BuyManh && data.HK_BuyManh[i]);
-                    const sell = (data.HK_SellSignal && data.HK_SellSignal[i]) || (data.HK_SellManh && data.HK_SellManh[i]);
-                    if (buy) markers.push({ time: dateToTs(data.dates[i]), position: 'belowBar', color: '#00ff6a', shape: 'arrowUp', text: 'BUY' });
-                    if (sell) markers.push({ time: dateToTs(data.dates[i]), position: 'aboveBar', color: '#ff3b3b', shape: 'arrowDown', text: 'SELL' });
-                }
-                // Add markers to the HK candle series (need to re-add to hk)
-                // workaround: use a separate invisible series for markers
-                if (markers.length > 0 && data.HK_Flower_Close) {
-                    const dummy = c1.addLineSeries({ color: 'transparent', lineWidth: 0 });
-                    dummy.setData(buildLine(data, 'HK_Flower_Close', range));
-                    dummy.setMarkers(markers.sort((a,b) => a.time - b.time));
-                }
-            }
-
-            // ---- PANE 2: Normal candles + 2Trend ----
-            const c2 = LightweightCharts.createChart(document.getElementById(`${mountId}-p2`), {
-                ...LWC_THEME, width: el.clientWidth, height: 280,
             });
-            instances.push({ chart: c2, ro: attachResize(c2, `${mountId}-p2`) });
-
-            const cs2 = c2.addCandlestickSeries({
-                upColor: '#00ff6a', downColor: '#ff3b3b',
-                borderUpColor: '#00ff6a', borderDownColor: '#ff3b3b',
-                wickUpColor: '#00ff6a', wickDownColor: '#ff3b3b'
-            });
-            cs2.setData(buildOHLCV(data, range));
-
-            // 2Trend SMA
-            if (data.T2_SMA) {
-                const t2 = c2.addLineSeries({ color: '#00ffaa', lineWidth: 3, title: '2Trend' });
-                t2.setData(buildLine(data, 'T2_SMA', range));
-            }
-            // Supertrend upper/lower as areas
-            if (data.T2_ST_Lower) {
-                const stl = c2.addLineSeries({ color: 'rgba(0,255,170,0.4)', lineWidth: 1, lineStyle: 2 });
-                stl.setData(buildLine(data, 'T2_ST_Lower', range));
-            }
-            if (data.T2_ST_Upper) {
-                const stu = c2.addLineSeries({ color: 'rgba(255,59,59,0.4)', lineWidth: 1, lineStyle: 2 });
-                stu.setData(buildLine(data, 'T2_ST_Upper', range));
-            }
-
-            syncTimeScales([c1, c2]);
-            c1.timeScale().fitContent();
         }
 
-        // -------------------------------------------------------
-        // CHART 3: HEATMAP (Bản đồ nhiệt)
-        // -------------------------------------------------------
-        function renderHeatmapChart(mountId, data, range, instances) {
-            const el = document.getElementById(mountId);
-            el.innerHTML = `<div class="chart-pane-stack">
-                <div id="${mountId}-p1" class="lwc-host main"></div>
-                <div id="${mountId}-p2" class="lwc-host sub"></div>
-            </div>`;
-
-            // ---- PANE 1: Heatmap bands + Flower candles ----
-            const c1 = LightweightCharts.createChart(document.getElementById(`${mountId}-p1`), {
-                ...LWC_THEME, width: el.clientWidth, height: 340,
-            });
-            instances.push({ chart: c1, ro: attachResize(c1, `${mountId}-p1`) });
-
-            // Heatmap band lines (Hi, KH, KM, KL, Lo) as reference lines
-            const bandCols = [
-                { col: 'HM_Band_Hi',  color: '#00ff6a', lbl: 'Band Hi' },
-                { col: 'HM_Band_KH',  color: '#22d3ee', lbl: 'Band KH' },
-                { col: 'HM_Band_KM',  color: '#fbbf24', lbl: 'Band KM' },
-                { col: 'HM_Band_KL',  color: '#f97316', lbl: 'Band KL' },
-                { col: 'HM_Band_Lo',  color: '#ff3b3b', lbl: 'Band Lo' },
-            ];
-            bandCols.forEach(bc => {
-                if (data[bc.col]) {
-                    const ls = c1.addLineSeries({ color: bc.color, lineWidth: 1, lineStyle: 2, title: bc.lbl });
-                    ls.setData(buildLine(data, bc.col, range));
-                }
-            });
-
-            // Flower candles colored by MoneyFlow
-            if (data.HM_Flower_Open && data.HM_Flower_Close) {
-                const n = data.dates.length;
-                const start = range >= 9999 ? 0 : Math.max(0, n - range);
-                const fcs = c1.addCandlestickSeries({
-                    upColor: '#ffffff', downColor: '#ff3b3b',
-                    borderUpColor: '#ffffff', borderDownColor: '#ff3b3b',
-                    wickUpColor: '#ffffff', wickDownColor: '#ff3b3b'
-                });
-                const fData = [];
-                for (let i = start; i < n; i++) {
-                    const fo = data.HM_Flower_Open[i], fh = data.HM_Flower_High[i],
-                          fl = data.HM_Flower_Low[i],  fc = data.HM_Flower_Close[i];
-                    if (!fo || !fc) continue;
-                    const mf = data.HM_MoneyFlow && data.HM_MoneyFlow[i];
-                    const up = fc >= fo;
-                    let clr;
-                    if (up && mf === 1)       clr = '#ffffff';
-                    else if (!up && mf === -1) clr = '#ff3b3b';
-                    else                        clr = '#fbbf24'; // neutral
-                    fData.push({ time: dateToTs(data.dates[i]),
-                        open: fo*1000, high: fh*1000, low: fl*1000, close: fc*1000,
-                        color: clr, borderColor: clr, wickColor: clr });
-                }
-                fcs.setData(fData);
-            }
-
-            // ---- PANE 2: Normal candles (reference) ----
-            const c2 = LightweightCharts.createChart(document.getElementById(`${mountId}-p2`), {
-                ...LWC_THEME, width: el.clientWidth, height: 150,
-            });
-            instances.push({ chart: c2, ro: attachResize(c2, `${mountId}-p2`) });
-
-            const nc = c2.addCandlestickSeries({
-                upColor: '#00ff6a', downColor: '#ff3b3b',
-                borderUpColor: '#00ff6a', borderDownColor: '#ff3b3b',
-                wickUpColor: '#00ff6a', wickDownColor: '#ff3b3b'
-            });
-            nc.setData(buildOHLCV(data, range));
-
-            syncTimeScales([c1, c2]);
-            c1.timeScale().fitContent();
-        }
-
-        // -------------------------------------------------------
-        // CHART 4: TECHNICAL REPORT (Candlestick + Ichimoku + MCDX + ADX + MACD)
-        // -------------------------------------------------------
-        function renderTechReportChart(mountId, data, range, instances) {
-            const el = document.getElementById(mountId);
-            el.innerHTML = `<div class="chart-pane-stack">
-                <div id="${mountId}-p1" class="lwc-host main" style="height:380px"></div>
-                <div id="${mountId}-p2" class="lwc-host sub"></div>
-                <div id="${mountId}-p3" class="lwc-host sub"></div>
-                <div id="${mountId}-p4" class="lwc-host sub"></div>
-            </div>`;
-
-            // ---- PANE 1: Candles + MA lines + Ichimoku cloud ----
-            const c1 = LightweightCharts.createChart(document.getElementById(`${mountId}-p1`), {
-                ...LWC_THEME, width: el.clientWidth, height: 380,
-            });
-            instances.push({ chart: c1, ro: attachResize(c1, `${mountId}-p1`) });
-
-            // Ichimoku cloud (SpanA vs SpanB filled area)
-            if (data.SpanA && data.SpanB) {
-                const n = data.dates.length;
-                const start = range >= 9999 ? 0 : Math.max(0, n - range);
-                // Draw SpanA and SpanB lines; use area series trick for fill
-                const spA = c1.addLineSeries({ color: 'rgba(0,255,106,0.5)', lineWidth: 1, title: 'SpanA' });
-                spA.setData(buildLine(data, 'SpanA', range));
-                const spB = c1.addLineSeries({ color: 'rgba(255,59,59,0.5)', lineWidth: 1, title: 'SpanB' });
-                spB.setData(buildLine(data, 'SpanB', range));
-            }
-            // Tenkan / Kijun
-            if (data.Tenkan) {
-                const tk = c1.addLineSeries({ color: '#3b82f6', lineWidth: 1.5, title: 'Tenkan' });
-                tk.setData(buildLine(data, 'Tenkan', range));
-            }
-            if (data.Kijun) {
-                const kj = c1.addLineSeries({ color: '#ef4444', lineWidth: 1.5, title: 'Kijun' });
-                kj.setData(buildLine(data, 'Kijun', range));
-            }
-            if (data.Kijun65) {
-                const kj65 = c1.addLineSeries({ color: '#f97316', lineWidth: 2, lineStyle: 2, title: 'Kijun65' });
-                kj65.setData(buildLine(data, 'Kijun65', range));
-            }
-            // MA lines
-            if (data.MA10) {
-                const m10 = c1.addLineSeries({ color: '#a78bfa', lineWidth: 1.5, title: 'MA10' });
-                m10.setData(buildLine(data, 'MA10', range));
-            }
-            if (data.MA20) {
-                const m20 = c1.addLineSeries({ color: '#34d399', lineWidth: 2, title: 'MA20' });
-                m20.setData(buildLine(data, 'MA20', range));
-            }
-            if (data.MA50) {
-                const m50 = c1.addLineSeries({ color: '#f59e0b', lineWidth: 2, title: 'MA50' });
-                m50.setData(buildLine(data, 'MA50', range));
-            }
-            // Candlestick on top
-            const mainCS = c1.addCandlestickSeries({
-                upColor: '#00ff6a', downColor: '#ff3b3b',
-                borderUpColor: '#00ff6a', borderDownColor: '#ff3b3b',
-                wickUpColor: '#00ff6a', wickDownColor: '#ff3b3b'
-            });
-            mainCS.setData(buildOHLCV(data, range));
-
-            // ---- PANE 2: MCDX (Banker / HotMoney / Retailer stacked histogram) ----
-            const c2 = LightweightCharts.createChart(document.getElementById(`${mountId}-p2`), {
-                ...LWC_THEME, width: el.clientWidth, height: 150,
-            });
-            instances.push({ chart: c2, ro: attachResize(c2, `${mountId}-p2`) });
-
-            if (data.MCDX_Banker) {
-                const banker = c2.addHistogramSeries({ color: '#f43f5e', priceLineVisible: false, title: 'Banker' });
-                banker.setData(buildLine(data, 'MCDX_Banker', range, 1));
-            }
-            if (data.MCDX_HotMoney) {
-                const hot = c2.addHistogramSeries({ color: '#fbbf24', priceLineVisible: false, title: 'Hot' });
-                hot.setData(buildLine(data, 'MCDX_HotMoney', range, 1));
-            }
-            if (data.MCDX_Banker_MA) {
-                const bma = c2.addLineSeries({ color: '#ffffff', lineWidth: 1.5, title: 'Banker MA' });
-                bma.setData(buildLine(data, 'MCDX_Banker_MA', range, 1));
-            }
-
-            // ---- PANE 3: ADX + DI+ / DI- ----
-            const c3 = LightweightCharts.createChart(document.getElementById(`${mountId}-p3`), {
-                ...LWC_THEME, width: el.clientWidth, height: 150,
-            });
-            instances.push({ chart: c3, ro: attachResize(c3, `${mountId}-p3`) });
-
-            if (data.ADX) {
-                const adx = c3.addLineSeries({ color: '#c084fc', lineWidth: 2, title: 'ADX' });
-                adx.setData(buildLine(data, 'ADX', range, 1));
-            }
-            if (data.DI_Plus) {
-                const dip = c3.addLineSeries({ color: '#34d399', lineWidth: 1.5, title: '+DI' });
-                dip.setData(buildLine(data, 'DI_Plus', range, 1));
-            }
-            if (data.DI_Minus) {
-                const dim = c3.addLineSeries({ color: '#f87171', lineWidth: 1.5, title: '-DI' });
-                dim.setData(buildLine(data, 'DI_Minus', range, 1));
-            }
-            // 25 threshold line
-            if (data.dates.length > 0) {
-                const n = data.dates.length;
-                const start = range >= 9999 ? 0 : Math.max(0, n - range);
-                c3.addLineSeries({ color: 'rgba(255,255,255,0.2)', lineWidth: 1, lineStyle: 1 })
-                  .setData([{ time: dateToTs(data.dates[start]), value: 25 },
-                             { time: dateToTs(data.dates[n-1]),  value: 25 }]);
-            }
-
-            // ---- PANE 4: MACD histogram + lines ----
-            const c4 = LightweightCharts.createChart(document.getElementById(`${mountId}-p4`), {
-                ...LWC_THEME, width: el.clientWidth, height: 150,
-            });
-            instances.push({ chart: c4, ro: attachResize(c4, `${mountId}-p4`) });
-
-            if (data.MACD_Hist) {
-                const n = data.dates.length;
-                const start = range >= 9999 ? 0 : Math.max(0, n - range);
-                const histData = [];
-                for (let i = start; i < n; i++) {
-                    const v = data.MACD_Hist[i];
-                    if (v === null || v === undefined) continue;
-                    histData.push({ time: dateToTs(data.dates[i]),
-                        value: v * 1000,
-                        color: v >= 0 ? 'rgba(52,211,153,0.7)' : 'rgba(248,113,113,0.7)' });
-                }
-                const mhist = c4.addHistogramSeries({ priceLineVisible: false, title: 'MACD Hist' });
-                mhist.setData(histData);
-            }
-            if (data.MACD) {
-                const macd = c4.addLineSeries({ color: '#60a5fa', lineWidth: 1.5, title: 'MACD' });
-                macd.setData(buildLine(data, 'MACD', range));
-            }
-            if (data.MACD_Signal) {
-                const msig = c4.addLineSeries({ color: '#fb923c', lineWidth: 1.5, title: 'Signal' });
-                msig.setData(buildLine(data, 'MACD_Signal', range));
-            }
-
-            syncTimeScales([c1, c2, c3, c4]);
-            c1.timeScale().fitContent();
-        }
-
-        // -------------------------------------------------------
-        // HELPERS: Resize observer + TimeScale sync
-        // -------------------------------------------------------
-        function attachResize(chart, hostId) {
-            const el = document.getElementById(hostId);
-            if (!el) return null;
-            const ro = new ResizeObserver(() => {
-                chart.resize(el.clientWidth, el.offsetHeight || chart.options().height);
-            });
+        // ── Attach resize observer shorthand ──
+        function roAttach(chart, el) {
+            const ro = new ResizeObserver(() =>
+                chart.resize(el.clientWidth, el.offsetHeight || chart.options().height));
             ro.observe(el);
             return ro;
         }
 
-        function syncTimeScales(charts) {
-            // Bidirectional sync of the visible logical range
-            let syncing = false;
-            charts.forEach((c, idx) => {
-                c.timeScale().subscribeVisibleLogicalRangeChange(range => {
-                    if (syncing || !range) return;
-                    syncing = true;
-                    charts.forEach((other, i) => {
-                        if (i !== idx) {
-                            try { other.timeScale().setVisibleLogicalRange(range); } catch(e){}
-                        }
-                    });
-                    syncing = false;
+        // ================================================================
+        //  renderGPChart  — in a cell body div (mountId), returns primary chart
+        // ================================================================
+        function renderGPChart(mountId, data, instances) {
+            const root = document.getElementById(mountId);
+            if (!root) return null;
+            root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+
+            const h1 = 220, h2 = 85, h3 = 85;
+
+            const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
+            const d2 = document.createElement('div'); d2.style.cssText = `flex:none;height:${h2}px;border-top:1px solid rgba(255,255,255,0.04);`;
+            const d3 = document.createElement('div'); d3.style.cssText = `flex:none;height:${h3}px;border-top:1px solid rgba(255,255,255,0.04);`;
+            root.append(d1, d2, d3);
+
+            // Pane 1: Candles + GreenPink cloud + xFast/xSlow + BB
+            const {chart: c1, ro: ro1} = mkChart(d1, h1);
+            instances.push({chart: c1, ro: ro1});
+
+            const cs = c1.addCandlestickSeries({
+                upColor:'#00ff6a',downColor:'#ff3b3b',
+                borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
+            });
+            cs.setData(ohlcv(data));
+
+            if (data.GP_xFast) c1.addLineSeries({color:'#39ff14',lineWidth:2,title:'xFast'}).setData(lineData(data,'GP_xFast'));
+            if (data.GP_xSlow) c1.addLineSeries({color:'#ff4444',lineWidth:2,title:'xSlow'}).setData(lineData(data,'GP_xSlow'));
+            if (data.GP_BB_Top) c1.addLineSeries({color:'rgba(68,136,255,0.6)',lineWidth:1,lineStyle:2}).setData(lineData(data,'GP_BB_Top'));
+            if (data.GP_BB_Bot) c1.addLineSeries({color:'rgba(68,136,255,0.6)',lineWidth:1,lineStyle:2}).setData(lineData(data,'GP_BB_Bot'));
+
+            // Pane 2: Octopus (A1 + B1)
+            const {chart: c2, ro: ro2} = mkChart(d2, h2);
+            instances.push({chart: c2, ro: ro2});
+            if (data.OCT_A1) c2.addLineSeries({color:'#14b8a6',lineWidth:2,title:'Oct A1'}).setData(lineData(data,'OCT_A1',1));
+            if (data.OCT_B1) c2.addLineSeries({color:'#a78bfa',lineWidth:2,lineStyle:2,title:'Oct B1'}).setData(lineData(data,'OCT_B1',1));
+            // zero line
+            if (data.dates.length > 0) {
+                c2.addLineSeries({color:'rgba(255,255,255,0.15)',lineWidth:1})
+                  .setData([{time:d2ts(data.dates[0]),value:0},{time:d2ts(data.dates[data.dates.length-1]),value:0}]);
+            }
+
+            // Pane 3: RS13 / RS52
+            const {chart: c3, ro: ro3} = mkChart(d3, h3);
+            instances.push({chart: c3, ro: ro3});
+            if (data.RS13) c3.addLineSeries({color:'#e2e8f0',lineWidth:2,title:'RS13'}).setData(lineData(data,'RS13',1));
+            if (data.RS52) c3.addLineSeries({color:'#fbbf24',lineWidth:2,title:'RS52'}).setData(lineData(data,'RS52',1));
+            if (data.dates.length > 0) {
+                c3.addLineSeries({color:'rgba(239,68,68,0.45)',lineWidth:1,lineStyle:1})
+                  .setData([{time:d2ts(data.dates[0]),value:50},{time:d2ts(data.dates[data.dates.length-1]),value:50}]);
+            }
+
+            syncCharts([c1,c2,c3]);
+            c1.timeScale().fitContent();
+            return c1;
+        }
+
+        // ================================================================
+        //  renderHeikinChart  — Heikin-Ashi + 2Trend
+        // ================================================================
+        function renderHeikinChart(mountId, data, instances) {
+            const root = document.getElementById(mountId);
+            if (!root) return null;
+            root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+
+            const h1 = 200, h2 = 185;
+            const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
+            const d2 = document.createElement('div'); d2.style.cssText = `flex:none;height:${h2}px;border-top:1px solid rgba(255,255,255,0.04);`;
+            root.append(d1, d2);
+
+            // Pane 1: Heikin-Ashi candles + Hull + NW stop + TC trend
+            const {chart: c1, ro: ro1} = mkChart(d1, h1);
+            instances.push({chart:c1,ro:ro1});
+
+            if (data.HK_Flower_Open && data.HK_Flower_Close) {
+                const hk = c1.addCandlestickSeries({
+                    upColor:'#00ff6a',downColor:'#ff3b3b',
+                    borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
+                    wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
+                });
+                const hkArr = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    const ho = data.HK_Flower_Open[i], hc = data.HK_Flower_Close[i],
+                          hh = data.HK_Flower_High[i], hl = data.HK_Flower_Low[i];
+                    if (!ho||!hc) continue;
+                    const col = data.HK_BarColor && data.HK_BarColor[i];
+                    const clr = col==='brightGreen'?'#00ff6a':col==='red'?'#ff3b3b':'#ffffff';
+                    hkArr.push({time:d2ts(data.dates[i]),
+                        open:ho*1000,high:hh*1000,low:hl*1000,close:hc*1000,
+                        color:clr,borderColor:clr,wickColor:clr});
+                }
+                hk.setData(hkArr);
+
+                // Buy/sell markers on HK
+                const markers = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    if ((data.HK_BuySignal&&data.HK_BuySignal[i])||(data.HK_BuyManh&&data.HK_BuyManh[i]))
+                        markers.push({time:d2ts(data.dates[i]),position:'belowBar',color:'#00ff6a',shape:'arrowUp',text:'B'});
+                    if ((data.HK_SellSignal&&data.HK_SellSignal[i])||(data.HK_SellManh&&data.HK_SellManh[i]))
+                        markers.push({time:d2ts(data.dates[i]),position:'aboveBar',color:'#ff3b3b',shape:'arrowDown',text:'S'});
+                }
+                if (markers.length) hk.setMarkers(markers.sort((a,b)=>a.time-b.time));
+            }
+            if (data.HK_MHull) c1.addLineSeries({color:'rgba(0,255,106,0.45)',lineWidth:1,title:'MHull'}).setData(lineData(data,'HK_MHull'));
+            if (data.HK_SHull) c1.addLineSeries({color:'rgba(255,59,59,0.45)',lineWidth:1,title:'SHull'}).setData(lineData(data,'HK_SHull'));
+            if (data.HK_NW)    c1.addLineSeries({color:'#38bdf8',lineWidth:2,title:'NW Stop'}).setData(lineData(data,'HK_NW'));
+            if (data.TC_Trend) c1.addLineSeries({color:'#f59e0b',lineWidth:2,title:'TC Trend'}).setData(lineData(data,'TC_Trend'));
+
+            // Pane 2: Normal candles + 2Trend SMA + Supertrend bands
+            const {chart: c2, ro: ro2} = mkChart(d2, h2);
+            instances.push({chart:c2,ro:ro2});
+            const cs2 = c2.addCandlestickSeries({
+                upColor:'#00ff6a',downColor:'#ff3b3b',
+                borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
+            });
+            cs2.setData(ohlcv(data));
+            if (data.T2_SMA) c2.addLineSeries({color:'#00ffaa',lineWidth:3,title:'2Trend'}).setData(lineData(data,'T2_SMA'));
+            if (data.T2_ST_Lower) c2.addLineSeries({color:'rgba(0,255,170,0.4)',lineWidth:1,lineStyle:2}).setData(lineData(data,'T2_ST_Lower'));
+            if (data.T2_ST_Upper) c2.addLineSeries({color:'rgba(255,59,59,0.4)',lineWidth:1,lineStyle:2}).setData(lineData(data,'T2_ST_Upper'));
+
+            syncCharts([c1,c2]);
+            c1.timeScale().fitContent();
+            return c1;
+        }
+
+        // ================================================================
+        //  renderHeatmapChart  — Bản đồ nhiệt
+        // ================================================================
+        function renderHeatmapChart(mountId, data, instances) {
+            const root = document.getElementById(mountId);
+            if (!root) return null;
+            root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+
+            const h1 = 265, h2 = 115;
+            const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
+            const d2 = document.createElement('div'); d2.style.cssText = `flex:none;height:${h2}px;border-top:1px solid rgba(255,255,255,0.04);`;
+            root.append(d1, d2);
+
+            // Pane 1: Heatmap bands + Flower candles
+            const {chart: c1, ro: ro1} = mkChart(d1, h1);
+            instances.push({chart:c1,ro:ro1});
+
+            [
+                {col:'HM_Band_Hi',color:'rgba(0,255,106,0.45)'},
+                {col:'HM_Band_KH',color:'rgba(34,211,238,0.45)'},
+                {col:'HM_Band_KM',color:'rgba(251,191,36,0.45)'},
+                {col:'HM_Band_KL',color:'rgba(249,115,22,0.45)'},
+                {col:'HM_Band_Lo',color:'rgba(255,59,59,0.45)'},
+            ].forEach(b => {
+                if (data[b.col]) c1.addLineSeries({color:b.color,lineWidth:1,lineStyle:2}).setData(lineData(data,b.col));
+            });
+
+            if (data.HM_Flower_Open && data.HM_Flower_Close) {
+                const fcs = c1.addCandlestickSeries({
+                    upColor:'#ffffff',downColor:'#ff3b3b',
+                    borderUpColor:'#ffffff',borderDownColor:'#ff3b3b',
+                    wickUpColor:'#ffffff',wickDownColor:'#ff3b3b'
+                });
+                const fArr = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    const fo=data.HM_Flower_Open[i],fc=data.HM_Flower_Close[i],
+                          fh=data.HM_Flower_High[i],fl=data.HM_Flower_Low[i];
+                    if (!fo||!fc) continue;
+                    const mf = data.HM_MoneyFlow&&data.HM_MoneyFlow[i];
+                    const up = fc>=fo;
+                    const clr = (up&&mf===1)?'#ffffff':(!up&&mf===-1)?'#ff3b3b':'#fbbf24';
+                    fArr.push({time:d2ts(data.dates[i]),
+                        open:fo*1000,high:fh*1000,low:fl*1000,close:fc*1000,
+                        color:clr,borderColor:clr,wickColor:clr});
+                }
+                fcs.setData(fArr);
+            }
+
+            // Pane 2: Normal candles (reference)
+            const {chart: c2, ro: ro2} = mkChart(d2, h2);
+            instances.push({chart:c2,ro:ro2});
+            c2.addCandlestickSeries({
+                upColor:'#00ff6a',downColor:'#ff3b3b',
+                borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
+            }).setData(ohlcv(data));
+
+            syncCharts([c1,c2]);
+            c1.timeScale().fitContent();
+            return c1;
+        }
+
+        // ================================================================
+        //  renderTechReportChart  — Candlestick+Ichimoku+MCDX+ADX+MACD
+        // ================================================================
+        function renderTechReportChart(mountId, data, instances) {
+            const root = document.getElementById(mountId);
+            if (!root) return null;
+            root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+
+            const h1 = 180, h2 = 68, h3 = 68, h4 = 68;
+            const mk = (h, border=true) => {
+                const d = document.createElement('div');
+                d.style.cssText = `flex:none;height:${h}px;${border?'border-top:1px solid rgba(255,255,255,0.04);':''}`;
+                root.appendChild(d); return d;
+            };
+            const d1 = mk(h1,false), d2 = mk(h2), d3 = mk(h3), d4 = mk(h4);
+
+            // Pane 1: Candles + MA + Ichimoku
+            const {chart: c1, ro: ro1} = mkChart(d1, h1);
+            instances.push({chart:c1,ro:ro1});
+
+            // Ichimoku spans first (behind candles)
+            if (data.SpanA) c1.addLineSeries({color:'rgba(0,255,106,0.45)',lineWidth:1,title:'SpanA'}).setData(lineData(data,'SpanA'));
+            if (data.SpanB) c1.addLineSeries({color:'rgba(255,59,59,0.45)',lineWidth:1,title:'SpanB'}).setData(lineData(data,'SpanB'));
+            if (data.Tenkan)  c1.addLineSeries({color:'#3b82f6',lineWidth:1.2,title:'Tenkan'}).setData(lineData(data,'Tenkan'));
+            if (data.Kijun)   c1.addLineSeries({color:'#ef4444',lineWidth:1.2,title:'Kijun'}).setData(lineData(data,'Kijun'));
+            if (data.Kijun65) c1.addLineSeries({color:'#f97316',lineWidth:1.5,lineStyle:2,title:'Kijun65'}).setData(lineData(data,'Kijun65'));
+
+            if (data.MA10)    c1.addLineSeries({color:'#a78bfa',lineWidth:1.5,title:'MA10'}).setData(lineData(data,'MA10'));
+            if (data.MA20)    c1.addLineSeries({color:'#34d399',lineWidth:2,  title:'MA20'}).setData(lineData(data,'MA20'));
+            if (data.MA50)    c1.addLineSeries({color:'#f59e0b',lineWidth:2,  title:'MA50'}).setData(lineData(data,'MA50'));
+
+            c1.addCandlestickSeries({
+                upColor:'#00ff6a',downColor:'#ff3b3b',
+                borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
+            }).setData(ohlcv(data));
+
+            // Pane 2: MCDX
+            const {chart: c2, ro: ro2} = mkChart(d2, h2);
+            instances.push({chart:c2,ro:ro2});
+            if (data.MCDX_Banker)    c2.addHistogramSeries({color:'#f43f5e',priceLineVisible:false,title:'Banker'}).setData(lineData(data,'MCDX_Banker',1));
+            if (data.MCDX_HotMoney)  c2.addHistogramSeries({color:'#fbbf24',priceLineVisible:false,title:'Hot'}).setData(lineData(data,'MCDX_HotMoney',1));
+            if (data.MCDX_Banker_MA) c2.addLineSeries({color:'#e2e8f0',lineWidth:1.5,title:'BankMA'}).setData(lineData(data,'MCDX_Banker_MA',1));
+
+            // Pane 3: ADX
+            const {chart: c3, ro: ro3} = mkChart(d3, h3);
+            instances.push({chart:c3,ro:ro3});
+            if (data.ADX)     c3.addLineSeries({color:'#c084fc',lineWidth:2,  title:'ADX'}).setData(lineData(data,'ADX',1));
+            if (data.DI_Plus) c3.addLineSeries({color:'#34d399',lineWidth:1.5,title:'+DI'}).setData(lineData(data,'DI_Plus',1));
+            if (data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5,title:'-DI'}).setData(lineData(data,'DI_Minus',1));
+            if (data.dates.length > 0)
+                c3.addLineSeries({color:'rgba(255,255,255,0.18)',lineWidth:1,lineStyle:1})
+                  .setData([{time:d2ts(data.dates[0]),value:25},{time:d2ts(data.dates[data.dates.length-1]),value:25}]);
+
+            // Pane 4: MACD
+            const {chart: c4, ro: ro4} = mkChart(d4, h4);
+            instances.push({chart:c4,ro:ro4});
+            if (data.MACD_Hist) {
+                const hArr = data.dates.map((dt,i) => {
+                    const v = data.MACD_Hist[i];
+                    if (v===null||v===undefined) return null;
+                    return {time:d2ts(dt), value:v*1000,
+                        color: v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};
+                }).filter(Boolean);
+                c4.addHistogramSeries({priceLineVisible:false,title:'Hist'}).setData(hArr);
+            }
+            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title:'MACD'}).setData(lineData(data,'MACD'));
+            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig'}).setData(lineData(data,'MACD_Signal'));
+
+            syncCharts([c1,c2,c3,c4]);
+            c1.timeScale().fitContent();
+            return c1;
+        }
+
+        // ================================================================
+        //  renderAll4Charts  — render all 4 simultaneously in a grid prefix
+        //  mountPrefix: e.g. 'market' → ids: marketMount-gp, marketMount-heikin ...
+        //               or a containerId like 'stockDetailsDashboard'
+        // ================================================================
+        async function renderAll4Charts(mountPrefix, ticker) {
+            const ids = ['gp','heikin','heatmap','techreport'];
+            const renders = {
+                gp: renderGPChart, heikin: renderHeikinChart,
+                heatmap: renderHeatmapChart, techreport: renderTechReportChart
+            };
+
+            // Show loading in all cells
+            ids.forEach(type => {
+                const mid = `${mountPrefix}-mount-${type}`;
+                destroyMount(mid);
+                cellLoading(mid, `Tải ${ticker}...`);
+            });
+
+            let data;
+            try { data = await fetchHistory(ticker); }
+            catch(e) {
+                ids.forEach(type => cellError(`${mountPrefix}-mount-${type}`,
+                    `Chưa có dữ liệu ${ticker}. Hãy chạy Actions để tạo Output/history/${ticker}.json`));
+                return;
+            }
+
+            // Render each chart and collect primary chart instances for cross-sync
+            const primaryCharts = [];
+            ids.forEach(type => {
+                const mid = `${mountPrefix}-mount-${type}`;
+                const inst = [];
+                lwcInstances[mid] = inst;
+                const primary = renders[type](mid, data, inst);
+                if (primary) primaryCharts.push(primary);
+            });
+
+            // Cross-chart time-scale sync (all 4 primary panes scroll together)
+            syncCharts(primaryCharts);
+        }
+
+        // ================================================================
+        //  EXPAND / FULLSCREEN
+        // ================================================================
+        // Store current expand context for re-render on resize
+        let _fsCtx = null;
+
+        function expandChart(mountPrefix, chartType) {
+            const modal = document.getElementById('chartFsModal');
+            const title = document.getElementById('chartFsTitle');
+            const fsMt  = document.getElementById('chartFsMount');
+            if (!modal) return;
+
+            // Resolve ticker from state
+            let ticker;
+            if (mountPrefix === 'market') {
+                ticker = marketChartTicker;
+            } else {
+                // stock containerId → find ticker from history cache or element
+                ticker = null;
+                // Try to read from the chartGrid id stored on the grid element
+                const grid = document.getElementById(`${mountPrefix}-chartGrid`);
+                if (grid && grid.dataset.ticker) ticker = grid.dataset.ticker;
+            }
+            if (!ticker || !historyCache[ticker]) {
+                alert('Dữ liệu chưa được tải. Hãy mở chart thường trước.'); return;
+            }
+
+            _fsCtx = { mountPrefix, chartType, ticker };
+            title.textContent = `${CHART_LABELS[chartType] || chartType} — ${ticker}`;
+
+            // Destroy previous FS instances
+            fsInstances.forEach(it => { try{it.ro&&it.ro.disconnect();}catch(e){} try{it.chart&&it.chart.remove();}catch(e){} });
+            fsInstances = [];
+            fsMt.innerHTML = '';
+
+            modal.classList.add('open');
+
+            // Wait for modal to be visible, then render at full size
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const renders = {
+                        gp: renderGPChartFs, heikin: renderHeikinChartFs,
+                        heatmap: renderHeatmapChartFs, techreport: renderTechReportChartFs
+                    };
+                    const fn = renders[chartType];
+                    if (fn) fn('chartFsMount', historyCache[ticker], fsInstances);
                 });
             });
         }
 
-        // -------------------------------------------------------
-        // MARKET INDEX CHART INTEGRATION
-        // -------------------------------------------------------
+        function closeChartFullscreen() {
+            document.getElementById('chartFsModal').classList.remove('open');
+            fsInstances.forEach(it => { try{it.ro&&it.ro.disconnect();}catch(e){} try{it.chart&&it.chart.remove();}catch(e){} });
+            fsInstances = [];
+            document.getElementById('chartFsMount').innerHTML = '';
+        }
+
+        // ESC to close
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChartFullscreen(); });
+
+        // ── Fullscreen variants (larger heights) ──
+        function renderGPChartFs(mountId, data, instances) {
+            const root = document.getElementById(mountId);
+            root.innerHTML = ''; root.style.display='flex'; root.style.flexDirection='column';
+            const total = root.offsetHeight || window.innerHeight - 120;
+            const h1=Math.round(total*0.55), h2=Math.round(total*0.225), h3=Math.round(total*0.225);
+            const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
+            const d1=mk(h1,false),d2=mk(h2),d3=mk(h3);
+            const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
+            const cs=c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'});
+            cs.setData(ohlcv(data));
+            if(data.GP_xFast)c1.addLineSeries({color:'#39ff14',lineWidth:2,title:'xFast'}).setData(lineData(data,'GP_xFast'));
+            if(data.GP_xSlow)c1.addLineSeries({color:'#ff4444',lineWidth:2,title:'xSlow'}).setData(lineData(data,'GP_xSlow'));
+            if(data.GP_BB_Top)c1.addLineSeries({color:'rgba(68,136,255,0.6)',lineWidth:1,lineStyle:2}).setData(lineData(data,'GP_BB_Top'));
+            if(data.GP_BB_Bot)c1.addLineSeries({color:'rgba(68,136,255,0.6)',lineWidth:1,lineStyle:2}).setData(lineData(data,'GP_BB_Bot'));
+            const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
+            if(data.OCT_A1)c2.addLineSeries({color:'#14b8a6',lineWidth:2}).setData(lineData(data,'OCT_A1',1));
+            if(data.OCT_B1)c2.addLineSeries({color:'#a78bfa',lineWidth:2,lineStyle:2}).setData(lineData(data,'OCT_B1',1));
+            const {chart:c3,ro:r3}=mkChart(d3,h3); instances.push({chart:c3,ro:r3});
+            if(data.RS13)c3.addLineSeries({color:'#e2e8f0',lineWidth:2,title:'RS13'}).setData(lineData(data,'RS13',1));
+            if(data.RS52)c3.addLineSeries({color:'#fbbf24',lineWidth:2,title:'RS52'}).setData(lineData(data,'RS52',1));
+            syncCharts([c1,c2,c3]); c1.timeScale().fitContent();
+        }
+
+        function renderHeikinChartFs(mountId, data, instances) {
+            const root=document.getElementById(mountId);
+            root.innerHTML=''; root.style.display='flex'; root.style.flexDirection='column';
+            const total=root.offsetHeight||window.innerHeight-120;
+            const h1=Math.round(total*0.5),h2=Math.round(total*0.5);
+            const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
+            const d1=mk(h1,false),d2=mk(h2);
+            const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
+            if(data.HK_Flower_Open&&data.HK_Flower_Close){
+                const hk=c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'});
+                const arr=[]; for(let i=0;i<data.dates.length;i++){const ho=data.HK_Flower_Open[i],hc=data.HK_Flower_Close[i],hh=data.HK_Flower_High[i],hl=data.HK_Flower_Low[i]; if(!ho||!hc)continue; const col=data.HK_BarColor&&data.HK_BarColor[i]; const clr=col==='brightGreen'?'#00ff6a':col==='red'?'#ff3b3b':'#ffffff'; arr.push({time:d2ts(data.dates[i]),open:ho*1000,high:hh*1000,low:hl*1000,close:hc*1000,color:clr,borderColor:clr,wickColor:clr}); }
+                hk.setData(arr);
+            }
+            if(data.HK_NW)   c1.addLineSeries({color:'#38bdf8',lineWidth:2}).setData(lineData(data,'HK_NW'));
+            if(data.TC_Trend)c1.addLineSeries({color:'#f59e0b',lineWidth:2.5}).setData(lineData(data,'TC_Trend'));
+            const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
+            c2.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'}).setData(ohlcv(data));
+            if(data.T2_SMA)c2.addLineSeries({color:'#00ffaa',lineWidth:3}).setData(lineData(data,'T2_SMA'));
+            syncCharts([c1,c2]); c1.timeScale().fitContent();
+        }
+
+        function renderHeatmapChartFs(mountId, data, instances) {
+            const root=document.getElementById(mountId);
+            root.innerHTML=''; root.style.display='flex'; root.style.flexDirection='column';
+            const total=root.offsetHeight||window.innerHeight-120;
+            const h1=Math.round(total*0.68),h2=Math.round(total*0.32);
+            const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
+            const d1=mk(h1,false),d2=mk(h2);
+            const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
+            [{col:'HM_Band_Hi',color:'rgba(0,255,106,0.4)'},{col:'HM_Band_KH',color:'rgba(34,211,238,0.4)'},{col:'HM_Band_KM',color:'rgba(251,191,36,0.4)'},{col:'HM_Band_KL',color:'rgba(249,115,22,0.4)'},{col:'HM_Band_Lo',color:'rgba(255,59,59,0.4)'}]
+            .forEach(b=>{if(data[b.col])c1.addLineSeries({color:b.color,lineWidth:1,lineStyle:2}).setData(lineData(data,b.col));});
+            if(data.HM_Flower_Open&&data.HM_Flower_Close){
+                const fcs=c1.addCandlestickSeries({upColor:'#ffffff',downColor:'#ff3b3b',borderUpColor:'#ffffff',borderDownColor:'#ff3b3b',wickUpColor:'#ffffff',wickDownColor:'#ff3b3b'});
+                const arr=[]; for(let i=0;i<data.dates.length;i++){const fo=data.HM_Flower_Open[i],fc=data.HM_Flower_Close[i],fh=data.HM_Flower_High[i],fl=data.HM_Flower_Low[i]; if(!fo||!fc)continue; const mf=data.HM_MoneyFlow&&data.HM_MoneyFlow[i]; const up=fc>=fo; const clr=(up&&mf===1)?'#ffffff':(!up&&mf===-1)?'#ff3b3b':'#fbbf24'; arr.push({time:d2ts(data.dates[i]),open:fo*1000,high:fh*1000,low:fl*1000,close:fc*1000,color:clr,borderColor:clr,wickColor:clr}); }
+                fcs.setData(arr);
+            }
+            const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
+            c2.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'}).setData(ohlcv(data));
+            syncCharts([c1,c2]); c1.timeScale().fitContent();
+        }
+
+        function renderTechReportChartFs(mountId, data, instances) {
+            const root=document.getElementById(mountId);
+            root.innerHTML=''; root.style.display='flex'; root.style.flexDirection='column';
+            const total=root.offsetHeight||window.innerHeight-120;
+            const h1=Math.round(total*0.46),h2=Math.round(total*0.18),h3=Math.round(total*0.18),h4=Math.round(total*0.18);
+            const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
+            const d1=mk(h1,false),d2=mk(h2),d3=mk(h3),d4=mk(h4);
+            const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
+            if(data.SpanA)c1.addLineSeries({color:'rgba(0,255,106,0.4)',lineWidth:1}).setData(lineData(data,'SpanA'));
+            if(data.SpanB)c1.addLineSeries({color:'rgba(255,59,59,0.4)',lineWidth:1}).setData(lineData(data,'SpanB'));
+            if(data.Tenkan)c1.addLineSeries({color:'#3b82f6',lineWidth:1.2}).setData(lineData(data,'Tenkan'));
+            if(data.Kijun)c1.addLineSeries({color:'#ef4444',lineWidth:1.2}).setData(lineData(data,'Kijun'));
+            if(data.MA10)c1.addLineSeries({color:'#a78bfa',lineWidth:1.5,title:'MA10'}).setData(lineData(data,'MA10'));
+            if(data.MA20)c1.addLineSeries({color:'#34d399',lineWidth:2,title:'MA20'}).setData(lineData(data,'MA20'));
+            if(data.MA50)c1.addLineSeries({color:'#f59e0b',lineWidth:2,title:'MA50'}).setData(lineData(data,'MA50'));
+            c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'}).setData(ohlcv(data));
+            const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
+            if(data.MCDX_Banker)c2.addHistogramSeries({color:'#f43f5e',priceLineVisible:false}).setData(lineData(data,'MCDX_Banker',1));
+            if(data.MCDX_Banker_MA)c2.addLineSeries({color:'#e2e8f0',lineWidth:1.5}).setData(lineData(data,'MCDX_Banker_MA',1));
+            const {chart:c3,ro:r3}=mkChart(d3,h3); instances.push({chart:c3,ro:r3});
+            if(data.ADX)c3.addLineSeries({color:'#c084fc',lineWidth:2,title:'ADX'}).setData(lineData(data,'ADX',1));
+            if(data.DI_Plus)c3.addLineSeries({color:'#34d399',lineWidth:1.5}).setData(lineData(data,'DI_Plus',1));
+            if(data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5}).setData(lineData(data,'DI_Minus',1));
+            const {chart:c4,ro:r4}=mkChart(d4,h4); instances.push({chart:c4,ro:r4});
+            if(data.MACD_Hist){const hArr=data.dates.map((dt,i)=>{const v=data.MACD_Hist[i];if(!v&&v!==0)return null;return{time:d2ts(dt),value:v*1000,color:v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};}).filter(Boolean);c4.addHistogramSeries({priceLineVisible:false}).setData(hArr);}
+            if(data.MACD)c4.addLineSeries({color:'#60a5fa',lineWidth:1.5}).setData(lineData(data,'MACD'));
+            if(data.MACD_Signal)c4.addLineSeries({color:'#fb923c',lineWidth:1.5}).setData(lineData(data,'MACD_Signal'));
+            syncCharts([c1,c2,c3,c4]); c1.timeScale().fitContent();
+        }
+
+        // ================================================================
+        //  MARKET INDEX CHART — called by selectMarketIndex()
+        // ================================================================
         function loadMarketCharts() {
-            // Called when user selects VNINDEX or HNX-INDEX
             marketChartTicker = activeMarketIndex;
             const title = document.getElementById('marketChartTitle');
             if (title) title.textContent = `📈 Biểu đồ Phân tích ${activeMarketIndex}`;
-            renderInteractiveChart('marketChartMount', marketChartType, activeMarketIndex, marketChartRange);
+            renderAll4Charts('market', activeMarketIndex);
         }
-    </script>
 
+        // Add listener to load data on page load
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
 </body>
 </html>
