@@ -51,6 +51,7 @@ jobs:
           PYTHONPATH: .
           VIETSTOCK_CURL: ${{ secrets.VIETSTOCK_CURL }}
         run: |
+          # 1. Cấu hình cURL từ secrets
           python -c '
           import os
           from tinvest.config_manager import ConfigManager
@@ -66,6 +67,17 @@ jobs:
           else:
               print("No VIETSTOCK_CURL secret provided or it is too short. Proceeding with existing config.")
           '
+          
+          # 2. Tự động nạp dữ liệu ban đầu bằng CSV nếu người dùng đẩy thư mục hoặc file CSV lên Git
+          if [ -d "import_data" ] && [ "$(ls -A import_data/*.csv 2>/dev/null)" ]; then
+              echo "=== PHÁT HIỆN THƯ MỤC import_data/ CHỨA FILE CSV. BẮT ĐẦU NẠP DỮ LIỆU BAN ĐẦU ==="
+              python run_headless_update.py --import-csv import_data/
+          elif [ -f "import_data.csv" ]; then
+              echo "=== PHÁT HIỆN FILE import_data.csv. BẮT ĐẦU NẠP DỮ LIỆU BAN ĐẦU ==="
+              python run_headless_update.py --import-csv import_data.csv
+          fi
+          
+          # 3. Chạy cập nhật tự động hàng ngày từ Vietstock
           python run_headless_update.py
 
       - name: Commit and Push Changes

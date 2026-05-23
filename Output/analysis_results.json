@@ -1,5 +1,5 @@
 {
-  "last_update": "2026-05-23 08:37:10",
+  "last_update": "2026-05-23 09:15:17",
   "market_breadth": {},
   "market_indices": {
     "VNINDEX": {
@@ -48,53 +48,6 @@
         "action": "CANH CHỐT LỜI BỚT - NGƯNG MUA",
         "details": "Banker (Đỏ) cắt xuống MA đen hoặc giảm liên tục 3 phiên."
       }
-    },
-    "HNX-INDEX": {
-      "price": 267510.0,
-      "date": "2026-05-22",
-      "regime": "UPTREND",
-      "action": "TRADE MẠNH – Tập trung vào cổ phiếu Leader.",
-      "ftd_active": true,
-      "ftd_date": "2026-03-25",
-      "ftd_quality": "WEAK",
-      "ra_day": 12,
-      "distribution_count": 0,
-      "support_resistance": {
-        "s1": 257060.0,
-        "s2": 251185.80000000002,
-        "r1": 268970.0,
-        "r2": 282418.50000000006
-      },
-      "alloc": "50-70%",
-      "alloc_note": "Tăng yếu dần nhưng FTD còn sống -> canh giữ, giảm dần nếu chớm gãy",
-      "diagnostics": {
-        "ma": {
-          "status": "Giá nằm Tên MA20, thiếu xung lực rõ ràng.",
-          "action": "Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA."
-        },
-        "ichimoku": {
-          "status": "Trạng thái tích lũy mờ nhạt, chưa có tín hiệu Ichimoku nổi bật.",
-          "action": "Tiếp tục quan sát diễn biến hoặc tham khảo indicator khac."
-        },
-        "rsi": {
-          "status": "Quá mua (RSI > 70) trong Uptrend: Trend đang rất khỏe.",
-          "action": "Giữ lệnh, không chốt non."
-        },
-        "macd": {
-          "status": "MACD > 0 (Trend tăng trung hạn).",
-          "action": ""
-        },
-        "adx": {
-          "status": "ADX < 20: Thị trường SIDEWAY — Không có xu hướng rõ ràng.",
-          "action": "Đánh mean reversion (mua thấp bán cao trong biên). RSI 30–70 hoạt động tốt. BỎ QUA mọi tín hiệu MACD/MA cắt nhau vì nhiễu cực cao. | 🚪 EXIT: DI cắt nhau theo chiều ngược lại HOẶC ADX quay về vùng Sideway (≤ 20)."
-        }
-      },
-      "heatmap_eval": "Trạng thái: Vàng (Lưỡng lự)",
-      "mcdx_eval": {
-        "status": "RỦI RO PHÂN PHỐI / FOMO",
-        "action": "HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN",
-        "details": "Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn."
-      }
     }
   },
   "categories_meta": {
@@ -132,65 +85,61 @@
   },
   "tickers_analysis": [
     {
-      "Ticker": "HNX-INDEX",
-      "Price": 267510,
-      "Volume": 84208699,
-      "Entry": 267510,
-      "Target": 282418,
-      "StopLoss": 249348,
-      "RR": "0.8/1",
-      "RiskScore": 0,
-      "RiskPct": 6.79,
-      "Action": "WAIT (Chờ xác nhận)",
+      "Ticker": "AAA",
+      "Price": 9650,
+      "Volume": 364473,
+      "Entry": 9650,
+      "Target": 10240,
+      "StopLoss": 9408,
+      "RR": "2.5/1",
+      "RiskScore": 10,
+      "RiskPct": 2.5,
+      "Action": "YES (Có thể cân nhắc)",
       "Categories": [
         "ACCUMULATION",
-        "UPCLOUD",
-        "ADD_2"
+        "ADD_1"
       ],
       "Rules": [
-        "RSI_CROSS_70",
+        "PRICE_CROSS_MA20",
         "RSI_GT_50",
         "PRICE_ABOVE_MA20",
         "PRICE_ABOVE_MA50",
         "MA20_GT_MA50",
         "MCDX_RED",
         "PRICE_ABOVE_KIJUN",
-        "PRICE_ABOVE_TENKAN",
-        "MACD_ABOVE_SIGNAL",
-        "WEEK_HIGH_BREAKOUT",
-        "ACCUMULATION_BREAKOUT"
+        "PRICE_ABOVE_TENKAN"
       ],
-      "CutlossFull": 239374,
-      "TrailingStop": 249348,
-      "OpportunityScore": 40,
-      "OpportunityDesc": "Trung bình",
-      "SafetyRating": 64,
-      "TopupPrice": 268970,
-      "TopupDesc": "Break đỉnh gần nhất (268.97) | ⚠️ Chưa thấy rõ nền nghỉ — cần thêm vài phiên nén trước khi buy",
+      "CutlossFull": 9370,
+      "TrailingStop": 9408,
+      "OpportunityScore": 25,
+      "OpportunityDesc": "Yếu",
+      "SafetyRating": 51,
+      "TopupPrice": 9860,
+      "TopupDesc": "Break Swing High gần nhất (9.86) | ⚠️ Chưa thấy rõ nền nghỉ — cần thêm vài phiên nén trước khi buy",
       "AccumulationQuality": "MEDIUM",
       "AccumulationNotes": [
         "Biên độ bắt đầu thu hẹp (<12%)",
         "Áp lực bán cạn kiệt (Volume low)",
         "Xuất hiện điểm cạn cung (No/Test Supply)"
       ],
-      "AccumulationRangePct": 8.72,
+      "AccumulationRangePct": 9.84,
       "ReadyToBreak": true,
       "MCDX": {
-        "banker_pct": 42.2,
-        "hot_pct": 57.8,
+        "banker_pct": 26.9,
+        "hot_pct": 73.1,
         "retailer_pct": 0.0,
-        "status": "RỦI RO PHÂN PHỐI / FOMO",
-        "action": "HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN",
-        "details": "Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn."
+        "status": "TRUNG TÍNH (Chưa rõ xu hướng MCDX)",
+        "action": "THEO DÕI",
+        "details": "Dòng tiền tạo lập (Đỏ) và dòng tiền đầu cơ (Vàng) đi ngang."
       },
       "Diagnostics": {
         "rsi": {
-          "status": "Quá mua (RSI > 70) trong Uptrend: Trend đang rất khỏe.",
-          "action": "Giữ lệnh, không chốt non."
+          "status": "Tín hiệu KHỎE NHẤT: Pullback RSI về vùng 40-50, Vol xác nhận.",
+          "action": "TÌM ĐIỂM MUA ngay khi RSI cắt lên 50."
         },
         "macd": {
-          "status": "MACD > 0 (Trend tăng trung hạn).",
-          "action": ""
+          "status": "PHÂN KỲ ĐỈNH MACD (Bearish Divergence): Giá kéo đỉnh mới nhưng MACD đỉnh lại thấp hơn. | Histogram Âm nhưng đang THU HẸP (Lực bán cạn). | MACD < 0 (Trend giảm trung hạn).",
+          "action": "Lực kéo kéo xả (Rủi ro Sập). Chờ xác nhận để CHỐT LỜI/SHORT. | Chuẩn bị tạo đáy, theo dõi chặt chẽ."
         },
         "adx": {
           "status": "ADX < 20: Thị trường SIDEWAY — Không có xu hướng rõ ràng.",
@@ -201,179 +150,8 @@
           "action": "Tiếp tục quan sát diễn biến hoặc tham khảo indicator khac."
         },
         "ma": {
-          "status": "Giá nằm Tên MA20, thiếu xung lực rõ ràng.",
-          "action": "Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA."
-        },
-        "vsa": {
-          "status": "VSA Dominant: BULLISH",
-          "action": "VSA Score: 1/4"
-        }
-      },
-      "History": {
-        "dates": [
-          "2026-04-07",
-          "2026-04-08",
-          "2026-04-09",
-          "2026-04-10",
-          "2026-04-13",
-          "2026-04-14",
-          "2026-04-15",
-          "2026-04-16",
-          "2026-04-17",
-          "2026-04-20",
-          "2026-04-21",
-          "2026-04-22",
-          "2026-04-23",
-          "2026-04-24",
-          "2026-04-28",
-          "2026-04-29",
-          "2026-05-04",
-          "2026-05-05",
-          "2026-05-07",
-          "2026-05-08",
-          "2026-05-11",
-          "2026-05-12",
-          "2026-05-13",
-          "2026-05-14",
-          "2026-05-15",
-          "2026-05-18",
-          "2026-05-19",
-          "2026-05-20",
-          "2026-05-21",
-          "2026-05-22"
-        ],
-        "closes": [
-          246700.0,
-          253320.0,
-          250980.0,
-          251910.0,
-          251660.0,
-          252410.0,
-          252720.0,
-          256490.0,
-          260000.0,
-          257329.99999999997,
-          253270.0,
-          255360.0,
-          253230.0,
-          251950.0,
-          249440.0,
-          250660.0,
-          250040.0,
-          247420.0,
-          248460.0,
-          246490.0,
-          248060.0,
-          253280.0,
-          254620.0,
-          255070.0,
-          257420.00000000003,
-          259250.0,
-          259500.0,
-          261329.99999999997,
-          264370.0,
-          267510.0
-        ],
-        "volumes": [
-          48052423,
-          101994921,
-          76194142,
-          78907531,
-          72121550,
-          59389816,
-          70869803,
-          63602672,
-          58023331,
-          38168370,
-          60785475,
-          39692698,
-          59042956,
-          41482278,
-          36834108,
-          53996023,
-          48775617,
-          47024017,
-          52110338,
-          48763194,
-          67233400,
-          43828485,
-          81786356,
-          38480046,
-          62250433,
-          98444357,
-          80972904,
-          89612993,
-          53741749,
-          84208699
-        ]
-      }
-    },
-    {
-      "Ticker": "VNINDEX",
-      "Price": 1877130,
-      "Volume": 854173859,
-      "Entry": 1877130,
-      "Target": 2029765,
-      "StopLoss": 1827817,
-      "RR": "3.1/1",
-      "RiskScore": 5,
-      "RiskPct": 2.63,
-      "Action": "YES (Có thể cân nhắc)",
-      "Categories": [
-        "ACCUMULATION",
-        "UPCLOUD",
-        "ADD_1"
-      ],
-      "Rules": [
-        "RSI_GT_50",
-        "PRICE_ABOVE_MA50",
-        "MA20_GT_MA50",
-        "MCDX_RED",
-        "PRICE_ABOVE_KIJUN"
-      ],
-      "CutlossFull": 1745001,
-      "TrailingStop": 1827817,
-      "OpportunityScore": 35,
-      "OpportunityDesc": "Yếu",
-      "SafetyRating": 59,
-      "TopupPrice": 1888330,
-      "TopupDesc": "Break Swing High gần nhất (1888.33) | ⚠️ Chưa thấy rõ nền nghỉ — cần thêm vài phiên nén trước khi buy",
-      "AccumulationQuality": "HIGH",
-      "AccumulationNotes": [
-        "Nền thắt chặt (Tight Base <7%)",
-        "Áp lực bán cạn kiệt (Volume low)",
-        "Xuất hiện điểm cạn cung (No/Test Supply)"
-      ],
-      "AccumulationRangePct": 6.07,
-      "ReadyToBreak": false,
-      "MCDX": {
-        "banker_pct": 38.1,
-        "hot_pct": 61.9,
-        "retailer_pct": 0.0,
-        "status": "TIỀN LỚN SUY YẾU",
-        "action": "CANH CHỐT LỜI BỚT - NGƯNG MUA",
-        "details": "Banker (Đỏ) cắt xuống MA đen hoặc giảm liên tục 3 phiên."
-      },
-      "Diagnostics": {
-        "rsi": {
-          "status": "PHÂN KỲ ĐỈNH (Bearish Divergence): Giá tạo đỉnh mới nhưng RSI thấp hơn.",
-          "action": "Lực mua yếu đi rõ rệt. Cẩn trọng sập, chuẩn bị CHỐT LỜI/SHORT."
-        },
-        "macd": {
-          "status": "PHÂN KỲ ĐỈNH MACD (Bearish Divergence): Giá kéo đỉnh mới nhưng MACD đỉnh lại thấp hơn. | MACD > 0 (Trend tăng trung hạn).",
-          "action": "Lực kéo kéo xả (Rủi ro Sập). Chờ xác nhận để CHỐT LỜI/SHORT."
-        },
-        "adx": {
-          "status": "ADX 24.0 (20–25) không có độ dốc: Tín hiệu chưa rõ ràng.",
-          "action": "Chờ ADX dốc lên hoặc vượt 25 mới xác nhận trend. | 🚪 EXIT: DI cắt nhau theo chiều ngược lại HOẶC ADX quay về vùng Sideway (≤ 20)."
-        },
-        "ichimoku": {
-          "status": "STRONG UPTREND (Xu hướng MẠNH NHẤT): Giá trên mây, Tenkan > Kijun, Chikou trống đường.",
-          "action": "All-in mindset. Canh giá Pullback về Tenkan (nhanh) hoặc Kijun (an toàn) để BUY."
-        },
-        "ma": {
-          "status": "Giá nằm Dưới MA20, thiếu xung lực rõ ràng.",
-          "action": "Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA."
+          "status": "SETUP 1 (PULLBACK MA20): Kèo ăn dày nhất. Giá test MA20 thành công.",
+          "action": "BUY MẠNH. Hỗ trợ MA20 đã đỡ giá tốt trong Uptrend."
         },
         "vsa": {
           "status": "VSA Dominant: NEUTRAL",
@@ -382,10 +160,6 @@
       },
       "History": {
         "dates": [
-          "2026-04-07",
-          "2026-04-08",
-          "2026-04-09",
-          "2026-04-10",
           "2026-04-13",
           "2026-04-14",
           "2026-04-15",
@@ -396,10 +170,14 @@
           "2026-04-22",
           "2026-04-23",
           "2026-04-24",
+          "2026-04-27",
           "2026-04-28",
           "2026-04-29",
+          "2026-04-30",
+          "2026-05-01",
           "2026-05-04",
           "2026-05-05",
+          "2026-05-06",
           "2026-05-07",
           "2026-05-08",
           "2026-05-11",
@@ -414,138 +192,121 @@
           "2026-05-22"
         ],
         "closes": [
-          1677540.0,
-          1756550.0,
-          1736680.0,
-          1750000.0,
-          1758960.0,
-          1775650.0,
-          1800650.0,
-          1819830.0,
-          1817170.0,
-          1837110.0,
-          1833480.0,
-          1857300.0,
-          1870360.0,
-          1853290.0,
-          1875840.0,
-          1854100.0,
-          1854060.0,
-          1874850.0,
-          1891200.0,
-          1915370.0,
-          1895500.0,
-          1901100.0,
-          1898370.0,
-          1925460.0,
-          1921600.0,
-          1927940.0,
-          1912930.0,
-          1913230.0,
-          1896890.0,
-          1877130.0
+          10170.0,
+          9880.0,
+          9990.0,
+          9740.0,
+          9680.0,
+          9830.0,
+          9840.0,
+          9680.0,
+          9580.0,
+          9680.0,
+          9570.0,
+          9600.0,
+          9610.0,
+          9510.0,
+          9820.0,
+          9910.0,
+          9610.0,
+          9640.0,
+          9540.0,
+          9670.0,
+          9550.0,
+          9540.0,
+          9610.0,
+          9730.0,
+          9560.0,
+          9510.0,
+          9440.0,
+          9350.0,
+          9600.0,
+          9650.0
         ],
         "volumes": [
-          563089100,
-          1211978700,
-          1006848400,
-          925131100,
-          825933100,
-          826661400,
-          867853100,
-          890369200,
-          708729100,
-          643588600,
-          841329000,
-          641338600,
-          1014702100,
-          625709200,
-          631088700,
-          684081700,
-          671298200,
-          762314900,
-          787614800,
-          944197112,
-          960671699,
-          733300648,
-          972787205,
-          675088585,
-          744584792,
-          820722199,
-          1007594006,
-          1197618071,
-          677251003,
-          854173859
+          438349,
+          64153,
+          126325,
+          290773,
+          456215,
+          105318,
+          444030,
+          427177,
+          126077,
+          402618,
+          183515,
+          256988,
+          385463,
+          175885,
+          421921,
+          67368,
+          196400,
+          238014,
+          141751,
+          280203,
+          339450,
+          220987,
+          349363,
+          261951,
+          245716,
+          110279,
+          365172,
+          416407,
+          50126,
+          364473
         ]
       }
     }
   ],
   "filtered_results": {
     "ACCUMULATION": [
-      "HNX-INDEX",
-      "VNINDEX"
+      "AAA"
     ],
     "PERFECT_MA": [],
     "HEIKIN_BUY": [],
-    "UPCLOUD": [
-      "HNX-INDEX",
-      "VNINDEX"
-    ],
+    "UPCLOUD": [],
     "WHITE_ADX": [],
     "EARLY": [],
     "ADD_1": [
-      "VNINDEX"
+      "AAA"
     ],
-    "ADD_2": [
-      "HNX-INDEX"
-    ],
+    "ADD_2": [],
     "STRONG": [],
     "RSI_BULLISH_DIVERGENCE": [],
     "MACD_BULLISH_DIVERGENCE": [],
     "MACD_HIST_BULLISH_DIVERGENCE": [],
     "RS13_GT_50": [],
     "RS52_GT_50": [],
-    "PRICE_CROSS_MA20": [],
+    "PRICE_CROSS_MA20": [
+      "AAA"
+    ],
     "PRICE_CROSS_MA50": [],
     "RSI_EXIT_OVERSOLD": [],
-    "RSI_CROSS_70": [
-      "HNX-INDEX"
-    ],
+    "RSI_CROSS_70": [],
     "RSI_GT_50": [
-      "HNX-INDEX",
-      "VNINDEX"
+      "AAA"
     ],
     "PRICE_ABOVE_MA20": [
-      "HNX-INDEX"
+      "AAA"
     ],
     "PRICE_ABOVE_MA50": [
-      "HNX-INDEX",
-      "VNINDEX"
+      "AAA"
     ],
     "MA20_GT_MA50": [
-      "HNX-INDEX",
-      "VNINDEX"
+      "AAA"
     ],
     "MCDX_RED": [
-      "HNX-INDEX",
-      "VNINDEX"
+      "AAA"
     ],
     "PRICE_ABOVE_KIJUN": [
-      "HNX-INDEX",
-      "VNINDEX"
+      "AAA"
     ],
     "PRICE_ABOVE_TENKAN": [
-      "HNX-INDEX"
+      "AAA"
     ],
     "MACD_CROSS_SIGNAL": [],
-    "MACD_ABOVE_SIGNAL": [
-      "HNX-INDEX"
-    ],
-    "WEEK_HIGH_BREAKOUT": [
-      "HNX-INDEX"
-    ],
-    "ACCUMULATION_BREAKOUT": [
-      "HNX-INDEX"
-    ]
+    "MACD_ABOVE_SIGNAL": [],
+    "WEEK_HIGH_BREAKOUT": [],
+    "ACCUMULATION_BREAKOUT": []
   }
 }
