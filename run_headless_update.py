@@ -637,60 +637,135 @@ def compute_and_export_dashboard(storage, affected_tickers):
         
     logger.info(f"✅ HOÀN TẤT CẬP NHẬT! Đã xuất {len(tickers_analysis)} mã cổ phiếu.")
     
-    # 10. Export Charts for Web Dashboard
-    logger.info("📈 Đang xuất các biểu đồ phân tích cho Web Dashboard...")
-    try:
-        from tinvest.chart_exporter import (
-            export_greenpink_chart,
-            export_heikin_chart,
-            export_heatmap_chart,
-            export_tech_report_chart
-        )
-        
-        tickers_to_export = []
-        for idx in ["VNINDEX", "HNX-INDEX"]:
-            idx_df = data_dict.get(idx)
-            if idx_df is not None and not idx_df.empty:
-                tickers_to_export.append((idx, idx_df))
-                
-        for t, data in list(analysis_cache.items()):
-            if t not in ["VNINDEX", "HNX-INDEX"]:
-                df_t = data.get("df")
-                if df_t is not None and not df_t.empty:
-                    tickers_to_export.append((t, df_t))
-                    
-        logger.info(f"[*] Bắt đầu xuất biểu đồ cho {len(tickers_to_export)} mã...")
-        
-        for idx, (t, df_t) in enumerate(tickers_to_export):
-            t_lower = t.lower()
-            
-            # Export GP
-            gp_path = os.path.join(output_dir, f"{t_lower}_gp.png")
-            export_greenpink_chart(t, df_t, data_dict.get("VNINDEX"), gp_path)
-            
-            # Export Heikin
-            hk_path = os.path.join(output_dir, f"{t_lower}_heikin.png")
-            export_heikin_chart(t, df_t, hk_path)
-            
-            # Export Heatmap
-            hm_path = os.path.join(output_dir, f"{t_lower}_heatmap.png")
-            export_heatmap_chart(t, df_t, hm_path)
-            
-            # Export Tech Report
-            rp_path = os.path.join(output_dir, f"{t_lower}_tech_report.png")
-            export_tech_report_chart(t, df_t, rp_path)
-            
-            if (idx + 1) % 10 == 0 or (idx + 1) == len(tickers_to_export):
-                logger.info(f"   [+] Đã vẽ xong biểu đồ cho {idx + 1}/{len(tickers_to_export)} mã...")
-                
-    except Exception as e_chart:
-        logger.error(f"⚠️ Lỗi xuất biểu đồ: {e_chart}")
-        import traceback
-        traceback.print_exc()
+    # 10. Export History JSON for each ticker (used by web charts — replaces PNG exports)
+    logger.info("📊 Đang xuất dữ liệu lịch sử JSON cho Web Dashboard (thay thế xuất ảnh PNG)...")
+    export_ticker_history_json(data_dict, analysis_cache, output_dir)
     
     logger.info("==================================================")
 
+
+def export_ticker_history_json(data_dict, analysis_cache, output_dir):
+    """
+    Export full OHLCV + computed indicators for each ticker to individual JSON files.
+    These files are lazy-loaded by the web frontend to render interactive charts
+    (replacing Matplotlib PNG exports entirely).
+    
+    Output: Output/history/{TICKER}.json  (one file per ticker)
+    """
+    import math
+    history_dir = os.path.join(output_dir, "history")
+    os.makedirs(history_dir, exist_ok=True)
+    
+    def safe_val(v):
+        """Convert numpy/pandas scalars to JSON-safe Python types."""
+        if v is None:
+            return None
+        try:
+            fv = float(v)
+            if math.isnan(fv) or math.isinf(fv):
+                return None
+            # Return int if it's a whole number (cleaner JSON)
+            if fv == int(fv) and abs(fv) < 1e12:
+                return int(fv)
+            return round(fv, 6)
+        except (TypeError, ValueError):
+            return None
+    
+    def serialize_col(series):
+        """Serialize a pandas Series to a list of JSON-safe values."""
+        return [safe_val(v) for v in series]
+    
+    # Columns needed for each chart type
+    # Chart 1: GreenPink + Octopus + RS13/RS52
+    GP_COLS = ['GP_E14', 'GP_E21', 'GP_xFast', 'GP_xSlow',
+               'GP_BB_Top', 'GP_BB_Bot',
+               'OCT_A1', 'OCT_B1', 'OCT_Color',
+               'OCT_BB_Top', 'OCT_BB_Bot',
+               'RS13', 'RS52']
+    
+    # Chart 2: Heikin-Ashi + 2Trend
+    HK_COLS = ['HK_Flower_Open', 'HK_Flower_High', 'HK_Flower_Low', 'HK_Flower_Close',
+               'HK_MHull', 'HK_SHull', 'HK_NW', 'HK_Trend', 'HK_BarColor',
+               'HK_BuySignal', 'HK_BuyManh', 'HK_SellSignal', 'HK_SellManh',
+               'TC_Trend', 'TC_TrendColor', 'TC_StopLine', 'TC_StopColor',
+               'T2_SMA', 'T2_SMA_Trend', 'T2_ST_Upper', 'T2_ST_Lower', 'T2_ST_Trend']
+    
+    # Chart 3: Heatmap
+    HM_COLS = ['HM_PFE', 'HM_STC', 'HM_MoneyFlow',
+               'HM_Flower_Open', 'HM_Flower_High', 'HM_Flower_Low', 'HM_Flower_Close',
+               'HM_Band_Hi', 'HM_Band_KH', 'HM_Band_KM', 'HM_Band_KL', 'HM_Band_Lo',
+               'HM_Band_Long_Hr', 'HM_Band_Long_Ls']
+    
+    # Chart 4: Technical Report (Candlestick + Ichimoku + MCDX + ADX + MACD)
+    TR_COLS = ['MA10', 'MA20', 'MA50',
+               'Tenkan', 'Kijun', 'Kijun65', 'SpanA', 'SpanB',
+               'MCDX_Banker', 'MCDX_HotMoney', 'MCDX_Retailer', 'MCDX_Banker_MA',
+               'ADX', 'ADX_Color', 'DI_Plus', 'DI_Minus',
+               'MACD', 'MACD_Signal', 'MACD_Hist',
+               'RSI']
+    
+    ALL_INDICATOR_COLS = list(dict.fromkeys(GP_COLS + HK_COLS + HM_COLS + TR_COLS))
+    
+    exported = 0
+    errors = 0
+    
+    # Export indices first (VNINDEX, HNX-INDEX)
+    all_tickers_to_export = list(data_dict.keys())
+    
+    for t in all_tickers_to_export:
+        try:
+            # Prefer the enriched df from analysis_cache (has more indicators)
+            cached = analysis_cache.get(t)
+            if cached and 'df' in cached and cached['df'] is not None:
+                df = cached['df'].copy()
+            else:
+                df = data_dict.get(t)
+                if df is None or df.empty:
+                    continue
+                df = df.copy()
+            
+            if df.empty or 'Date' not in df.columns:
+                continue
+            
+            # Convert Date to string
+            df['Date'] = pd.to_datetime(df['Date'])
+            df = df.sort_values('Date').reset_index(drop=True)
+            
+            record = {
+                "ticker": t,
+                "dates": [d.strftime("%Y-%m-%d") for d in df['Date']],
+                # OHLCV (required for all chart types)
+                "opens":   serialize_col(df['Open']),
+                "highs":   serialize_col(df['High']),
+                "lows":    serialize_col(df['Low']),
+                "closes":  serialize_col(df['Close']),
+                "volumes": serialize_col(df['Volume']),
+            }
+            
+            # Add indicator columns if present
+            for col in ALL_INDICATOR_COLS:
+                if col in df.columns:
+                    # Special case: bool/string columns
+                    if df[col].dtype == bool or df[col].dtype == object:
+                        record[col] = [bool(v) if isinstance(v, (bool, np.bool_)) else str(v) if v is not None else None for v in df[col]]
+                    else:
+                        record[col] = serialize_col(df[col])
+            
+            # Write JSON (no indent for smaller file size)
+            out_path = os.path.join(history_dir, f"{t}.json")
+            with open(out_path, 'w', encoding='utf-8') as f:
+                json.dump(record, f, ensure_ascii=False, separators=(',', ':'))
+            
+            exported += 1
+        except Exception as ex:
+            logger.error(f"   ! Lỗi xuất history JSON mã {t}: {ex}")
+            errors += 1
+    
+    logger.info(f"✅ Đã xuất history JSON: {exported} mã thành công, {errors} lỗi → {history_dir}")
+
+
 def run_csv_import(csv_paths):
+
     from pathlib import Path
     from tinvest.data_loader import _normalize_columns, _clean_dataframe
     

@@ -41,10 +41,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Setup Chrome for Headless Selenium
-        run: |
-          echo "Checking Chrome version in runner:"
-          google-chrome --version || echo "Google Chrome not found"
 
       - name: Run Update Script
         env:
