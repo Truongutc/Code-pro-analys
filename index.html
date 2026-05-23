@@ -3177,27 +3177,39 @@
         // ── Utility: date string → Unix seconds ──
         function d2ts(s) { return Math.floor(new Date(s + 'T00:00:00Z').getTime() / 1000); }
 
+        // ── Detect price scale: indices store raw points (>50), stocks store price/1000 ──
+        function priceScale(data) {
+            // If closes values are already large (>50), they are index points, no scaling needed
+            const sample = (data.closes || []).find(v => v != null && v !== 0);
+            return (sample && sample > 50) ? 1 : 1000;
+        }
+
         // ── Build OHLCV array from history data ──
         function ohlcv(data) {
+            const sc = priceScale(data);
             const out = [];
             for (let i = 0; i < data.dates.length; i++) {
                 const o = data.opens[i], c = data.closes[i],
                       h = data.highs[i], l = data.lows[i];
                 if (!o || !c) continue;
                 out.push({ time: d2ts(data.dates[i]),
-                    open: o*1000, high: h*1000, low: l*1000, close: c*1000 });
+                    open: o*sc, high: h*sc, low: l*sc, close: c*sc });
             }
             return out;
         }
 
         // ── Build line series data from a named column ──
-        function lineData(data, col, scale = 1000) {
+        // defaultScale: 1000 for stocks (price/1000 units), auto-overridden for indices
+        function lineData(data, col, defaultScale = 1000) {
             const out = [];
             if (!data[col]) return out;
+            // For price-based indicators (MA, BB) use same scale as OHLCV
+            // For oscillators (RS, OCT, ADX, MACD) defaultScale is passed as 1
+            const sc = (defaultScale === 1000) ? priceScale(data) : defaultScale;
             for (let i = 0; i < data.dates.length; i++) {
                 const v = data[col][i];
                 if (v === null || v === undefined) continue;
-                out.push({ time: d2ts(data.dates[i]), value: v * scale });
+                out.push({ time: d2ts(data.dates[i]), value: v * sc });
             }
             return out;
         }
@@ -3350,6 +3362,7 @@
                     wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
                 });
                 const hkArr = [];
+                const hkSc = priceScale(data);
                 for (let i = 0; i < data.dates.length; i++) {
                     const ho = data.HK_Flower_Open[i], hc = data.HK_Flower_Close[i],
                           hh = data.HK_Flower_High[i], hl = data.HK_Flower_Low[i];
@@ -3357,7 +3370,7 @@
                     const col = data.HK_BarColor && data.HK_BarColor[i];
                     const clr = col==='brightGreen'?'#00ff6a':col==='red'?'#ff3b3b':'#ffffff';
                     hkArr.push({time:d2ts(data.dates[i]),
-                        open:ho*1000,high:hh*1000,low:hl*1000,close:hc*1000,
+                        open:ho*hkSc,high:hh*hkSc,low:hl*hkSc,close:hc*hkSc,
                         color:clr,borderColor:clr,wickColor:clr});
                 }
                 hk.setData(hkArr);
@@ -3429,6 +3442,7 @@
                     wickUpColor:'#ffffff',wickDownColor:'#ff3b3b'
                 });
                 const fArr = [];
+                const fSc = priceScale(data);
                 for (let i = 0; i < data.dates.length; i++) {
                     const fo=data.HM_Flower_Open[i],fc=data.HM_Flower_Close[i],
                           fh=data.HM_Flower_High[i],fl=data.HM_Flower_Low[i];
@@ -3437,7 +3451,7 @@
                     const up = fc>=fo;
                     const clr = (up&&mf===1)?'#ffffff':(!up&&mf===-1)?'#ff3b3b':'#fbbf24';
                     fArr.push({time:d2ts(data.dates[i]),
-                        open:fo*1000,high:fh*1000,low:fl*1000,close:fc*1000,
+                        open:fo*fSc,high:fh*fSc,low:fl*fSc,close:fc*fSc,
                         color:clr,borderColor:clr,wickColor:clr});
                 }
                 fcs.setData(fArr);
@@ -3518,13 +3532,13 @@
                 const hArr = data.dates.map((dt,i) => {
                     const v = data.MACD_Hist[i];
                     if (v===null||v===undefined) return null;
-                    return {time:d2ts(dt), value:v*1000,
+                    return {time:d2ts(dt), value:v,
                         color: v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};
                 }).filter(Boolean);
                 c4.addHistogramSeries({priceLineVisible:false,title:'Hist'}).setData(hArr);
             }
-            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title:'MACD'}).setData(lineData(data,'MACD'));
-            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig'}).setData(lineData(data,'MACD_Signal'));
+            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title:'MACD'}).setData(lineData(data,'MACD',1));
+            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig'}).setData(lineData(data,'MACD_Signal',1));
 
             syncCharts([c1,c2,c3,c4]);
             c1.timeScale().fitContent();
@@ -3666,7 +3680,7 @@
             const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
             if(data.HK_Flower_Open&&data.HK_Flower_Close){
                 const hk=c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'});
-                const arr=[]; for(let i=0;i<data.dates.length;i++){const ho=data.HK_Flower_Open[i],hc=data.HK_Flower_Close[i],hh=data.HK_Flower_High[i],hl=data.HK_Flower_Low[i]; if(!ho||!hc)continue; const col=data.HK_BarColor&&data.HK_BarColor[i]; const clr=col==='brightGreen'?'#00ff6a':col==='red'?'#ff3b3b':'#ffffff'; arr.push({time:d2ts(data.dates[i]),open:ho*1000,high:hh*1000,low:hl*1000,close:hc*1000,color:clr,borderColor:clr,wickColor:clr}); }
+                const arr=[]; const hkSc=priceScale(data); for(let i=0;i<data.dates.length;i++){const ho=data.HK_Flower_Open[i],hc=data.HK_Flower_Close[i],hh=data.HK_Flower_High[i],hl=data.HK_Flower_Low[i]; if(!ho||!hc)continue; const col=data.HK_BarColor&&data.HK_BarColor[i]; const clr=col==='brightGreen'?'#00ff6a':col==='red'?'#ff3b3b':'#ffffff'; arr.push({time:d2ts(data.dates[i]),open:ho*hkSc,high:hh*hkSc,low:hl*hkSc,close:hc*hkSc,color:clr,borderColor:clr,wickColor:clr}); }
                 hk.setData(arr);
             }
             if(data.HK_NW)   c1.addLineSeries({color:'#38bdf8',lineWidth:2}).setData(lineData(data,'HK_NW'));
@@ -3689,7 +3703,7 @@
             .forEach(b=>{if(data[b.col])c1.addLineSeries({color:b.color,lineWidth:1,lineStyle:2}).setData(lineData(data,b.col));});
             if(data.HM_Flower_Open&&data.HM_Flower_Close){
                 const fcs=c1.addCandlestickSeries({upColor:'#ffffff',downColor:'#ff3b3b',borderUpColor:'#ffffff',borderDownColor:'#ff3b3b',wickUpColor:'#ffffff',wickDownColor:'#ff3b3b'});
-                const arr=[]; for(let i=0;i<data.dates.length;i++){const fo=data.HM_Flower_Open[i],fc=data.HM_Flower_Close[i],fh=data.HM_Flower_High[i],fl=data.HM_Flower_Low[i]; if(!fo||!fc)continue; const mf=data.HM_MoneyFlow&&data.HM_MoneyFlow[i]; const up=fc>=fo; const clr=(up&&mf===1)?'#ffffff':(!up&&mf===-1)?'#ff3b3b':'#fbbf24'; arr.push({time:d2ts(data.dates[i]),open:fo*1000,high:fh*1000,low:fl*1000,close:fc*1000,color:clr,borderColor:clr,wickColor:clr}); }
+                const arr=[]; const fSc=priceScale(data); for(let i=0;i<data.dates.length;i++){const fo=data.HM_Flower_Open[i],fc=data.HM_Flower_Close[i],fh=data.HM_Flower_High[i],fl=data.HM_Flower_Low[i]; if(!fo||!fc)continue; const mf=data.HM_MoneyFlow&&data.HM_MoneyFlow[i]; const up=fc>=fo; const clr=(up&&mf===1)?'#ffffff':(!up&&mf===-1)?'#ff3b3b':'#fbbf24'; arr.push({time:d2ts(data.dates[i]),open:fo*fSc,high:fh*fSc,low:fl*fSc,close:fc*fSc,color:clr,borderColor:clr,wickColor:clr}); }
                 fcs.setData(arr);
             }
             const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
@@ -3721,9 +3735,9 @@
             if(data.DI_Plus)c3.addLineSeries({color:'#34d399',lineWidth:1.5}).setData(lineData(data,'DI_Plus',1));
             if(data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5}).setData(lineData(data,'DI_Minus',1));
             const {chart:c4,ro:r4}=mkChart(d4,h4); instances.push({chart:c4,ro:r4});
-            if(data.MACD_Hist){const hArr=data.dates.map((dt,i)=>{const v=data.MACD_Hist[i];if(!v&&v!==0)return null;return{time:d2ts(dt),value:v*1000,color:v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};}).filter(Boolean);c4.addHistogramSeries({priceLineVisible:false}).setData(hArr);}
-            if(data.MACD)c4.addLineSeries({color:'#60a5fa',lineWidth:1.5}).setData(lineData(data,'MACD'));
-            if(data.MACD_Signal)c4.addLineSeries({color:'#fb923c',lineWidth:1.5}).setData(lineData(data,'MACD_Signal'));
+            if(data.MACD_Hist){const hArr=data.dates.map((dt,i)=>{const v=data.MACD_Hist[i];if(!v&&v!==0)return null;return{time:d2ts(dt),value:v,color:v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};}).filter(Boolean);c4.addHistogramSeries({priceLineVisible:false}).setData(hArr);}
+            if(data.MACD)c4.addLineSeries({color:'#60a5fa',lineWidth:1.5}).setData(lineData(data,'MACD',1));
+            if(data.MACD_Signal)c4.addLineSeries({color:'#fb923c',lineWidth:1.5}).setData(lineData(data,'MACD_Signal',1));
             syncCharts([c1,c2,c3,c4]); c1.timeScale().fitContent();
         }
 
