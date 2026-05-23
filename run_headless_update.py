@@ -4,6 +4,9 @@
 import os
 import sys
 import json
+import matplotlib
+# Use Agg backend for headless environments to prevent display server errors on GitHub
+matplotlib.use('Agg')
 
 # Reconfigure stdout/stderr to UTF-8 on Windows to prevent UnicodeEncodeError
 if sys.platform.startswith("win"):

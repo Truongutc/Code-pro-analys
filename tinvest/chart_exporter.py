@@ -11,11 +11,10 @@ logger = logging.getLogger(__name__)
 
 # Configure matplotlib backend safely
 import matplotlib
-if 'tkinter' not in sys.modules:
-    try:
-        matplotlib.use('Agg')
-    except Exception as e:
-        logger.warning(f"Could not set Agg backend: {e}")
+try:
+    matplotlib.use('Agg')
+except Exception as e:
+    logger.warning(f"Could not set Agg backend: {e}")
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
