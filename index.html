@@ -1577,7 +1577,7 @@
 
         /* Single chart cell */
         .chart-cell {
-            background: #08101c;
+            background: #000000;
             border: 1px solid rgba(255,255,255,0.07);
             border-radius: 12px;
             overflow: hidden;
@@ -1709,7 +1709,7 @@
         .chart-fs-close:hover { background: rgba(239,68,68,0.25); border-color: #ef4444; }
         .chart-fs-body {
             flex: 1;
-            background: #08101c;
+            background: #000000;
             border-radius: 12px;
             overflow: hidden;
             position: relative;
@@ -1811,28 +1811,28 @@
                                 <span class="chart-cell-label">🌿 GreenPink + Octopus</span>
                                 <button class="chart-expand-btn" onclick="expandChart('market','gp')">⛶ Mở rộng</button>
                             </div>
-                            <div class="chart-cell-body" id="marketMount-gp"></div>
+                            <div class="chart-cell-body" id="market-mount-gp"></div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
                                 <span class="chart-cell-label">🕯️ Heikin-Ashi + 2Trend</span>
                                 <button class="chart-expand-btn" onclick="expandChart('market','heikin')">⛶ Mở rộng</button>
                             </div>
-                            <div class="chart-cell-body" id="marketMount-heikin"></div>
+                            <div class="chart-cell-body" id="market-mount-heikin"></div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
                                 <span class="chart-cell-label">🔥 Bản đồ nhiệt</span>
                                 <button class="chart-expand-btn" onclick="expandChart('market','heatmap')">⛶ Mở rộng</button>
                             </div>
-                            <div class="chart-cell-body" id="marketMount-heatmap"></div>
+                            <div class="chart-cell-body" id="market-mount-heatmap"></div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
                                 <span class="chart-cell-label">📊 Báo cáo Kỹ thuật</span>
                                 <button class="chart-expand-btn" onclick="expandChart('market','techreport')">⛶ Mở rộng</button>
                             </div>
-                            <div class="chart-cell-body" id="marketMount-techreport"></div>
+                            <div class="chart-cell-body" id="market-mount-techreport"></div>
                         </div>
                     </div>
                 </section>
@@ -2385,38 +2385,6 @@
             }
         }
 
-        // Load 4 index charts
-        function loadMarketCharts() {
-            const indexLower = activeMarketIndex.toLowerCase();
-            const ts = Date.now();
-            const chartsConfig = [
-                { id: 'vnindexGpChart', errorId: 'gpChartError', type: 'gp', name: 'GP & Octopus' },
-                { id: 'vnindexHeikinChart', errorId: 'heikinChartError', type: 'heikin', name: 'Heikin-Ashi & 2Trend' },
-                { id: 'vnindexHeatmapChart', errorId: 'heatmapChartError', type: 'heatmap', name: 'Heatmap' },
-                { id: 'vnindexReportChart', errorId: 'reportChartError', type: 'tech_report', name: 'Tech Report' }
-            ];
-
-            chartsConfig.forEach(cfg => {
-                const img = document.getElementById(cfg.id);
-                const err = document.getElementById(cfg.errorId);
-                if (!img || !err) return;
-
-                img.style.display = 'none';
-                err.style.display = 'block';
-                err.textContent = `Đang tải biểu đồ ${cfg.name}...`;
-
-                const src = `./Output/${indexLower}_${cfg.type}.png?v=${ts}`;
-                img.onload = () => {
-                    img.style.display = 'block';
-                    err.style.display = 'none';
-                };
-                img.onerror = () => {
-                    img.style.display = 'none';
-                    err.textContent = `⚠️ Chưa có biểu đồ ${cfg.name}. Vui lòng chạy run_headless_update.py để tạo biểu đồ.`;
-                };
-                img.src = src;
-            });
-        }
 
         // Build interactive Chart.js line graph for Market Breadth
         function initBreadthChart() {
@@ -2965,6 +2933,9 @@
                 activeCustomFilters.delete(filterKey);
                 row.classList.remove('checked-row');
             }
+            
+            // Automatically apply filters immediately
+            applyCustomFilters();
         }
 
         // Apply custom filters logically using AND matching
@@ -3193,7 +3164,7 @@
 
         // ── LWC base theme (TradingView dark) ──
         const LWC_THEME = {
-            layout:    { background: { color: '#08101c' }, textColor: '#7a8599' },
+            layout:    { background: { color: '#000000' }, textColor: '#7a8599' },
             grid:      { vertLines: { color: 'rgba(255,255,255,0.025)' },
                          horzLines: { color: 'rgba(255,255,255,0.04)'  } },
             crosshair: { mode: 1 },

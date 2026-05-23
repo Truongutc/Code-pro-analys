@@ -191,6 +191,27 @@ def run_sync_and_update():
     compute_and_export_dashboard(storage, affected_tickers)
 
 def compute_and_export_dashboard(storage, affected_tickers):
+    # Load existing analysis results if file exists to merge instead of overwrite
+    existing_tickers_analysis = {}
+    existing_market_indices = {}
+    existing_market_breadth = {}
+    
+    output_dir = os.path.join(base_path, "Output")
+    output_file = os.path.join(output_dir, "analysis_results.json")
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, 'r', encoding='utf-8') as f:
+                old_data = json.load(f)
+                if isinstance(old_data, dict):
+                    for r in old_data.get("tickers_analysis", []):
+                        if isinstance(r, dict) and "Ticker" in r:
+                            existing_tickers_analysis[r["Ticker"]] = r
+                    existing_market_indices = old_data.get("market_indices", {})
+                    existing_market_breadth = old_data.get("market_breadth", {})
+            logger.info(f"💾 Đã tải {len(existing_tickers_analysis)} mã từ file analysis_results.json hiện tại để hợp nhất.")
+        except Exception as e_load:
+            logger.warning(f"⚠️ Không thể đọc file analysis_results.json cũ: {e_load}. Sẽ tạo mới.")
+
     # 5. Determine which tickers need recalculation
     if not affected_tickers:
         logger.info("ℹ️ Dữ liệu giá hiện tại đã khớp 100%. Đang tính toán cho toàn bộ mã trong Registry...")
@@ -260,8 +281,12 @@ def compute_and_export_dashboard(storage, affected_tickers):
         logger.info("✅ Tuyệt vời! 100% mã đã đầy đủ chỉ số Trending.")
 
     # 7. Calculate Market Breadth (Time-series)
-    logger.info("📊 Đang tính toán dữ liệu Độ rộng Thị trường...")
-    market_breadth_data = compute_market_breadth(data_dict)
+    if len(data_dict) >= 1000 or not existing_market_breadth:
+        logger.info("📊 Đang tính toán dữ liệu Độ rộng Thị trường...")
+        market_breadth_data = compute_market_breadth(data_dict)
+    else:
+        logger.info("📊 Số lượng mã cập nhật ít. Giữ nguyên dữ liệu Độ rộng Thị trường cũ.")
+        market_breadth_data = existing_market_breadth
     
     # 8. Filter Tickers & Build Output Structure
     logger.info("🔍 Đang tổng hợp các bộ lọc và luật tùy chỉnh...")
@@ -456,15 +481,41 @@ def compute_and_export_dashboard(storage, affected_tickers):
         }
         
         tickers_analysis.append(ticker_record)
+
+    # Merge existing and newly analyzed
+    merged_tickers_analysis = existing_tickers_analysis.copy()
+    for record in tickers_analysis:
+        merged_tickers_analysis[record["Ticker"]] = record
         
-        # Populate pre-compiled categories/rules lists
-        for cat in matched_categories:
-            filtered_results[cat].append(ticker)
-        for rule_key in matched_rules:
-            filtered_results[rule_key].append(ticker)
+    # Remove recalculated tickers that were filtered out or failed
+    newly_analyzed_symbols = {r["Ticker"] for r in tickers_analysis}
+    for t in affected_tickers:
+        if t not in newly_analyzed_symbols and t in merged_tickers_analysis:
+            del merged_tickers_analysis[t]
+            
+    # Final sorted tickers list
+    tickers_analysis = list(merged_tickers_analysis.values())
+    tickers_analysis.sort(key=lambda x: (
+        1 if x.get("Action") == "BUY" else (2 if x.get("Action") == "WAIT" else 3),
+        x.get("Ticker", "")
+    ))
+    
+    # Rebuild pre-compiled categories/rules lists
+    filtered_results = {cat: [] for cat in categories_meta.keys()}
+    for rule_key in rules_meta.keys():
+        filtered_results[rule_key] = []
+        
+    for r in tickers_analysis:
+        t_symbol = r["Ticker"]
+        for cat in r.get("Categories", []):
+            if cat in filtered_results:
+                filtered_results[cat].append(t_symbol)
+        for rule in r.get("Rules", []):
+            if rule in filtered_results:
+                filtered_results[rule].append(t_symbol)
 
     # Calculate Market Indices Analysis
-    market_indices = {}
+    market_indices = existing_market_indices.copy()
     breadth_ma20 = 50.0
     breadth_ma50 = 50.0
     if market_breadth_data and "MA20" in market_breadth_data and market_breadth_data["MA20"]:
@@ -473,6 +524,11 @@ def compute_and_export_dashboard(storage, affected_tickers):
         breadth_ma50 = market_breadth_data["MA50"][-1]
 
     for index_ticker in ["VNINDEX", "HNX-INDEX"]:
+        # Skip index calculation if already in market_indices and not in affected_tickers to save time
+        if index_ticker in market_indices and index_ticker not in affected_tickers:
+            logger.info(f"📈 Giữ nguyên dữ liệu phân tích cũ cho Index {index_ticker}.")
+            continue
+            
         idx_df = data_dict.get(index_ticker)
         if idx_df is not None and not idx_df.empty:
             try:
