@@ -2934,7 +2934,7 @@ class TinvestApp:
                                 alloc = "10-20%"
                                 alloc_note = "Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp"
 
-                        cleaned_sr = {k: float(v) for k, v in sr.items()}
+                        cleaned_sr = {k: float(v) * 1000 for k, v in sr.items()}
                         
                         market_indices[index_ticker] = {
                             "price": float(idx_df['Close'].iloc[-1]) * 1000,

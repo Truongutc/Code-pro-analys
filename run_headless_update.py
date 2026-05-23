@@ -558,7 +558,7 @@ def run_sync_and_update():
                         alloc = "10-20%"
                         alloc_note = "Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp"
 
-                cleaned_sr = {k: float(v) for k, v in sr.items()}
+                cleaned_sr = {k: float(v) * 1000 for k, v in sr.items()}
                 
                 market_indices[index_ticker] = {
                     "price": float(idx_df['Close'].iloc[-1]) * 1000,
@@ -621,36 +621,54 @@ def run_sync_and_update():
         
     logger.info(f"✅ HOÀN TẤT CẬP NHẬT! Đã xuất {len(tickers_analysis)} mã cổ phiếu.")
     
-    # 10. Export VNINDEX Charts (GP & Heikin-Ashi) for Web Dashboard
-    logger.info("📈 Đang xuất biểu đồ VNINDEX cho Web Dashboard...")
+    # 10. Export Charts for Web Dashboard
+    logger.info("📈 Đang xuất các biểu đồ phân tích cho Web Dashboard...")
     try:
-        from tinvest.chart_exporter import export_greenpink_chart, export_heikin_chart
+        from tinvest.chart_exporter import (
+            export_greenpink_chart,
+            export_heikin_chart,
+            export_heatmap_chart,
+            export_tech_report_chart
+        )
         
-        vn_df = data_dict.get("VNINDEX")
-        if vn_df is not None and not vn_df.empty:
-            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+        tickers_to_export = []
+        for idx in ["VNINDEX", "HNX-INDEX"]:
+            idx_df = data_dict.get(idx)
+            if idx_df is not None and not idx_df.empty:
+                tickers_to_export.append((idx, idx_df))
+                
+        for t, data in list(analysis_cache.items()):
+            if t not in ["VNINDEX", "HNX-INDEX"]:
+                df_t = data.get("df")
+                if df_t is not None and not df_t.empty:
+                    tickers_to_export.append((t, df_t))
+                    
+        logger.info(f"[*] Bắt đầu xuất biểu đồ cho {len(tickers_to_export)} mã...")
+        
+        for idx, (t, df_t) in enumerate(tickers_to_export):
+            t_lower = t.lower()
             
-            # Export GP Chart (with timestamp + fixed name)
-            gp_ts_path = os.path.join(output_dir, f"vnindex_gp_{ts}.png")
-            gp_fixed_path = os.path.join(output_dir, "vnindex_gp.png")
-            export_greenpink_chart("VNINDEX", vn_df, vn_df, gp_ts_path)
-            # Copy to fixed name for web dashboard
-            import shutil
-            if os.path.exists(gp_ts_path):
-                shutil.copy2(gp_ts_path, gp_fixed_path)
-                logger.info(f"   ✅ GP Chart: {gp_ts_path} → {gp_fixed_path}")
+            # Export GP
+            gp_path = os.path.join(output_dir, f"{t_lower}_gp.png")
+            export_greenpink_chart(t, df_t, data_dict.get("VNINDEX"), gp_path)
             
-            # Export Heikin Chart (with timestamp + fixed name)
-            hk_ts_path = os.path.join(output_dir, f"vnindex_heikin_{ts}.png")
-            hk_fixed_path = os.path.join(output_dir, "vnindex_heikin.png")
-            export_heikin_chart("VNINDEX", vn_df, hk_ts_path)
-            if os.path.exists(hk_ts_path):
-                shutil.copy2(hk_ts_path, hk_fixed_path)
-                logger.info(f"   ✅ Heikin Chart: {hk_ts_path} → {hk_fixed_path}")
-        else:
-            logger.warning("⚠️ Không có dữ liệu VNINDEX để xuất biểu đồ.")
+            # Export Heikin
+            hk_path = os.path.join(output_dir, f"{t_lower}_heikin.png")
+            export_heikin_chart(t, df_t, hk_path)
+            
+            # Export Heatmap
+            hm_path = os.path.join(output_dir, f"{t_lower}_heatmap.png")
+            export_heatmap_chart(t, df_t, hm_path)
+            
+            # Export Tech Report
+            rp_path = os.path.join(output_dir, f"{t_lower}_tech_report.png")
+            export_tech_report_chart(t, df_t, rp_path)
+            
+            if (idx + 1) % 10 == 0 or (idx + 1) == len(tickers_to_export):
+                logger.info(f"   [+] Đã vẽ xong biểu đồ cho {idx + 1}/{len(tickers_to_export)} mã...")
+                
     except Exception as e_chart:
-        logger.error(f"⚠️ Lỗi xuất biểu đồ VNINDEX: {e_chart}")
+        logger.error(f"⚠️ Lỗi xuất biểu đồ: {e_chart}")
         import traceback
         traceback.print_exc()
     
