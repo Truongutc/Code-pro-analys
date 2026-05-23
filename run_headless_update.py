@@ -181,6 +181,10 @@ def run_sync_and_update():
             except Exception as e:
                 logger.error(f"   ! Lỗi Index {ticker}: {e}")
                 
+    # 5. Compute indicators & export
+    compute_and_export_dashboard(storage, affected_tickers)
+
+def compute_and_export_dashboard(storage, affected_tickers):
     # 5. Determine which tickers need recalculation
     if not affected_tickers:
         logger.info("ℹ️ Dữ liệu giá hiện tại đã khớp 100%. Đang tính toán cho toàn bộ mã trong Registry...")
@@ -199,6 +203,12 @@ def run_sync_and_update():
         if df_full is not None:
             data_dict[t] = df_full
             items_to_recompute.append((t, df_full))
+            
+    # Đảm bảo luôn có VNINDEX để xuất biểu đồ GreenPink
+    if "VNINDEX" not in data_dict:
+        vn_df = storage.load_ticker_data("VNINDEX")
+        if vn_df is not None:
+            data_dict["VNINDEX"] = vn_df
             
     total = len(items_to_recompute)
     if total > 0:
@@ -674,6 +684,118 @@ def run_sync_and_update():
     
     logger.info("==================================================")
 
+def run_csv_import(csv_paths):
+    from pathlib import Path
+    from tinvest.data_loader import _normalize_columns, _clean_dataframe
+    
+    logger.info("==================================================")
+    logger.info("🚀 BẮT ĐẦU NẠP DỮ LIỆU TỪ FILE CSV")
+    logger.info("==================================================")
+    
+    storage = StorageManager()
+    
+    # 1. Thu thập tất cả các file CSV
+    files_to_process = []
+    for path in csv_paths:
+        p = Path(path)
+        if p.is_dir():
+            # Quét tất cả file .csv trong thư mục
+            files_to_process.extend(list(p.glob("**/*.csv")) + list(p.glob("*.csv")))
+        elif p.is_file() and p.suffix.lower() == ".csv":
+            files_to_process.append(p)
+        else:
+            # Check if it matches a wildcard or is just a path string
+            import glob
+            matched = glob.glob(path)
+            for m in matched:
+                mp = Path(m)
+                if mp.is_file() and mp.suffix.lower() == ".csv":
+                    files_to_process.append(mp)
+                    
+    # Loại bỏ trùng lặp và giữ thứ tự
+    seen = set()
+    unique_files = []
+    for f in files_to_process:
+        abs_path = f.resolve()
+        if abs_path not in seen:
+            seen.add(abs_path)
+            unique_files.append(f)
+            
+    if not unique_files:
+        logger.error("❌ Không tìm thấy file CSV hợp lệ nào để xử lý.")
+        sys.exit(1)
+        
+    logger.info(f"[*] Tìm thấy {len(unique_files)} file CSV để xử lý...")
+    
+    affected_tickers = set()
+    skipped_3char = 0
+    skipped_old = 0
+    loaded_count = 0
+    
+    for f in unique_files:
+        try:
+            df_raw = pd.read_csv(f)
+            df_norm = _normalize_columns(df_raw)
+            
+            # Tên file suy luận mã nếu không có cột Ticker
+            if "Ticker" not in df_norm.columns:
+                potential_ticker = f.stem.upper().split('_')[0].split(' ')[0]
+                is_idx = ("VNINDEX" in potential_ticker) or ("HNX" in potential_ticker) or ("HAINDEX" in potential_ticker)
+                if (len(potential_ticker) == 3 and potential_ticker.isalnum()) or is_idx:
+                    df_norm["Ticker"] = potential_ticker
+                    logger.info(f"   + Nhận diện mã '{potential_ticker}' từ tên file: {f.name}")
+                else:
+                    logger.warning(f"   ! Tên file '{f.name}' không phải mã cổ phiếu hợp lệ (3 ký tự hoặc Index). Bỏ qua.")
+                    continue
+            
+            # Xử lý gộp theo nhóm Ticker
+            grouped = df_norm.groupby("Ticker")
+            for ticker_val, group in grouped:
+                t = str(ticker_val).upper().strip()
+                
+                # Bộ lọc 3 ký tự (hoặc index)
+                is_idx = ("VNINDEX" in t) or ("HNX" in t) or ("HAINDEX" in t)
+                if not (len(t) == 3 and t.isalnum()) and not is_idx:
+                    skipped_3char += 1
+                    continue
+                    
+                sub_df = group.drop(columns=["Ticker"]).copy()
+                try:
+                    clean_sub = _clean_dataframe(sub_df, ticker=t)
+                    
+                    # Bộ lọc 30 ngày tương tự AICcode
+                    last_date = clean_sub['Date'].max()
+                    if (datetime.now() - last_date).days > 30 and not is_idx:
+                        skipped_old += 1
+                        continue
+                        
+                    # Đồng bộ giá vào Storage
+                    storage.sync_prices(t, clean_sub, source='CSV')
+                    affected_tickers.add(t)
+                    loaded_count += 1
+                except Exception as ex:
+                    logger.error(f"   ! Lỗi xử lý chi tiết mã {t} trong file {f.name}: {ex}")
+                    
+        except Exception as e:
+            logger.error(f"   ! Lỗi đọc/chuẩn hóa file {f.name}: {e}")
+            
+    if skipped_3char > 0:
+        logger.info(f"[*] Đã bỏ qua {skipped_3char} mã không hợp lệ (không phải 3 ký tự hoặc Index).")
+    if skipped_old > 0:
+        logger.info(f"[*] Đã bỏ qua {skipped_old} mã có dữ liệu quá cũ (> 30 ngày không giao dịch).")
+        
+    if not affected_tickers:
+        logger.error("❌ Không nạp được mã cổ phiếu hợp lệ nào từ CSV.")
+        sys.exit(1)
+        
+    logger.info(f"✅ Hoàn tất nạp dữ liệu! Đã đồng bộ {loaded_count} mã vào Storage.")
+    
+    # Cập nhật Registry các mã hoạt động
+    storage.save_active_registry(list(affected_tickers))
+    
+    # Tính toán toàn bộ chỉ báo và vẽ biểu đồ
+    compute_and_export_dashboard(storage, affected_tickers)
+
 def compute_market_breadth(data_dict):
     """Ported market breadth computation from TinvestApp._update_breadth_from_cache."""
     if len(data_dict) < 5:
@@ -771,4 +893,12 @@ def compute_market_breadth(data_dict):
     return {}
 
 if __name__ == "__main__":
-    run_sync_and_update()
+    import argparse
+    parser = argparse.ArgumentParser(description="Hệ thống cập nhật dữ liệu tự động cho AIC PRO")
+    parser.add_argument("--import-csv", nargs="+", help="Đường dẫn đến một hoặc nhiều file/thư mục CSV chứa dữ liệu lịch sử ban đầu")
+    args = parser.parse_args()
+    
+    if args.import_csv:
+        run_csv_import(args.import_csv)
+    else:
+        run_sync_and_update()
