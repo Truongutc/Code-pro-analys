@@ -12,6 +12,9 @@ if sys.platform.startswith("win"):
     if hasattr(sys.stderr, "reconfigure"):
         sys.stderr.reconfigure(encoding='utf-8')
 import logging
+import warnings
+# Suppress Pandas FutureWarnings to keep logs clean
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
