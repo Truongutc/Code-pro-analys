@@ -2009,6 +2009,13 @@
                     <!-- Loaded dynamically -->
                 </div>
 
+                <!-- AI Detailed Strategy Report Card -->
+                <section class="card" id="marketAIReportCard" style="margin-top: 16px; display: none;">
+                    <div class="card-title">📝 Báo cáo Chiến lược AI Chi tiết</div>
+                    <div class="divider-h" style="margin: 12px 0;"></div>
+                    <pre id="marketAIReportContent" style="padding: 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.22); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); border: 1px solid var(--border-color); max-height: 500px; overflow-y: auto;"></pre>
+                </section>
+
                 <!-- 4-Panel Interactive Chart Grid -->
                 <section class="card interactive-chart-section">
                     <div class="chart-panel-header">
@@ -2050,8 +2057,19 @@
                             </div>
                         </div>
                         <div class="chart-cell">
-                            <div class="chart-cell-header">
-                                <span class="chart-cell-label">📊 Báo cáo Kỹ thuật</span>
+                            <div class="chart-cell-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="chart-cell-label">📊 Báo cáo Kỹ thuật</span>
+                                    <div class="chart-toggles-container" style="display:inline-flex; gap:6px; font-size:0.7rem; align-items:center; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08);">
+                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kumo" checked onchange="toggleTechLine('Kumo', this.checked)"> Kumo</label>
+                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Tenkan" checked onchange="toggleTechLine('Tenkan', this.checked)"> Tenkan</label>
+                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun" checked onchange="toggleTechLine('Kijun', this.checked)"> Kijun</label>
+                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun65" checked onchange="toggleTechLine('Kijun65', this.checked)"> Kijun65</label>
+                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA10" checked onchange="toggleTechLine('MA10', this.checked)"> MA10</label>
+                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA20" checked onchange="toggleTechLine('MA20', this.checked)"> MA20</label>
+                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA50" checked onchange="toggleTechLine('MA50', this.checked)"> MA50</label>
+                                    </div>
+                                </div>
                                 <button class="chart-expand-btn" onclick="expandChart('market','techreport')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="market-mount-techreport"></div>
@@ -2281,6 +2299,62 @@
         let breadthChart = null;
         let currentChartRange = 30;
         let activeMarketIndex = 'VNINDEX';
+        
+        // Visibility state for Technical Report Chart lines
+        const techChartVisibility = {
+            SpanA: true,
+            SpanB: true,
+            Tenkan: true,
+            Kijun: true,
+            Kijun65: true,
+            MA10: true,
+            MA20: true,
+            MA50: true
+        };
+        const techReportSeriesRegistry = {}; // keyed by mountId
+
+        function toggleTechLine(key, checked) {
+            techChartVisibility[key] = checked;
+            // Sync all checkboxes on the page
+            document.querySelectorAll(`.tech-toggle-${key}`).forEach(el => {
+                el.checked = checked;
+            });
+            if (key === 'Kumo') {
+                techChartVisibility['SpanA'] = checked;
+                techChartVisibility['SpanB'] = checked;
+                document.querySelectorAll(`.tech-toggle-SpanA, .tech-toggle-SpanB`).forEach(el => {
+                    el.checked = checked;
+                });
+            }
+            applyTechChartVisibility();
+        }
+
+        function applyTechChartVisibility() {
+            for (const mountId in techReportSeriesRegistry) {
+                const registry = techReportSeriesRegistry[mountId];
+                if (!registry) continue;
+                for (const key in techChartVisibility) {
+                    const series = registry[key];
+                    if (series) {
+                        series.applyOptions({ visible: techChartVisibility[key] });
+                    }
+                }
+            }
+        }
+
+        function getTechTogglesHtml() {
+            return `
+            <div class="chart-toggles-container" style="display:inline-flex; gap:6px; font-size:0.7rem; align-items:center; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08);">
+                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kumo" ${techChartVisibility.SpanA ? 'checked' : ''} onchange="toggleTechLine('Kumo', this.checked)"> Kumo</label>
+                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Tenkan" ${techChartVisibility.Tenkan ? 'checked' : ''} onchange="toggleTechLine('Tenkan', this.checked)"> Tenkan</label>
+                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun" ${techChartVisibility.Kijun ? 'checked' : ''} onchange="toggleTechLine('Kijun', this.checked)"> Kijun</label>
+                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun65" ${techChartVisibility.Kijun65 ? 'checked' : ''} onchange="toggleTechLine('Kijun65', this.checked)"> Kijun65</label>
+                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA10" ${techChartVisibility.MA10 ? 'checked' : ''} onchange="toggleTechLine('MA10', this.checked)"> MA10</label>
+                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA20" ${techChartVisibility.MA20 ? 'checked' : ''} onchange="toggleTechLine('MA20', this.checked)"> MA20</label>
+                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA50" ${techChartVisibility.MA50 ? 'checked' : ''} onchange="toggleTechLine('MA50', this.checked)"> MA50</label>
+            </div>
+            `;
+        }
         
         // Pagination logic
         let displayedCount = 0;
@@ -2530,6 +2604,18 @@
                 return;
             }
             detailSection.style.display = 'block';
+
+            // Populate AI Detailed Report Card
+            const aiCard = document.getElementById('marketAIReportCard');
+            const aiContent = document.getElementById('marketAIReportContent');
+            if (aiCard && aiContent) {
+                if (indexData.ReportText) {
+                    aiContent.textContent = indexData.ReportText;
+                    aiCard.style.display = 'block';
+                } else {
+                    aiCard.style.display = 'none';
+                }
+            }
 
             // Summary Header
             const headerEl = document.getElementById('vnindexSummaryHeader');
@@ -3227,6 +3313,15 @@
                     </div>
                 </div>
 
+                <!-- BLOCK 5: Báo cáo Phân tích Chi tiết từ AI -->
+                ${t.ReportText ? `
+                <div class="card block-card" style="margin-top: 16px;">
+                    <h3 class="card-title">📝 Báo cáo Phân tích Chi tiết từ AI</h3>
+                    <div class="divider-h" style="margin: 12px 0;"></div>
+                    <pre style="padding: 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.22); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); border: 1px solid var(--border-color); max-height: 500px; overflow-y: auto;">${t.ReportText}</pre>
+                </div>
+                ` : ''}
+
                 <!-- 4-Panel Interactive Chart Grid -->
                 <section class="card interactive-chart-section" style="margin-top: 20px;">
                     <div class="chart-panel-header">
@@ -3268,8 +3363,11 @@
                             </div>
                         </div>
                         <div class="chart-cell">
-                            <div class="chart-cell-header">
-                                <span class="chart-cell-label">📊 Kỹ thuật</span>
+                            <div class="chart-cell-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="chart-cell-label">📊 Kỹ thuật</span>
+                                    \${getTechTogglesHtml()}
+                                </div>
                                 <button class="chart-expand-btn" onclick="expandChart('${containerId}','techreport')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="${containerId}-mount-techreport"></div>
@@ -3532,7 +3630,7 @@
                         </div>
                         <div class="metric-item">
                             <span class="metric-label">Mục Tiêu</span>
-                            <span class="metric-value target">${formatPrice(t.Target)}</span>
+                            <span class="metric-value target">${formatPrice(t.Target)}${t.Target2 ? ' / ' + formatPrice(t.Target2) : ''}</span>
                         </div>
                         <div class="metric-item">
                             <span class="metric-label">Cắt Lỗ</span>
@@ -3999,16 +4097,53 @@
             const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates);
             instances.push({chart:c1,ro:ro1});
 
-            // Ichimoku spans first (behind candles)
-            if (data.SpanA) c1.addLineSeries({color:'rgba(0,255,106,0.45)',lineWidth:1,title:'SpanA'}).setData(lineData(data,'SpanA'));
-            if (data.SpanB) c1.addLineSeries({color:'rgba(255,59,59,0.45)',lineWidth:1,title:'SpanB'}).setData(lineData(data,'SpanB'));
-            if (data.Tenkan)  c1.addLineSeries({color:'#3b82f6',lineWidth:1.2,title:'Tenkan'}).setData(lineData(data,'Tenkan'));
-            if (data.Kijun)   c1.addLineSeries({color:'#ef4444',lineWidth:1.2,title:'Kijun'}).setData(lineData(data,'Kijun'));
-            if (data.Kijun65) c1.addLineSeries({color:'#f97316',lineWidth:1.5,lineStyle:2,title:'Kijun65'}).setData(lineData(data,'Kijun65'));
+            // Initialize registry for this mount to manage line visibility toggles
+            techReportSeriesRegistry[mountId] = {};
 
-            if (data.MA10)    c1.addLineSeries({color:'#a78bfa',lineWidth:1.5,title:'MA10'}).setData(lineData(data,'MA10'));
-            if (data.MA20)    c1.addLineSeries({color:'#34d399',lineWidth:2,  title:'MA20'}).setData(lineData(data,'MA20'));
-            if (data.MA50)    c1.addLineSeries({color:'#f59e0b',lineWidth:2,  title:'MA50'}).setData(lineData(data,'MA50'));
+            // Ichimoku spans first (behind candles) - using soft semi-transparent colors
+            if (data.SpanA) {
+                const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.2)',lineWidth:1,title:'SpanA',visible:techChartVisibility.SpanA});
+                sSpanA.setData(lineData(data,'SpanA'));
+                techReportSeriesRegistry[mountId].SpanA = sSpanA;
+            }
+            if (data.SpanB) {
+                const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.2)',lineWidth:1,title:'SpanB',visible:techChartVisibility.SpanB});
+                sSpanB.setData(lineData(data,'SpanB'));
+                techReportSeriesRegistry[mountId].SpanB = sSpanB;
+            }
+            
+            // Bright neon colors for other indicator lines
+            if (data.Tenkan) {
+                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title:'Tenkan',visible:techChartVisibility.Tenkan});
+                sTenkan.setData(lineData(data,'Tenkan'));
+                techReportSeriesRegistry[mountId].Tenkan = sTenkan;
+            }
+            if (data.Kijun) {
+                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title:'Kijun',visible:techChartVisibility.Kijun});
+                sKijun.setData(lineData(data,'Kijun'));
+                techReportSeriesRegistry[mountId].Kijun = sKijun;
+            }
+            if (data.Kijun65) {
+                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title:'Kijun65',visible:techChartVisibility.Kijun65});
+                sKijun65.setData(lineData(data,'Kijun65'));
+                techReportSeriesRegistry[mountId].Kijun65 = sKijun65;
+            }
+
+            if (data.MA10) {
+                const sMA10 = c1.addLineSeries({color:'#d946ef',lineWidth:1.5,title:'MA10',visible:techChartVisibility.MA10});
+                sMA10.setData(lineData(data,'MA10'));
+                techReportSeriesRegistry[mountId].MA10 = sMA10;
+            }
+            if (data.MA20) {
+                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title:'MA20',visible:techChartVisibility.MA20});
+                sMA20.setData(lineData(data,'MA20'));
+                techReportSeriesRegistry[mountId].MA20 = sMA20;
+            }
+            if (data.MA50) {
+                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title:'MA50',visible:techChartVisibility.MA50});
+                sMA50.setData(lineData(data,'MA50'));
+                techReportSeriesRegistry[mountId].MA50 = sMA50;
+            }
 
             c1.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
@@ -4016,21 +4151,106 @@
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
             }).setData(ohlcv(data));
 
-            // Pane 2: MCDX
+            // Pane 2: MCDX Stacked Area Chart (Layered Retailer, Hot Money, Banker)
             const {chart: c2, ro: ro2} = mkChart(d2, h2);
             instances.push({chart:c2,ro:ro2});
-            if (data.MCDX_Banker)    c2.addHistogramSeries({color:'#f43f5e',priceLineVisible:false,title:'Banker'}).setData(lineData(data,'MCDX_Banker',1));
-            if (data.MCDX_HotMoney)  c2.addHistogramSeries({color:'#fbbf24',priceLineVisible:false,title:'Hot'}).setData(lineData(data,'MCDX_HotMoney',1));
-            if (data.MCDX_Banker_MA) c2.addLineSeries({color:'#e2e8f0',lineWidth:1.5,title:'BankMA'}).setData(lineData(data,'MCDX_Banker_MA',1));
+            
+            // Retailer (Green) constant 20
+            const greenData = data.dates.map(dt => ({ time: d2ts(dt), value: 20.0 }));
+            c2.addAreaSeries({
+                topColor: 'rgba(52, 211, 153, 0.4)',
+                bottomColor: 'rgba(52, 211, 153, 0.05)',
+                lineColor: '#34d399',
+                lineWidth: 1,
+                priceLineVisible: false,
+                title: 'Retailer'
+            }).setData(greenData);
 
-            // Pane 3: ADX
+            // Hot Money (Yellow)
+            if (data.MCDX_HotMoney) {
+                c2.addAreaSeries({
+                    topColor: 'rgba(251, 191, 36, 0.65)',
+                    bottomColor: 'rgba(251, 191, 36, 0.1)',
+                    lineColor: '#fbbf24',
+                    lineWidth: 1,
+                    priceLineVisible: false,
+                    title: 'Hot'
+                }).setData(lineData(data, 'MCDX_HotMoney', 1));
+            }
+
+            // Banker (Red)
+            if (data.MCDX_Banker) {
+                c2.addAreaSeries({
+                    topColor: 'rgba(244, 63, 94, 0.85)',
+                    bottomColor: 'rgba(244, 63, 94, 0.2)',
+                    lineColor: '#f43f5e',
+                    lineWidth: 1,
+                    priceLineVisible: false,
+                    title: 'Banker'
+                }).setData(lineData(data, 'MCDX_Banker', 1));
+            }
+
+            // Banker MA (White/Gray)
+            if (data.MCDX_Banker_MA) {
+                c2.addLineSeries({
+                    color: '#ffffff',
+                    lineWidth: 1.5,
+                    priceLineVisible: false,
+                    title: 'BankMA'
+                }).setData(lineData(data, 'MCDX_Banker_MA', 1));
+            }
+
+            c2.priceScale('right').applyOptions({
+                scaleMargins: {
+                    top: 0,
+                    bottom: 0,
+                },
+            });
+
+            // Pane 3: ADX with Dynamic Color Segments
             const {chart: c3, ro: ro3} = mkChart(d3, h3);
             instances.push({chart:c3,ro:ro3});
-            if (data.ADX)     c3.addLineSeries({color:'#c084fc',lineWidth:2,  title:'ADX'}).setData(lineData(data,'ADX',1));
-            if (data.DI_Plus) c3.addLineSeries({color:'#34d399',lineWidth:1.5,title:'+DI'}).setData(lineData(data,'DI_Plus',1));
-            if (data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5,title:'-DI'}).setData(lineData(data,'DI_Minus',1));
+            
+            if (data.ADX) {
+                const adxData = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    const dt = data.dates[i];
+                    const val = data.ADX[i];
+                    if (val === null || val === undefined) continue;
+                    
+                    const prevVal = i > 0 ? data.ADX[i-1] : null;
+                    const diPlus = data.DI_Plus ? data.DI_Plus[i] : 0;
+                    const diMinus = data.DI_Minus ? data.DI_Minus[i] : 0;
+                    
+                    let color = '#c084fc'; // Default purple
+                    if (val <= 20) {
+                        color = '#eab308'; // Orange for Range
+                    } else if (diPlus >= diMinus) {
+                        if (prevVal !== null && val < prevVal) {
+                            color = '#00ff6a'; // Green if falling
+                        } else {
+                            color = '#ffffff'; // White if rising
+                        }
+                    } else {
+                        color = '#ef4444'; // Red if DI- > DI+
+                    }
+                    
+                    adxData.push({
+                        time: d2ts(dt),
+                        value: val,
+                        color: color
+                    });
+                }
+                c3.addLineSeries({
+                    lineWidth: 2.5,
+                    title: 'ADX',
+                    priceLineVisible: false
+                }).setData(adxData);
+            }
+            if (data.DI_Plus) c3.addLineSeries({color:'#34d399',lineWidth:1.5,title:'+DI',priceLineVisible:false}).setData(lineData(data,'DI_Plus',1));
+            if (data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5,title:'-DI',priceLineVisible:false}).setData(lineData(data,'DI_Minus',1));
             if (data.dates.length > 0)
-                c3.addLineSeries({color:'rgba(255,255,255,0.18)',lineWidth:1,lineStyle:1})
+                c3.addLineSeries({color:'rgba(255,255,255,0.18)',lineWidth:1,lineStyle:1,priceLineVisible:false})
                   .setData([{time:d2ts(data.dates[0]),value:25},{time:d2ts(data.dates[data.dates.length-1]),value:25}]);
 
             // Pane 4: MACD
@@ -4045,8 +4265,8 @@
                 }).filter(Boolean);
                 c4.addHistogramSeries({priceLineVisible:false,title:'Hist'}).setData(hArr);
             }
-            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title:'MACD'}).setData(lineData(data,'MACD',1));
-            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig'}).setData(lineData(data,'MACD_Signal',1));
+            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title:'MACD',priceLineVisible:false}).setData(lineData(data,'MACD',1));
+            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig',priceLineVisible:false}).setData(lineData(data,'MACD_Signal',1));
 
             syncCharts([c1,c2,c3,c4]);
             applyDefaultChartRange(c1, data.dates, 90);
@@ -4242,6 +4462,18 @@
             _fsCtx = { mountPrefix, chartType, ticker };
             title.textContent = `${CHART_LABELS[chartType] || chartType} — ${ticker}`;
 
+            // Inject toggles if techreport is expanded
+            const fsControls = document.getElementById('chartFsControls');
+            if (fsControls) {
+                if (chartType === 'techreport') {
+                    fsControls.style.display = 'block';
+                    fsControls.innerHTML = getTechTogglesHtml();
+                } else {
+                    fsControls.style.display = 'none';
+                    fsControls.innerHTML = '';
+                }
+            }
+
             // Destroy previous FS instances
             fsInstances.forEach(it => { try{it.ro&&it.ro.disconnect();}catch(e){} try{it.chart&&it.chart.remove();}catch(e){} });
             fsInstances = [];
@@ -4344,33 +4576,189 @@
         }
 
         function renderTechReportChartFs(mountId, data, instances) {
-            const root=document.getElementById(mountId);
-            root.innerHTML=''; root.style.display='flex'; root.style.flexDirection='column';
-            const total=root.offsetHeight||window.innerHeight-120;
-            const h1=Math.round(total*0.46),h2=Math.round(total*0.18),h3=Math.round(total*0.18),h4=Math.round(total*0.18);
-            const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
-            const d1=mk(h1,false),d2=mk(h2),d3=mk(h3),d4=mk(h4);
-            const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates); instances.push({chart:c1,ro:r1});
-            if(data.SpanA)c1.addLineSeries({color:'rgba(0,255,106,0.4)',lineWidth:1}).setData(lineData(data,'SpanA'));
-            if(data.SpanB)c1.addLineSeries({color:'rgba(255,59,59,0.4)',lineWidth:1}).setData(lineData(data,'SpanB'));
-            if(data.Tenkan)c1.addLineSeries({color:'#3b82f6',lineWidth:1.2}).setData(lineData(data,'Tenkan'));
-            if(data.Kijun)c1.addLineSeries({color:'#ef4444',lineWidth:1.2}).setData(lineData(data,'Kijun'));
-            if(data.MA10)c1.addLineSeries({color:'#a78bfa',lineWidth:1.5,title:'MA10'}).setData(lineData(data,'MA10'));
-            if(data.MA20)c1.addLineSeries({color:'#34d399',lineWidth:2,title:'MA20'}).setData(lineData(data,'MA20'));
-            if(data.MA50)c1.addLineSeries({color:'#f59e0b',lineWidth:2,title:'MA50'}).setData(lineData(data,'MA50'));
-            c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'}).setData(ohlcv(data));
-            const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
-            if(data.MCDX_Banker)c2.addHistogramSeries({color:'#f43f5e',priceLineVisible:false}).setData(lineData(data,'MCDX_Banker',1));
-            if(data.MCDX_Banker_MA)c2.addLineSeries({color:'#e2e8f0',lineWidth:1.5}).setData(lineData(data,'MCDX_Banker_MA',1));
-            const {chart:c3,ro:r3}=mkChart(d3,h3); instances.push({chart:c3,ro:r3});
-            if(data.ADX)c3.addLineSeries({color:'#c084fc',lineWidth:2,title:'ADX'}).setData(lineData(data,'ADX',1));
-            if(data.DI_Plus)c3.addLineSeries({color:'#34d399',lineWidth:1.5}).setData(lineData(data,'DI_Plus',1));
-            if(data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5}).setData(lineData(data,'DI_Minus',1));
-            const {chart:c4,ro:r4}=mkChart(d4,h4); instances.push({chart:c4,ro:r4});
-            if(data.MACD_Hist){const hArr=data.dates.map((dt,i)=>{const v=data.MACD_Hist[i];if(!v&&v!==0)return null;return{time:d2ts(dt),value:v,color:v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};}).filter(Boolean);c4.addHistogramSeries({priceLineVisible:false}).setData(hArr);}
-            if(data.MACD)c4.addLineSeries({color:'#60a5fa',lineWidth:1.5}).setData(lineData(data,'MACD',1));
-            if(data.MACD_Signal)c4.addLineSeries({color:'#fb923c',lineWidth:1.5}).setData(lineData(data,'MACD_Signal',1));
-            syncCharts([c1,c2,c3,c4]); applyDefaultChartRange(c1, data.dates, 90);
+            const root = document.getElementById(mountId);
+            if (!root) return;
+            root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+            const total = root.offsetHeight || window.innerHeight - 120;
+            const h1 = Math.round(total * 0.46), h2 = Math.round(total * 0.18), h3 = Math.round(total * 0.18), h4 = Math.round(total * 0.18);
+            const mk = (h, b = true) => {
+                const d = document.createElement('div');
+                d.style.cssText = `flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;
+                root.appendChild(d); return d;
+            };
+            const d1 = mk(h1, false), d2 = mk(h2), d3 = mk(h3), d4 = mk(h4);
+            const {chart: c1, ro: r1} = mkChart(d1, h1, data.dates);
+            instances.push({chart: c1, ro: r1});
+
+            // Initialize registry for this mount to manage line visibility toggles
+            techReportSeriesRegistry[mountId] = {};
+
+            // Ichimoku spans first (behind candles) - using soft semi-transparent colors
+            if (data.SpanA) {
+                const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.2)',lineWidth:1,title:'SpanA',visible:techChartVisibility.SpanA});
+                sSpanA.setData(lineData(data,'SpanA'));
+                techReportSeriesRegistry[mountId].SpanA = sSpanA;
+            }
+            if (data.SpanB) {
+                const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.2)',lineWidth:1,title:'SpanB',visible:techChartVisibility.SpanB});
+                sSpanB.setData(lineData(data,'SpanB'));
+                techReportSeriesRegistry[mountId].SpanB = sSpanB;
+            }
+            
+            // Bright neon colors for other indicator lines
+            if (data.Tenkan) {
+                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title:'Tenkan',visible:techChartVisibility.Tenkan});
+                sTenkan.setData(lineData(data,'Tenkan'));
+                techReportSeriesRegistry[mountId].Tenkan = sTenkan;
+            }
+            if (data.Kijun) {
+                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title:'Kijun',visible:techChartVisibility.Kijun});
+                sKijun.setData(lineData(data,'Kijun'));
+                techReportSeriesRegistry[mountId].Kijun = sKijun;
+            }
+            if (data.Kijun65) {
+                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title:'Kijun65',visible:techChartVisibility.Kijun65});
+                sKijun65.setData(lineData(data,'Kijun65'));
+                techReportSeriesRegistry[mountId].Kijun65 = sKijun65;
+            }
+
+            if (data.MA10) {
+                const sMA10 = c1.addLineSeries({color:'#d946ef',lineWidth:1.5,title:'MA10',visible:techChartVisibility.MA10});
+                sMA10.setData(lineData(data,'MA10'));
+                techReportSeriesRegistry[mountId].MA10 = sMA10;
+            }
+            if (data.MA20) {
+                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title:'MA20',visible:techChartVisibility.MA20});
+                sMA20.setData(lineData(data,'MA20'));
+                techReportSeriesRegistry[mountId].MA20 = sMA20;
+            }
+            if (data.MA50) {
+                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title:'MA50',visible:techChartVisibility.MA50});
+                sMA50.setData(lineData(data,'MA50'));
+                techReportSeriesRegistry[mountId].MA50 = sMA50;
+            }
+
+            c1.addCandlestickSeries({
+                upColor:'#00ff6a',downColor:'#ff3b3b',
+                borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
+            }).setData(ohlcv(data));
+
+            // Pane 2: MCDX Stacked Area Chart
+            const {chart: c2, ro: r2} = mkChart(d2, h2);
+            instances.push({chart: c2, ro: r2});
+            
+            const greenData = data.dates.map(dt => ({ time: d2ts(dt), value: 20.0 }));
+            c2.addAreaSeries({
+                topColor: 'rgba(52, 211, 153, 0.4)',
+                bottomColor: 'rgba(52, 211, 153, 0.05)',
+                lineColor: '#34d399',
+                lineWidth: 1,
+                priceLineVisible: false,
+                title: 'Retailer'
+            }).setData(greenData);
+
+            if (data.MCDX_HotMoney) {
+                c2.addAreaSeries({
+                    topColor: 'rgba(251, 191, 36, 0.65)',
+                    bottomColor: 'rgba(251, 191, 36, 0.1)',
+                    lineColor: '#fbbf24',
+                    lineWidth: 1,
+                    priceLineVisible: false,
+                    title: 'Hot'
+                }).setData(lineData(data, 'MCDX_HotMoney', 1));
+            }
+
+            if (data.MCDX_Banker) {
+                c2.addAreaSeries({
+                    topColor: 'rgba(244, 63, 94, 0.85)',
+                    bottomColor: 'rgba(244, 63, 94, 0.2)',
+                    lineColor: '#f43f5e',
+                    lineWidth: 1,
+                    priceLineVisible: false,
+                    title: 'Banker'
+                }).setData(lineData(data, 'MCDX_Banker', 1));
+            }
+
+            if (data.MCDX_Banker_MA) {
+                c2.addLineSeries({
+                    color: '#ffffff',
+                    lineWidth: 1.5,
+                    priceLineVisible: false,
+                    title: 'BankMA'
+                }).setData(lineData(data, 'MCDX_Banker_MA', 1));
+            }
+
+            c2.priceScale('right').applyOptions({
+                scaleMargins: {
+                    top: 0,
+                    bottom: 0,
+                },
+            });
+
+            // Pane 3: ADX with Dynamic Color Segments
+            const {chart: c3, ro: r3} = mkChart(d3, h3);
+            instances.push({chart: c3, ro: r3});
+            
+            if (data.ADX) {
+                const adxData = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    const dt = data.dates[i];
+                    const val = data.ADX[i];
+                    if (val === null || val === undefined) continue;
+                    
+                    const prevVal = i > 0 ? data.ADX[i-1] : null;
+                    const diPlus = data.DI_Plus ? data.DI_Plus[i] : 0;
+                    const diMinus = data.DI_Minus ? data.DI_Minus[i] : 0;
+                    
+                    let color = '#c084fc';
+                    if (val <= 20) {
+                        color = '#eab308';
+                    } else if (diPlus >= diMinus) {
+                        if (prevVal !== null && val < prevVal) {
+                            color = '#00ff6a';
+                        } else {
+                            color = '#ffffff';
+                        }
+                    } else {
+                        color = '#ef4444';
+                    }
+                    
+                    adxData.push({
+                        time: d2ts(dt),
+                        value: val,
+                        color: color
+                    });
+                }
+                c3.addLineSeries({
+                    lineWidth: 2.5,
+                    title: 'ADX',
+                    priceLineVisible: false
+                }).setData(adxData);
+            }
+            if (data.DI_Plus) c3.addLineSeries({color:'#34d399',lineWidth:1.5,title:'+DI',priceLineVisible:false}).setData(lineData(data,'DI_Plus',1));
+            if (data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5,title:'-DI',priceLineVisible:false}).setData(lineData(data,'DI_Minus',1));
+            if (data.dates.length > 0)
+                c3.addLineSeries({color:'rgba(255,255,255,0.18)',lineWidth:1,lineStyle:1,priceLineVisible:false})
+                  .setData([{time:d2ts(data.dates[0]),value:25},{time:d2ts(data.dates[data.dates.length-1]),value:25}]);
+
+            // Pane 4: MACD
+            const {chart: c4, ro: r4} = mkChart(d4, h4);
+            instances.push({chart: c4, ro: r4});
+            if (data.MACD_Hist) {
+                const hArr = data.dates.map((dt,i) => {
+                    const v = data.MACD_Hist[i];
+                    if (v===null||v===undefined) return null;
+                    return {time:d2ts(dt), value:v,
+                        color: v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};
+                }).filter(Boolean);
+                c4.addHistogramSeries({priceLineVisible:false,title:'Hist'}).setData(hArr);
+            }
+            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title:'MACD',priceLineVisible:false}).setData(lineData(data,'MACD',1));
+            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig',priceLineVisible:false}).setData(lineData(data,'MACD_Signal',1));
+
+            syncCharts([c1, c2, c3, c4]);
+            applyDefaultChartRange(c1, data.dates, 90);
         }
 
         // ================================================================
