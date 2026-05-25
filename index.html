@@ -2204,7 +2204,7 @@
         // Fetch analysis data from local Output folder
         async function loadData() {
             try {
-                const response = await fetch('./Output/analysis_results.json');
+                const response = await fetch('./Output/analysis_results.json?t=' + new Date().getTime());
                 rawData = await response.json();
                 
                 // Set update time
@@ -3336,7 +3336,7 @@
         // ── Lazy-fetch per-ticker history JSON ──
         async function fetchHistory(ticker) {
             if (historyCache[ticker]) return historyCache[ticker];
-            const r = await fetch(`./Output/history/${ticker}.json`);
+            const r = await fetch(`./Output/history/${ticker}.json?t=` + new Date().getTime());
             if (!r.ok) throw new Error(`HTTP ${r.status} for ${ticker}`);
             historyCache[ticker] = await r.json();
             return historyCache[ticker];
