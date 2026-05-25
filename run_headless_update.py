@@ -864,10 +864,8 @@ def run_csv_import(csv_paths):
         
     logger.info(f"[*] Tìm thấy {len(unique_files)} file CSV để xử lý...")
     
-    affected_tickers = set()
+    ticker_dfs = {}
     skipped_3char = 0
-    skipped_old = 0
-    loaded_count = 0
     
     for f in unique_files:
         try:
@@ -885,7 +883,7 @@ def run_csv_import(csv_paths):
                     logger.warning(f"   ! Tên file '{f.name}' không phải mã cổ phiếu hợp lệ (3 ký tự hoặc Index). Bỏ qua.")
                     continue
             
-            # Xử lý gộp theo nhóm Ticker
+            # Xử lý gộp theo nhóm Ticker vào dictionary
             grouped = df_norm.groupby("Ticker")
             for ticker_val, group in grouped:
                 t = str(ticker_val).upper().strip()
@@ -897,24 +895,60 @@ def run_csv_import(csv_paths):
                     continue
                     
                 sub_df = group.drop(columns=["Ticker"]).copy()
-                try:
-                    clean_sub = _clean_dataframe(sub_df, ticker=t)
-                    
-                    # Bộ lọc 30 ngày tương tự AICcode
-                    last_date = clean_sub['Date'].max()
-                    if (datetime.now() - last_date).days > 30 and not is_idx:
-                        skipped_old += 1
-                        continue
-                        
-                    # Đồng bộ giá vào Storage
-                    storage.sync_prices(t, clean_sub, source='CSV')
-                    affected_tickers.add(t)
-                    loaded_count += 1
-                except Exception as ex:
-                    logger.error(f"   ! Lỗi xử lý chi tiết mã {t} trong file {f.name}: {ex}")
+                if t not in ticker_dfs:
+                    ticker_dfs[t] = []
+                ticker_dfs[t].append(sub_df)
                     
         except Exception as e:
             logger.error(f"   ! Lỗi đọc/chuẩn hóa file {f.name}: {e}")
+            
+    affected_tickers = set()
+    skipped_old = 0
+    loaded_count = 0
+    
+    logger.info(f"[*] Đang xử lý và gộp dữ liệu cho {len(ticker_dfs)} mã cổ phiếu...")
+    
+    for t, dfs in ticker_dfs.items():
+        try:
+            # Gộp tất cả các DataFrame của mã t
+            combined_df = pd.concat(dfs, ignore_index=True)
+            is_idx = ("VNINDEX" in t) or ("HNX" in t) or ("HAINDEX" in t)
+            
+            try:
+                # Đồng nhất định dạng cột Date trước khi sắp xếp và loại bỏ trùng lặp
+                date_series = combined_df["Date"].astype(str).str.replace(r"\.0$", "", regex=True)
+                if date_series.str.match(r"^\d{8}$").all():
+                    combined_df["Date"] = pd.to_datetime(date_series, format="%Y%m%d")
+                else:
+                    combined_df["Date"] = pd.to_datetime(date_series, errors="coerce")
+                
+                # Loại bỏ các dòng có Date lỗi (NaT)
+                combined_df = combined_df.dropna(subset=["Date"])
+                
+                # Sắp xếp theo ngày tăng dần
+                combined_df = combined_df.sort_values("Date").reset_index(drop=True)
+                
+                # Loại bỏ các dòng trùng lặp ngày, giữ lại dòng cuối cùng
+                combined_df = combined_df.drop_duplicates(subset=["Date"], keep="last")
+                
+                # Làm sạch dữ liệu
+                clean_sub = _clean_dataframe(combined_df, ticker=t)
+                
+                # Bộ lọc 30 ngày tương tự AICcode
+                last_date = clean_sub['Date'].max()
+                if (datetime.now() - last_date).days > 30 and not is_idx:
+                    skipped_old += 1
+                    continue
+                    
+                # Đồng bộ giá vào Storage
+                storage.sync_prices(t, clean_sub, source='CSV')
+                affected_tickers.add(t)
+                loaded_count += 1
+            except Exception as ex:
+                logger.error(f"   ! Lỗi xử lý chi tiết mã {t}: {ex}")
+                
+        except Exception as e:
+            logger.error(f"   ! Lỗi gộp dữ liệu mã {t}: {e}")
             
     if skipped_3char > 0:
         logger.info(f"[*] Đã bỏ qua {skipped_3char} mã không hợp lệ (không phải 3 ký tự hoặc Index).")
@@ -1029,13 +1063,52 @@ def compute_market_breadth(data_dict):
         }
     return {}
 
+def run_clear_cache():
+    import shutil
+    logger.info("==================================================")
+    logger.info("🧹 BẮT ĐẦU XÓA TOÀN BỘ DỮ LIỆU CŨ (CLEAR DATA CACHE)")
+    logger.info("==================================================")
+    
+    storage = StorageManager()
+    count = storage.clear_computed_data()
+    logger.info(f"✅ Đã xóa sạch {count} files trong data_storage.")
+    
+    # Clean Output directory
+    output_dir = os.path.join(base_path, "Output")
+    analysis_file = os.path.join(output_dir, "analysis_results.json")
+    history_dir = os.path.join(output_dir, "history")
+    
+    deleted_output_files = 0
+    if os.path.exists(analysis_file):
+        try:
+            os.remove(analysis_file)
+            deleted_output_files += 1
+            logger.info("   🗑️ Đã xóa Output/analysis_results.json")
+        except Exception as e:
+            logger.error(f"   ! Lỗi khi xóa {analysis_file}: {e}")
+            
+    if os.path.exists(history_dir):
+        try:
+            shutil.rmtree(history_dir)
+            os.makedirs(history_dir, exist_ok=True)
+            deleted_output_files += 1
+            logger.info("   🗑️ Đã xóa thư mục Output/history/")
+        except Exception as e:
+            logger.error(f"   ! Lỗi khi xóa thư mục {history_dir}: {e}")
+            
+    logger.info(f"✅ Hoàn tất dọn dẹp {deleted_output_files} mục trong Output.")
+    logger.info("==================================================")
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Hệ thống cập nhật dữ liệu tự động cho AIC PRO")
     parser.add_argument("--import-csv", nargs="+", help="Đường dẫn đến một hoặc nhiều file/thư mục CSV chứa dữ liệu lịch sử ban đầu")
+    parser.add_argument("--clear-cache", action="store_true", help="Xóa sạch toàn bộ dữ liệu lưu trữ cũ và kết quả tính toán")
     args = parser.parse_args()
     
-    if args.import_csv:
+    if args.clear_cache:
+        run_clear_cache()
+    elif args.import_csv:
         run_csv_import(args.import_csv)
     else:
         run_sync_and_update()
