@@ -285,6 +285,57 @@
             border-color: var(--accent-purple);
         }
 
+        /* Interactive controls for Breadth Chart */
+        .ma-toggles {
+            display: flex;
+            gap: 6px;
+        }
+
+        .ma-toggles button {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .ma-toggles button.inactive {
+            opacity: 0.3;
+            background: transparent !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            color: var(--text-secondary) !important;
+        }
+
+        #toggle-normal-ma10.active, #toggle-fs-ma10.active {
+            border-color: #ffffff;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        #toggle-normal-ma20.active, #toggle-fs-ma20.active {
+            border-color: #fbbf24;
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.1);
+        }
+
+        #toggle-normal-ma50.active, #toggle-fs-ma50.active {
+            border-color: #ef4444;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .chart-fs-controls {
+            display: none;
+            margin-left: auto;
+            margin-right: 16px;
+            align-items: center;
+            gap: 12px;
+        }
+
+
         .breadth-chart-container {
             position: relative;
             height: 400px;
@@ -1848,11 +1899,19 @@
             <section class="card">
                 <div class="card-title">
                     <span>Độ Rộng Thị Trường (MA Lines vs VNINDEX)</span>
-                    <div class="chart-controls">
-                        <button class="btn-sm active" onclick="setChartRange(30)">30N</button>
-                        <button class="btn-sm" onclick="setChartRange(90)">90N</button>
-                        <button class="btn-sm" onclick="setChartRange(180)">180N</button>
-                        <button class="btn-sm" onclick="setChartRange(9999)">Tất cả</button>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div class="ma-toggles">
+                            <button id="toggle-normal-ma10" class="btn-sm active" onclick="toggleBreadthMA('MA10')">MA10</button>
+                            <button id="toggle-normal-ma20" class="btn-sm active" onclick="toggleBreadthMA('MA20')">MA20</button>
+                            <button id="toggle-normal-ma50" class="btn-sm active" onclick="toggleBreadthMA('MA50')">MA50</button>
+                        </div>
+                        <div class="chart-controls">
+                            <button class="btn-sm" onclick="setBreadthChartRange(30)">30N</button>
+                            <button class="btn-sm active" onclick="setBreadthChartRange(90)">90N</button>
+                            <button class="btn-sm" onclick="setBreadthChartRange(180)">180N</button>
+                            <button class="btn-sm" onclick="setBreadthChartRange(9999)">Tất cả</button>
+                        </div>
+                        <button class="btn-sm" onclick="expandBreadthChart()">⛶ Mở rộng</button>
                     </div>
                 </div>
                 <div class="breadth-chart-container" id="breadthChartContainer"></div>
@@ -2082,6 +2141,7 @@
     <div id="chartFsModal" class="chart-fs-modal">
         <div class="chart-fs-header">
             <span class="chart-fs-title" id="chartFsTitle">📈 Biểu đồ</span>
+            <div id="chartFsControls" class="chart-fs-controls"></div>
             <button class="chart-fs-close" onclick="closeChartFullscreen()">✕ Đóng (Esc)</button>
         </div>
         <div class="chart-fs-body">
@@ -2480,17 +2540,20 @@
 
 
         let breadthChartLwc = null;
+        let breadthChartFsInstance = null;
+        let breadthMAVisible = { MA10: true, MA20: true, MA50: true };
+        let breadthChartActiveDays = 90;
 
         // Build interactive Lightweight Charts for Market Breadth
-        async function initBreadthChart() {
-            const container = document.getElementById('breadthChartContainer');
-            if (!container) return;
+        async function createBreadthChart(containerId, isFs) {
+            const container = document.getElementById(containerId);
+            if (!container) return null;
             container.innerHTML = '';
             
             const data = rawData.market_breadth;
             if (!data || !data.dates) {
                 container.innerHTML = '<div class="chart-error">Không có dữ liệu độ rộng thị trường</div>';
-                return;
+                return null;
             }
             
             // Try fetching VNINDEX candlestick history
@@ -2501,11 +2564,14 @@
                 console.warn("Could not load VNINDEX candlestick history, falling back to line chart", e);
             }
             
+            // For fullscreen, let's make it fill the modal height or use a larger height
+            const height = isFs ? Math.max(400, (container.offsetHeight || window.innerHeight - 150)) : 400;
+
             // Create Lightweight Chart
             const chart = LightweightCharts.createChart(container, {
                 ...LWC_THEME,
                 width: container.clientWidth,
-                height: 400,
+                height: height,
                 leftPriceScale: {
                     visible: true,
                     borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -2537,19 +2603,22 @@
                 priceScaleId: 'left',
                 color: '#ffffff', // White
                 lineWidth: 2,
-                title: '% > MA10'
+                title: '% > MA10',
+                visible: breadthMAVisible.MA10
             });
             const ma20Series = chart.addLineSeries({
                 priceScaleId: 'left',
                 color: '#fbbf24', // Yellow
                 lineWidth: 2,
-                title: '% > MA20'
+                title: '% > MA20',
+                visible: breadthMAVisible.MA20
             });
             const ma50Series = chart.addLineSeries({
                 priceScaleId: 'left',
                 color: '#ef4444', // Red
                 lineWidth: 2,
-                title: '% > MA50'
+                title: '% > MA50',
+                visible: breadthMAVisible.MA50
             });
             
             // Prepare line data
@@ -2606,55 +2675,188 @@
             
             // Handle resizing
             const ro = new ResizeObserver(() => {
-                chart.resize(container.clientWidth, 400);
+                const w = container.clientWidth;
+                const h = isFs ? Math.max(400, (container.offsetHeight || window.innerHeight - 150)) : 400;
+                chart.resize(w, h);
             });
             ro.observe(container);
             
-            // Store instance
-            breadthChartLwc = { chart, ro, dates: data.dates };
-            
-            // Set default view range (last 30 days)
-            setChartRange(30);
+            return { chart, ro, dates: data.dates, ma10Series, ma20Series, ma50Series };
         }
 
-        // Change chart range view (sets zoom/visible logical range instead of recreating ChartJS)
-        function setChartRange(days) {
-            currentChartRange = days;
-            const buttons = document.querySelectorAll('.chart-controls button');
-            buttons.forEach(btn => btn.classList.remove('active'));
+        async function initBreadthChart() {
+            const res = await createBreadthChart('breadthChartContainer', false);
+            if (res) {
+                breadthChartLwc = res;
+                // Set default view range (last 90 days)
+                setBreadthChartRange(breadthChartActiveDays);
+                updateBreadthToggleButtons();
+            }
+        }
+
+        async function renderBreadthChartFs(mountId) {
+            const res = await createBreadthChart(mountId, true);
+            if (res) {
+                breadthChartFsInstance = res;
+                fsInstances.push(res);
+                applyBreadthRange(res.chart, res.dates, breadthChartActiveDays);
+            }
+        }
+
+        // Change chart range view (sets zoom/visible logical range)
+        function setBreadthChartRange(days) {
+            breadthChartActiveDays = days;
             
-            const eventTarget = window.event ? window.event.target : null;
-            if (eventTarget) {
-                eventTarget.classList.add('active');
+            if (breadthChartLwc && breadthChartLwc.chart) {
+                applyBreadthRange(breadthChartLwc.chart, breadthChartLwc.dates, days);
+            }
+            if (breadthChartFsInstance && breadthChartFsInstance.chart) {
+                applyBreadthRange(breadthChartFsInstance.chart, breadthChartFsInstance.dates, days);
+            }
+            
+            updateBreadthRangeButtons(days);
+        }
+
+        function applyBreadthRange(chartObj, dates, days) {
+            if (!dates || dates.length === 0) return;
+            if (days >= dates.length) {
+                chartObj.timeScale().fitContent();
             } else {
-                // fallback to find button by text content or dataset
-                const btns = document.querySelectorAll('.chart-controls button');
-                btns.forEach(btn => {
+                const fromIndex = Math.max(0, dates.length - days);
+                const toIndex = dates.length - 1;
+                const fromTs = d2ts(dates[fromIndex]);
+                const toTs = d2ts(dates[toIndex]);
+                chartObj.timeScale().setVisibleRange({
+                    from: fromTs,
+                    to: toTs
+                });
+            }
+        }
+
+        function updateBreadthRangeButtons(days) {
+            // Update normal card range buttons
+            const normalCard = document.querySelector('.card .chart-controls');
+            if (normalCard) {
+                const buttons = normalCard.querySelectorAll('button');
+                buttons.forEach(btn => {
+                    btn.classList.remove('active');
                     if (days === 30 && btn.innerText.includes('30')) btn.classList.add('active');
                     else if (days === 90 && btn.innerText.includes('90')) btn.classList.add('active');
                     else if (days === 180 && btn.innerText.includes('180')) btn.classList.add('active');
                     else if (days > 360 && btn.innerText.includes('Tất cả')) btn.classList.add('active');
                 });
             }
-            
-            if (breadthChartLwc && breadthChartLwc.chart) {
-                const dates = breadthChartLwc.dates;
-                if (!dates || dates.length === 0) return;
-                
-                if (days >= dates.length) {
-                    breadthChartLwc.chart.timeScale().fitContent();
-                } else {
-                    const fromIndex = Math.max(0, dates.length - days);
-                    const toIndex = dates.length - 1;
-                    const fromTs = d2ts(dates[fromIndex]);
-                    const toTs = d2ts(dates[toIndex]);
-                    breadthChartLwc.chart.timeScale().setVisibleRange({
-                        from: fromTs,
-                        to: toTs
-                    });
-                }
+
+            // Update fullscreen modal range buttons
+            const fsControls = document.getElementById('chartFsControls');
+            if (fsControls) {
+                const buttons = fsControls.querySelectorAll('.chart-controls button');
+                buttons.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (days === 30 && btn.innerText.includes('30')) btn.classList.add('active');
+                    else if (days === 90 && btn.innerText.includes('90')) btn.classList.add('active');
+                    else if (days === 180 && btn.innerText.includes('180')) btn.classList.add('active');
+                    else if (days > 360 && btn.innerText.includes('Tất cả')) btn.classList.add('active');
+                });
             }
         }
+
+        function toggleBreadthMA(maKey) {
+            breadthMAVisible[maKey] = !breadthMAVisible[maKey];
+            
+            // Sync visibility inside active charts
+            if (breadthChartLwc) {
+                const series = breadthChartLwc[maKey.toLowerCase() + 'Series'];
+                if (series) {
+                    series.applyOptions({ visible: breadthMAVisible[maKey] });
+                }
+            }
+            if (breadthChartFsInstance) {
+                const series = breadthChartFsInstance[maKey.toLowerCase() + 'Series'];
+                if (series) {
+                    series.applyOptions({ visible: breadthMAVisible[maKey] });
+                }
+            }
+            
+            updateBreadthToggleButtons();
+        }
+
+        function updateBreadthToggleButtons() {
+            const keys = ['MA10', 'MA20', 'MA50'];
+            keys.forEach(key => {
+                const visible = breadthMAVisible[key];
+                
+                // Normal card buttons
+                const btnNormal = document.getElementById(`toggle-normal-${key.toLowerCase()}`);
+                if (btnNormal) {
+                    if (visible) {
+                        btnNormal.classList.add('active');
+                        btnNormal.classList.remove('inactive');
+                    } else {
+                        btnNormal.classList.remove('active');
+                        btnNormal.classList.add('inactive');
+                    }
+                }
+                
+                // Fullscreen modal buttons
+                const btnFs = document.getElementById(`toggle-fs-${key.toLowerCase()}`);
+                if (btnFs) {
+                    if (visible) {
+                        btnFs.classList.add('active');
+                        btnFs.classList.remove('inactive');
+                    } else {
+                        btnFs.classList.remove('active');
+                        btnFs.classList.add('inactive');
+                    }
+                }
+            });
+        }
+
+        async function expandBreadthChart() {
+            const modal = document.getElementById('chartFsModal');
+            const title = document.getElementById('chartFsTitle');
+            const fsMt  = document.getElementById('chartFsMount');
+            const fsControls = document.getElementById('chartFsControls');
+            if (!modal) return;
+
+            title.textContent = `Độ Rộng Thị Trường (MA Lines vs VNINDEX)`;
+
+            // Destroy previous FS instances
+            fsInstances.forEach(it => { try{it.ro&&it.ro.disconnect();}catch(e){} try{it.chart&&it.chart.remove();}catch(e){} });
+            fsInstances = [];
+            fsMt.innerHTML = '';
+            breadthChartFsInstance = null;
+
+            // Setup FS breadth controls in header
+            if (fsControls) {
+                fsControls.innerHTML = `
+                    <div class="ma-toggles">
+                        <button id="toggle-fs-ma10" class="btn-sm" onclick="toggleBreadthMA('MA10')">MA10</button>
+                        <button id="toggle-fs-ma20" class="btn-sm" onclick="toggleBreadthMA('MA20')">MA20</button>
+                        <button id="toggle-fs-ma50" class="btn-sm" onclick="toggleBreadthMA('MA50')">MA50</button>
+                    </div>
+                    <div class="chart-controls">
+                        <button class="btn-sm" onclick="setBreadthChartRange(30)">30N</button>
+                        <button class="btn-sm" onclick="setBreadthChartRange(90)">90N</button>
+                        <button class="btn-sm" onclick="setBreadthChartRange(180)">180N</button>
+                        <button class="btn-sm" onclick="setBreadthChartRange(9999)">Tất cả</button>
+                    </div>
+                `;
+                fsControls.style.display = 'flex';
+                updateBreadthToggleButtons();
+                updateBreadthRangeButtons(breadthChartActiveDays);
+            }
+
+            modal.classList.add('open');
+
+            // Wait for modal layout to settle, then render
+            requestAnimationFrame(() => {
+                requestAnimationFrame(async () => {
+                    await renderBreadthChartFs('chartFsMount');
+                });
+            });
+        }
+
 
         // Lookup Search autocomplete (Tab 2)
         function handleLookupSearch() {
@@ -3757,8 +3959,14 @@
 
         function closeChartFullscreen() {
             document.getElementById('chartFsModal').classList.remove('open');
+            const fsControls = document.getElementById('chartFsControls');
+            if (fsControls) {
+                fsControls.style.display = 'none';
+                fsControls.innerHTML = '';
+            }
             fsInstances.forEach(it => { try{it.ro&&it.ro.disconnect();}catch(e){} try{it.chart&&it.chart.remove();}catch(e){} });
             fsInstances = [];
+            breadthChartFsInstance = null;
             document.getElementById('chartFsMount').innerHTML = '';
         }
 
