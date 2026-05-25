@@ -2,10 +2,10 @@ name: Auto Update Stock Data
 
 on:
   schedule:
-    # 12:00 PM ICT is 05:00 UTC (weekdays Monday to Friday)
-    - cron: '0 5 * * 1-5'
-    # 15:30 (3:30 PM) ICT is 08:30 UTC (weekdays Monday to Friday)
-    - cron: '30 8 * * 1-5'
+    # 12:12 PM ICT is 05:12 UTC (weekdays Monday to Friday) - offset by 12 mins to bypass queue congestion
+    - cron: '12 5 * * 1-5'
+    # 15:35 (3:35 PM) ICT is 08:35 UTC (weekdays Monday to Friday) - offset by 5 mins to bypass queue congestion
+    - cron: '35 8 * * 1-5'
   workflow_dispatch: # Enable manual run button in GitHub Actions tab
 
 jobs:
