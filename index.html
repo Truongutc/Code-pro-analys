@@ -316,15 +316,21 @@
         }
 
         #toggle-normal-ma20.active, #toggle-fs-ma20.active {
-            border-color: #fbbf24;
-            color: #fbbf24;
-            background: rgba(251, 191, 36, 0.1);
+            border-color: #00f0ff;
+            color: #00f0ff;
+            background: rgba(0, 240, 255, 0.1);
         }
 
         #toggle-normal-ma50.active, #toggle-fs-ma50.active {
-            border-color: #ef4444;
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
+            border-color: #ff007f;
+            color: #ff007f;
+            background: rgba(255, 0, 127, 0.1);
+        }
+
+        #toggle-normal-vnindex.active, #toggle-fs-vnindex.active {
+            border-color: #00ff6a;
+            color: #00ff6a;
+            background: rgba(0, 255, 106, 0.1);
         }
 
         .chart-fs-controls {
@@ -1901,6 +1907,7 @@
                     <span>Độ Rộng Thị Trường (MA Lines vs VNINDEX)</span>
                     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <div class="ma-toggles">
+                            <button id="toggle-normal-vnindex" class="btn-sm active" onclick="toggleBreadthVNINDEX()">VNINDEX</button>
                             <button id="toggle-normal-ma10" class="btn-sm active" onclick="toggleBreadthMA('MA10')">MA10</button>
                             <button id="toggle-normal-ma20" class="btn-sm active" onclick="toggleBreadthMA('MA20')">MA20</button>
                             <button id="toggle-normal-ma50" class="btn-sm active" onclick="toggleBreadthMA('MA50')">MA50</button>
@@ -2542,6 +2549,7 @@
         let breadthChartLwc = null;
         let breadthChartFsInstance = null;
         let breadthMAVisible = { MA10: true, MA20: true, MA50: true };
+        let breadthVNINDEXVisible = true;
         let breadthChartActiveDays = 90;
 
         // Build interactive Lightweight Charts for Market Breadth
@@ -2608,14 +2616,14 @@
             });
             const ma20Series = chart.addLineSeries({
                 priceScaleId: 'left',
-                color: '#fbbf24', // Yellow
+                color: '#00f0ff', // Cyan (Vibrant neon contrasting color)
                 lineWidth: 2,
                 title: '% > MA20',
                 visible: breadthMAVisible.MA20
             });
             const ma50Series = chart.addLineSeries({
                 priceScaleId: 'left',
-                color: '#ef4444', // Red
+                color: '#ff007f', // Fuchsia (Vibrant neon contrasting color)
                 lineWidth: 2,
                 title: '% > MA50',
                 visible: breadthMAVisible.MA50
@@ -2644,8 +2652,9 @@
             ma50Series.setData(ma50Data);
             
             // Add VNINDEX to RIGHT scale
+            let vnSeries = null;
             if (vnHistory) {
-                const candleSeries = chart.addCandlestickSeries({
+                vnSeries = chart.addCandlestickSeries({
                     priceScaleId: 'right',
                     upColor: '#00ff6a',
                     downColor: '#ff3b3b',
@@ -2653,16 +2662,18 @@
                     borderDownColor: '#ff3b3b',
                     wickUpColor: '#00ff6a',
                     wickDownColor: '#ff3b3b',
-                    title: 'VNINDEX'
+                    title: 'VNINDEX',
+                    visible: breadthVNINDEXVisible
                 });
-                candleSeries.setData(ohlcv(vnHistory));
+                vnSeries.setData(ohlcv(vnHistory));
             } else if (data.VNINDEX_Closes && data.VNINDEX_Closes.length > 0) {
                 // Fallback to line
-                const lineSeries = chart.addLineSeries({
+                vnSeries = chart.addLineSeries({
                     priceScaleId: 'right',
                     color: '#ef4444',
                     lineWidth: 2.5,
-                    title: 'VNINDEX (Close)'
+                    title: 'VNINDEX (Close)',
+                    visible: breadthVNINDEXVisible
                 });
                 const vnData = [];
                 for (let i = 0; i < data.dates.length; i++) {
@@ -2670,7 +2681,7 @@
                         vnData.push({ time: d2ts(data.dates[i]), value: data.VNINDEX_Closes[i] });
                     }
                 }
-                lineSeries.setData(vnData);
+                vnSeries.setData(vnData);
             }
             
             // Handle resizing
@@ -2681,7 +2692,7 @@
             });
             ro.observe(container);
             
-            return { chart, ro, dates: data.dates, ma10Series, ma20Series, ma50Series };
+            return { chart, ro, dates: data.dates, ma10Series, ma20Series, ma50Series, vnSeries };
         }
 
         async function initBreadthChart() {
@@ -2781,6 +2792,20 @@
             updateBreadthToggleButtons();
         }
 
+        function toggleBreadthVNINDEX() {
+            breadthVNINDEXVisible = !breadthVNINDEXVisible;
+            
+            // Sync visibility inside active charts
+            if (breadthChartLwc && breadthChartLwc.vnSeries) {
+                breadthChartLwc.vnSeries.applyOptions({ visible: breadthVNINDEXVisible });
+            }
+            if (breadthChartFsInstance && breadthChartFsInstance.vnSeries) {
+                breadthChartFsInstance.vnSeries.applyOptions({ visible: breadthVNINDEXVisible });
+            }
+            
+            updateBreadthToggleButtons();
+        }
+
         function updateBreadthToggleButtons() {
             const keys = ['MA10', 'MA20', 'MA50'];
             keys.forEach(key => {
@@ -2810,6 +2835,29 @@
                     }
                 }
             });
+
+            // Update VNINDEX toggle button
+            const vniNormal = document.getElementById('toggle-normal-vnindex');
+            if (vniNormal) {
+                if (breadthVNINDEXVisible) {
+                    vniNormal.classList.add('active');
+                    vniNormal.classList.remove('inactive');
+                } else {
+                    vniNormal.classList.remove('active');
+                    vniNormal.classList.add('inactive');
+                }
+            }
+
+            const vniFs = document.getElementById('toggle-fs-vnindex');
+            if (vniFs) {
+                if (breadthVNINDEXVisible) {
+                    vniFs.classList.add('active');
+                    vniFs.classList.remove('inactive');
+                } else {
+                    vniFs.classList.remove('active');
+                    vniFs.classList.add('inactive');
+                }
+            }
         }
 
         async function expandBreadthChart() {
@@ -2831,6 +2879,7 @@
             if (fsControls) {
                 fsControls.innerHTML = `
                     <div class="ma-toggles">
+                        <button id="toggle-fs-vnindex" class="btn-sm" onclick="toggleBreadthVNINDEX()">VNINDEX</button>
                         <button id="toggle-fs-ma10" class="btn-sm" onclick="toggleBreadthMA('MA10')">MA10</button>
                         <button id="toggle-fs-ma20" class="btn-sm" onclick="toggleBreadthMA('MA20')">MA20</button>
                         <button id="toggle-fs-ma50" class="btn-sm" onclick="toggleBreadthMA('MA50')">MA50</button>
