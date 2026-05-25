@@ -7,6 +7,12 @@ on:
     # 15:30 (3:30 PM) ICT is 08:30 UTC (weekdays Monday to Friday)
     - cron: '30 8 * * 1-5'
   workflow_dispatch: # Enable manual run button in GitHub Actions tab
+    inputs:
+      curl_command:
+        description: 'Dán cURL command mới để cập nhật token Vietstock (Không bắt buộc)'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   update:
@@ -46,14 +52,15 @@ jobs:
         env:
           PYTHONPATH: .
           VIETSTOCK_CURL: ${{ secrets.VIETSTOCK_CURL }}
+          INPUT_CURL: ${{ github.event.inputs.curl_command }}
         run: |
-          # 1. Cấu hình cURL từ secrets
+          # 1. Cấu hình cURL từ input hoặc secrets
           python -c '
           import os
           from tinvest.config_manager import ConfigManager
-          curl_str = os.environ.get("VIETSTOCK_CURL")
+          curl_str = os.environ.get("INPUT_CURL") or os.environ.get("VIETSTOCK_CURL")
           if curl_str and len(curl_str.strip()) > 10:
-              print("Found VIETSTOCK_CURL secret. Parsing and updating config...")
+              print("Found new cURL input/secret. Parsing and updating config...")
               mgr = ConfigManager()
               success = mgr.parse_input(curl_str)
               if success:
@@ -61,7 +68,7 @@ jobs:
               else:
                   print("Failed to parse cURL credentials.")
           else:
-              print("No VIETSTOCK_CURL secret provided or it is too short. Proceeding with existing config.")
+              print("No cURL input or secret provided. Proceeding with existing config.")
           '
           
           # 2. Chạy cập nhật tự động hàng ngày từ Vietstock
