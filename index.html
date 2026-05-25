@@ -126,38 +126,102 @@
             display: flex;
             justify-content: center;
         }
-        
-        .nav-container {
+
+        /* Menu Dropdown Style */
+        .menu-dropdown {
+            position: relative;
+            display: inline-block;
             max-width: 1200px;
             width: 100%;
-            display: flex;
-            gap: 8px;
+            text-align: center;
         }
-        
-        .nav-tab {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.02);
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border-color);
             border-radius: 10px;
-            color: var(--text-secondary);
-            padding: 8px 12px;
-            font-size: 0.85rem;
+            color: var(--text-primary);
+            padding: 8px 16px;
+            font-size: 0.9rem;
             font-weight: 600;
             font-family: 'Outfit', sans-serif;
             cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: center;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 8px;
+            transition: all 0.2s ease;
+            min-width: 260px;
         }
-        
-        .nav-tab.active, .nav-tab:hover {
+        .menu-btn:hover {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: var(--accent-purple);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+        }
+        .menu-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(8, 11, 19, 0.98);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            min-width: 260px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            z-index: 150;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        .menu-content.show {
+            display: block;
+        }
+        .menu-item {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 0.9rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s;
+        }
+        .menu-item:hover {
+            background: rgba(139, 92, 246, 0.12);
+            color: white;
+        }
+        .menu-item.active {
             background: linear-gradient(135deg, var(--accent-purple) 0%, #6366f1 100%);
             color: white;
-            border-color: transparent;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+            font-weight: 700;
+        }
+
+        /* Status indicators */
+        .status-dot-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        .status-dot-indicator.green {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+        .status-dot-indicator.red {
+            background-color: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
+        }
+        .status-dot-indicator.yellow {
+            background-color: var(--accent-orange);
+            box-shadow: 0 0 8px var(--accent-orange);
         }
 
         main {
@@ -221,10 +285,14 @@
             border-color: var(--accent-purple);
         }
 
-        .chart-container {
+        .breadth-chart-container {
             position: relative;
-            height: 250px;
+            height: 400px;
             width: 100%;
+            background: #000000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
         }
 
         /* Market Cards */
@@ -1739,22 +1807,29 @@
                 <h1>AIC PRO Dashboard <span>beta</span></h1>
             </div>
             <div class="header-actions">
-                <button id="updateDataBtn" class="header-action-btn update-btn" title="Cập nhật dữ liệu">🔄</button>
                 <button id="settingsBtn" class="header-action-btn gear-btn" title="Cài đặt hệ thống">⚙️</button>
             </div>
             <div class="update-badge">
-                <span class="update-dot"></span>
+                <span class="update-dot" title="Trạng thái cập nhật dữ liệu"></span>
                 <span id="updateTimeText">Đang tải...</span>
+                <span style="margin-left: 10px; margin-right: 10px; opacity: 0.25;">|</span>
+                <span id="vietstockStatusDot" class="status-dot-indicator red" title="Trạng thái cURL Vietstock"></span>
+                <span id="vietstockStatusText">Vietstock: Đang kiểm tra...</span>
             </div>
         </div>
     </header>
 
     <!-- Navigation Tabs -->
     <nav class="tab-navigation">
-        <div class="nav-container">
-            <button class="nav-tab active" data-tab="market-tab" onclick="switchTab('market-tab')">📊 Thị trường (VNINDEX)</button>
-            <button class="nav-tab" data-tab="lookup-tab" onclick="switchTab('lookup-tab')">🔍 Tra cứu Cổ phiếu</button>
-            <button class="nav-tab" data-tab="filter-tab" onclick="switchTab('filter-tab')">🎯 Lọc Cổ phiếu</button>
+        <div class="menu-dropdown">
+            <button id="menuBtn" class="menu-btn" onclick="toggleMenuDropdown(event)">
+                <span id="currentTabIcon">📊</span> <span id="currentTabLabel">Thị trường (VNINDEX)</span> <span style="font-size: 0.75rem; margin-left: 4px; opacity: 0.7;">▼</span>
+            </button>
+            <div id="menuContent" class="menu-content">
+                <button class="menu-item active" data-tab="market-tab" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)')">📊 Thị trường (VNINDEX)</button>
+                <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')">🔍 Tra cứu Cổ phiếu</button>
+                <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Lọc Cổ phiếu')">🎯 Lọc Cổ phiếu</button>
+            </div>
         </div>
     </nav>
 
@@ -1780,9 +1855,7 @@
                         <button class="btn-sm" onclick="setChartRange(9999)">Tất cả</button>
                     </div>
                 </div>
-                <div class="chart-container">
-                    <canvas id="breadthChart"></canvas>
-                </div>
+                <div class="breadth-chart-container" id="breadthChartContainer"></div>
             </section>
 
             <!-- VNINDEX Detailed Analysis Section -->
@@ -2036,32 +2109,6 @@
                 </div>
 
                 <div class="settings-divider"></div>
-
-                <!-- Data Management Section -->
-                <div class="settings-section-title">📊 Quản lý Dữ liệu</div>
-                <div class="settings-info">
-                    <span>⏰ Tự động cập nhật: <strong>12:00</strong> và <strong>15:30</strong> (Thứ 2–6)</span>
-                </div>
-                <div class="data-actions-grid">
-                    <button class="data-action-btn" onclick="triggerUpdate('normal')">
-                        <span class="data-action-icon">🔄</span>
-                        <span class="data-action-label">Cập nhật mới</span>
-                        <span class="data-action-desc">Load dữ liệu còn thiếu & kiểm tra ngày gần nhất</span>
-                    </button>
-                    <button class="data-action-btn danger" onclick="triggerUpdate('reset')">
-                        <span class="data-action-icon">🗑️</span>
-                        <span class="data-action-label">Xóa & Cập nhật lại</span>
-                        <span class="data-action-desc">Xóa toàn bộ dữ liệu, tải lại từ đầu</span>
-                    </button>
-                    <button class="data-action-btn csv" onclick="triggerCsvUpload()">
-                        <span class="data-action-icon">📂</span>
-                        <span class="data-action-label">Upload CSV</span>
-                        <span class="data-action-desc">Truyền dữ liệu từ file CSV thủ công</span>
-                    </button>
-                </div>
-                <input type="file" id="csvFileInput" accept=".csv" style="display:none;" onchange="handleCsvUpload(event)" />
-
-                <div class="settings-divider"></div>
                 <div class="settings-actions">
                     <button class="btn-secondary" onclick="closeSettings()">Đóng</button>
                 </div>
@@ -2118,18 +2165,40 @@
         // Tab Switching Mechanism
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             
             document.getElementById(tabId).classList.add('active');
-            const clickedBtn = document.querySelector(`[data-tab="${tabId}"]`);
-            if (clickedBtn) clickedBtn.classList.add('active');
+            const clickedItem = document.querySelector(`.menu-item[data-tab="${tabId}"]`);
+            if (clickedItem) clickedItem.classList.add('active');
             
             // Re-render chart size if switching to market tab
-            if (tabId === 'market-tab' && breadthChart) {
+            if (tabId === 'market-tab' && breadthChartLwc && breadthChartLwc.chart) {
                 setTimeout(() => {
-                    breadthChart.resize();
+                    const container = document.getElementById('breadthChartContainer');
+                    if (container) {
+                        breadthChartLwc.chart.resize(container.clientWidth, 400);
+                    }
                 }, 50);
             }
+        }
+
+        // Dropdown Menu functions
+        function toggleMenuDropdown(event) {
+            event.stopPropagation();
+            const content = document.getElementById('menuContent');
+            if (content) content.classList.toggle('show');
+        }
+        
+        function selectMenuTab(tabId, icon, label) {
+            const content = document.getElementById('menuContent');
+            if (content) content.classList.remove('show');
+            
+            const tabIcon = document.getElementById('currentTabIcon');
+            const tabLabel = document.getElementById('currentTabLabel');
+            if (tabIcon) tabIcon.innerText = icon;
+            if (tabLabel) tabLabel.innerText = label;
+            
+            switchTab(tabId);
         }
 
         // Fetch analysis data from local Output folder
@@ -2140,6 +2209,30 @@
                 
                 // Set update time
                 document.getElementById('updateTimeText').innerText = `Cập nhật: ${rawData.last_update}`;
+                
+                // Set Vietstock cURL token status
+                const vsStatus = rawData.vietstock_status || "UNKNOWN";
+                const vsDot = document.getElementById('vietstockStatusDot');
+                const vsText = document.getElementById('vietstockStatusText');
+                if (vsDot && vsText) {
+                    if (vsStatus === "VALID" || vsStatus === "LIMITED_BYPASSED") {
+                        vsDot.className = "status-dot-indicator green";
+                        vsText.innerText = `Kết nối: ${vsStatus === "VALID" ? "OK" : "BYPASSED"}`;
+                        vsText.style.color = "var(--accent-green)";
+                    } else if (vsStatus === "LIMITED") {
+                        vsDot.className = "status-dot-indicator red";
+                        vsText.innerText = "Kết nối: Bị giới hạn";
+                        vsText.style.color = "var(--accent-red)";
+                    } else if (vsStatus === "CSV_MODE") {
+                        vsDot.className = "status-dot-indicator yellow";
+                        vsText.innerText = "Kết nối: Nạp CSV";
+                        vsText.style.color = "var(--accent-orange)";
+                    } else {
+                        vsDot.className = "status-dot-indicator red";
+                        vsText.innerText = `Kết nối: Lỗi (${vsStatus})`;
+                        vsText.style.color = "var(--accent-red)";
+                    }
+                }
                 
                 // Render Market Indices Cards (VNINDEX / HNX)
                 renderMarketStatus();
@@ -2386,134 +2479,145 @@
         }
 
 
-        // Build interactive Chart.js line graph for Market Breadth
-        function initBreadthChart() {
-            const ctx = document.getElementById('breadthChart').getContext('2d');
+        let breadthChartLwc = null;
+
+        // Build interactive Lightweight Charts for Market Breadth
+        async function initBreadthChart() {
+            const container = document.getElementById('breadthChartContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            
             const data = rawData.market_breadth;
-            if (!data || !data.dates) return;
-
-            const sliceLength = currentChartRange;
-            const labels = data.dates.slice(-sliceLength);
-            const ma10 = data.MA10.slice(-sliceLength);
-            const ma20 = data.MA20.slice(-sliceLength);
-            const ma50 = data.MA50.slice(-sliceLength);
-            const vnCloses = data.VNINDEX_Closes ? data.VNINDEX_Closes.slice(-sliceLength) : [];
-
-            if (breadthChart) {
-                breadthChart.destroy();
+            if (!data || !data.dates) {
+                container.innerHTML = '<div class="chart-error">Không có dữ liệu độ rộng thị trường</div>';
+                return;
             }
-
-            const datasets = [
-                {
-                    label: '% > MA10',
-                    data: ma10,
-                    borderColor: '#8b5cf6',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    tension: 0.15,
-                    yAxisID: 'yBreadth',
-                    fill: false
-                },
-                {
-                    label: '% > MA20',
-                    data: ma20,
-                    borderColor: '#14b8a6',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    tension: 0.15,
-                    yAxisID: 'yBreadth',
-                    fill: false
-                },
-                {
-                    label: '% > MA50',
-                    data: ma50,
-                    borderColor: '#3b82f6',
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    tension: 0.15,
-                    yAxisID: 'yBreadth',
-                    fill: false
-                }
-            ];
-
-            if (vnCloses.length > 0 && vnCloses.some(v => v > 0)) {
-                datasets.push({
-                    label: 'VNINDEX Close',
-                    data: vnCloses,
-                    borderColor: '#ef4444',
-                    borderWidth: 2.5,
-                    pointRadius: 0,
-                    tension: 0.1,
-                    yAxisID: 'yPrice',
-                    fill: false
-                });
+            
+            // Try fetching VNINDEX candlestick history
+            let vnHistory = null;
+            try {
+                vnHistory = await fetchHistory('VNINDEX');
+            } catch(e) {
+                console.warn("Could not load VNINDEX candlestick history, falling back to line chart", e);
             }
-
-            breadthChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                color: '#9ca3af',
-                                font: { size: 10, family: 'Inter' },
-                                boxWidth: 12
-                            }
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(13, 19, 33, 0.95)',
-                            titleColor: '#f3f4f6',
-                            bodyColor: '#d1d5db',
-                            borderColor: 'rgba(255,255,255,0.08)',
-                            borderWidth: 1
-                        }
+            
+            // Create Lightweight Chart
+            const chart = LightweightCharts.createChart(container, {
+                ...LWC_THEME,
+                width: container.clientWidth,
+                height: 400,
+                leftPriceScale: {
+                    visible: true,
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    autoScale: false,
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.1,
                     },
-                    scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: {
-                                color: '#6b7280',
-                                font: { size: 9 },
-                                maxTicksLimit: 6
-                            }
-                        },
-                        yBreadth: {
-                            type: 'linear',
-                            position: 'left',
-                            min: 0,
-                            max: 100,
-                            grid: { color: 'rgba(255,255,255,0.04)' },
-                            ticks: {
-                                color: '#6b7280',
-                                font: { size: 9 },
-                                callback: val => val + '%'
-                            }
-                        },
-                        yPrice: {
-                            type: 'linear',
-                            position: 'right',
-                            grid: { display: false },
-                            ticks: {
-                                color: '#ef4444',
-                                font: { size: 9 },
-                                callback: val => formatPrice(val, true)
-                            }
-                        }
-                    }
+                },
+                rightPriceScale: {
+                    visible: true,
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    autoScale: true,
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.1,
+                    },
                 }
             });
+            
+            // Lock left price scale between 0 and 100 for percentage breadth
+            chart.priceScale('left').applyOptions({
+                minPrice: 0,
+                maxPrice: 100,
+            });
+            
+            // Add lines to LEFT scale
+            const ma10Series = chart.addLineSeries({
+                priceScaleId: 'left',
+                color: '#ffffff', // White
+                lineWidth: 2,
+                title: '% > MA10'
+            });
+            const ma20Series = chart.addLineSeries({
+                priceScaleId: 'left',
+                color: '#fbbf24', // Yellow
+                lineWidth: 2,
+                title: '% > MA20'
+            });
+            const ma50Series = chart.addLineSeries({
+                priceScaleId: 'left',
+                color: '#ef4444', // Red
+                lineWidth: 2,
+                title: '% > MA50'
+            });
+            
+            // Prepare line data
+            const ma10Data = [];
+            const ma20Data = [];
+            const ma50Data = [];
+            
+            for (let i = 0; i < data.dates.length; i++) {
+                const ts = d2ts(data.dates[i]);
+                if (data.MA10[i] !== null && data.MA10[i] !== undefined) {
+                    ma10Data.push({ time: ts, value: data.MA10[i] });
+                }
+                if (data.MA20[i] !== null && data.MA20[i] !== undefined) {
+                    ma20Data.push({ time: ts, value: data.MA20[i] });
+                }
+                if (data.MA50[i] !== null && data.MA50[i] !== undefined) {
+                    ma50Data.push({ time: ts, value: data.MA50[i] });
+                }
+            }
+            
+            ma10Series.setData(ma10Data);
+            ma20Series.setData(ma20Data);
+            ma50Series.setData(ma50Data);
+            
+            // Add VNINDEX to RIGHT scale
+            if (vnHistory) {
+                const candleSeries = chart.addCandlestickSeries({
+                    priceScaleId: 'right',
+                    upColor: '#00ff6a',
+                    downColor: '#ff3b3b',
+                    borderUpColor: '#00ff6a',
+                    borderDownColor: '#ff3b3b',
+                    wickUpColor: '#00ff6a',
+                    wickDownColor: '#ff3b3b',
+                    title: 'VNINDEX'
+                });
+                candleSeries.setData(ohlcv(vnHistory));
+            } else if (data.VNINDEX_Closes && data.VNINDEX_Closes.length > 0) {
+                // Fallback to line
+                const lineSeries = chart.addLineSeries({
+                    priceScaleId: 'right',
+                    color: '#ef4444',
+                    lineWidth: 2.5,
+                    title: 'VNINDEX (Close)'
+                });
+                const vnData = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    if (data.VNINDEX_Closes[i]) {
+                        vnData.push({ time: d2ts(data.dates[i]), value: data.VNINDEX_Closes[i] });
+                    }
+                }
+                lineSeries.setData(vnData);
+            }
+            
+            // Handle resizing
+            const ro = new ResizeObserver(() => {
+                chart.resize(container.clientWidth, 400);
+            });
+            ro.observe(container);
+            
+            // Store instance
+            breadthChartLwc = { chart, ro, dates: data.dates };
+            
+            // Set default view range (last 30 days)
+            setChartRange(30);
         }
 
-        // Change chart range view
+        // Change chart range view (sets zoom/visible logical range instead of recreating ChartJS)
         function setChartRange(days) {
             currentChartRange = days;
             const buttons = document.querySelectorAll('.chart-controls button');
@@ -2522,8 +2626,34 @@
             const eventTarget = window.event ? window.event.target : null;
             if (eventTarget) {
                 eventTarget.classList.add('active');
+            } else {
+                // fallback to find button by text content or dataset
+                const btns = document.querySelectorAll('.chart-controls button');
+                btns.forEach(btn => {
+                    if (days === 30 && btn.innerText.includes('30')) btn.classList.add('active');
+                    else if (days === 90 && btn.innerText.includes('90')) btn.classList.add('active');
+                    else if (days === 180 && btn.innerText.includes('180')) btn.classList.add('active');
+                    else if (days > 360 && btn.innerText.includes('Tất cả')) btn.classList.add('active');
+                });
             }
-            initBreadthChart();
+            
+            if (breadthChartLwc && breadthChartLwc.chart) {
+                const dates = breadthChartLwc.dates;
+                if (!dates || dates.length === 0) return;
+                
+                if (days >= dates.length) {
+                    breadthChartLwc.chart.timeScale().fitContent();
+                } else {
+                    const fromIndex = Math.max(0, dates.length - days);
+                    const toIndex = dates.length - 1;
+                    const fromTs = d2ts(dates[fromIndex]);
+                    const toTs = d2ts(dates[toIndex]);
+                    breadthChartLwc.chart.timeScale().setVisibleRange({
+                        from: fromTs,
+                        to: toTs
+                    });
+                }
+            }
         }
 
         // Lookup Search autocomplete (Tab 2)
@@ -2911,12 +3041,18 @@
         window.onclick = function(event) {
             const modal = document.getElementById('tickerDetailsModal');
             const dropdown = document.getElementById('lookupSuggestions');
+            const menuContent = document.getElementById('menuContent');
+            
             if (event.target === modal) {
                 closeTickerDetailsModal();
             }
             // Auto hide search dropdown suggestions if clicking elsewhere
             if (event.target !== document.getElementById('lookupSearchInput')) {
                 if (dropdown) dropdown.style.display = 'none';
+            }
+            // Auto hide menu dropdown if clicking elsewhere
+            if (!event.target.closest('.menu-dropdown')) {
+                if (menuContent) menuContent.classList.remove('show');
             }
         }
 
@@ -3113,18 +3249,6 @@
             document.getElementById('settingsMsg').innerHTML = '<span style="color:var(--accent-green)">✅ Đã lưu URL vào bộ nhớ trình duyệt!<br><small>Hãy cập nhật config.json trên server/repo để áp dụng cho lần chạy headless tiếp theo.</small></span>';
         }
 
-        function triggerUpdate(mode) {
-            alert(`Yêu cầu cập nhật (${mode}) đã được nhận. Vui lòng chạy lệnh 'python run_headless_update.py' từ terminal để thực thi.`);
-        }
-
-        function triggerCsvUpload() {
-            document.getElementById('csvFileInput').click();
-        }
-
-        function handleCsvUpload(event) {
-            alert("Tính năng import CSV trực tiếp trên giao diện web đang được phát triển. Vui lòng sử dụng script python để nạp dữ liệu.");
-        }
-
         // Close settings modal when clicking outside
         document.getElementById('settingsModal').addEventListener('click', (e) => {
             if (e.target === document.getElementById('settingsModal')) closeSettings();
@@ -3134,11 +3258,6 @@
         document.getElementById('settingsBtn').addEventListener('click', () => {
             const saved = localStorage.getItem('aic_vietstock_curl');
             if (saved) document.getElementById('settingsUrl').value = saved;
-        });
-
-        // Event listener for manual update trigger
-        document.getElementById('updateDataBtn').addEventListener('click', () => {
-            alert("Để cập nhật dữ liệu mới nhất, vui lòng chạy lệnh:\npython run_headless_update.py\ntrong terminal của bạn.");
         });
 
 

@@ -71,6 +71,8 @@ def run_sync_and_update():
         if refreshed:
             logger.info("✅ Đã làm mới token thành công! Thiết lập lại client...")
             client.refresh_from_config()
+            status = client.check_session_status()
+            logger.info(f"[*] Trạng thái phiên làm việc sau khi refresh: {status}")
         else:
             logger.error("❌ Không thể làm mới token bằng Selenium.")
             # We still proceed with the existing credentials/bypass small paging as a fallback
@@ -188,13 +190,14 @@ def run_sync_and_update():
                 logger.error(f"   ! Lỗi Index {ticker}: {e}")
                 
     # 5. Compute indicators & export
-    compute_and_export_dashboard(storage, affected_tickers)
+    compute_and_export_dashboard(storage, affected_tickers, vietstock_status=status)
 
-def compute_and_export_dashboard(storage, affected_tickers):
+def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=None):
     # Load existing analysis results if file exists to merge instead of overwrite
     existing_tickers_analysis = {}
     existing_market_indices = {}
     existing_market_breadth = {}
+    existing_vietstock_status = None
     
     output_dir = os.path.join(base_path, "Output")
     output_file = os.path.join(output_dir, "analysis_results.json")
@@ -208,9 +211,14 @@ def compute_and_export_dashboard(storage, affected_tickers):
                             existing_tickers_analysis[r["Ticker"]] = r
                     existing_market_indices = old_data.get("market_indices", {})
                     existing_market_breadth = old_data.get("market_breadth", {})
+                    existing_vietstock_status = old_data.get("vietstock_status", None)
             logger.info(f"💾 Đã tải {len(existing_tickers_analysis)} mã từ file analysis_results.json hiện tại để hợp nhất.")
         except Exception as e_load:
             logger.warning(f"⚠️ Không thể đọc file analysis_results.json cũ: {e_load}. Sẽ tạo mới.")
+
+    # Use existing status if not provided and it was saved previously
+    if vietstock_status is None:
+        vietstock_status = existing_vietstock_status or "UNKNOWN"
 
     # 5. Determine which tickers need recalculation
     if not affected_tickers:
@@ -679,6 +687,7 @@ def compute_and_export_dashboard(storage, affected_tickers):
     
     final_output = {
         "last_update": last_update_str,
+        "vietstock_status": vietstock_status,
         "market_breadth": market_breadth_data,
         "market_indices": market_indices,
         "categories_meta": categories_meta,
@@ -965,7 +974,7 @@ def run_csv_import(csv_paths):
     storage.save_active_registry(list(affected_tickers))
     
     # Tính toán toàn bộ chỉ báo và vẽ biểu đồ
-    compute_and_export_dashboard(storage, affected_tickers)
+    compute_and_export_dashboard(storage, affected_tickers, vietstock_status="CSV_MODE")
 
 def compute_market_breadth(data_dict):
     """Ported market breadth computation from TinvestApp._update_breadth_from_cache."""
