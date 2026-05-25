@@ -4100,47 +4100,47 @@
             // Initialize registry for this mount to manage line visibility toggles
             techReportSeriesRegistry[mountId] = {};
 
-            // Ichimoku spans first (behind candles) - using soft semi-transparent colors
+            // Ichimoku spans first (behind candles) - using bright, visible boundary lines
             if (data.SpanA) {
-                const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.2)',lineWidth:1,title:'SpanA',visible:techChartVisibility.SpanA});
+                const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:2,title:'SpanA',visible:techChartVisibility.SpanA,priceLineVisible:false});
                 sSpanA.setData(lineData(data,'SpanA'));
                 techReportSeriesRegistry[mountId].SpanA = sSpanA;
             }
             if (data.SpanB) {
-                const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.2)',lineWidth:1,title:'SpanB',visible:techChartVisibility.SpanB});
+                const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:2,title:'SpanB',visible:techChartVisibility.SpanB,priceLineVisible:false});
                 sSpanB.setData(lineData(data,'SpanB'));
                 techReportSeriesRegistry[mountId].SpanB = sSpanB;
             }
             
-            // Bright neon colors for other indicator lines
+            // Bright neon colors for other indicator lines (with priceLineVisible disabled to declutter)
             if (data.Tenkan) {
-                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title:'Tenkan',visible:techChartVisibility.Tenkan});
+                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title:'Tenkan',visible:techChartVisibility.Tenkan,priceLineVisible:false});
                 sTenkan.setData(lineData(data,'Tenkan'));
                 techReportSeriesRegistry[mountId].Tenkan = sTenkan;
             }
             if (data.Kijun) {
-                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title:'Kijun',visible:techChartVisibility.Kijun});
+                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title:'Kijun',visible:techChartVisibility.Kijun,priceLineVisible:false});
                 sKijun.setData(lineData(data,'Kijun'));
                 techReportSeriesRegistry[mountId].Kijun = sKijun;
             }
             if (data.Kijun65) {
-                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title:'Kijun65',visible:techChartVisibility.Kijun65});
+                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title:'Kijun65',visible:techChartVisibility.Kijun65,priceLineVisible:false});
                 sKijun65.setData(lineData(data,'Kijun65'));
                 techReportSeriesRegistry[mountId].Kijun65 = sKijun65;
             }
 
             if (data.MA10) {
-                const sMA10 = c1.addLineSeries({color:'#d946ef',lineWidth:1.5,title:'MA10',visible:techChartVisibility.MA10});
+                const sMA10 = c1.addLineSeries({color:'#ffffff',lineWidth:1.5,title:'MA10',visible:techChartVisibility.MA10,priceLineVisible:false});
                 sMA10.setData(lineData(data,'MA10'));
                 techReportSeriesRegistry[mountId].MA10 = sMA10;
             }
             if (data.MA20) {
-                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title:'MA20',visible:techChartVisibility.MA20});
+                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title:'MA20',visible:techChartVisibility.MA20,priceLineVisible:false});
                 sMA20.setData(lineData(data,'MA20'));
                 techReportSeriesRegistry[mountId].MA20 = sMA20;
             }
             if (data.MA50) {
-                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title:'MA50',visible:techChartVisibility.MA50});
+                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title:'MA50',visible:techChartVisibility.MA50,priceLineVisible:false});
                 sMA50.setData(lineData(data,'MA50'));
                 techReportSeriesRegistry[mountId].MA50 = sMA50;
             }
@@ -4593,47 +4593,47 @@
             // Initialize registry for this mount to manage line visibility toggles
             techReportSeriesRegistry[mountId] = {};
 
-            // Ichimoku spans first (behind candles) - using soft semi-transparent colors
+            // Ichimoku spans first (behind candles) - using bright, visible boundary lines
             if (data.SpanA) {
-                const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.2)',lineWidth:1,title:'SpanA',visible:techChartVisibility.SpanA});
+                const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:2,title:'SpanA',visible:techChartVisibility.SpanA,priceLineVisible:false});
                 sSpanA.setData(lineData(data,'SpanA'));
                 techReportSeriesRegistry[mountId].SpanA = sSpanA;
             }
             if (data.SpanB) {
-                const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.2)',lineWidth:1,title:'SpanB',visible:techChartVisibility.SpanB});
+                const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:2,title:'SpanB',visible:techChartVisibility.SpanB,priceLineVisible:false});
                 sSpanB.setData(lineData(data,'SpanB'));
                 techReportSeriesRegistry[mountId].SpanB = sSpanB;
             }
             
-            // Bright neon colors for other indicator lines
+            // Bright neon colors for other indicator lines (with priceLineVisible disabled to declutter)
             if (data.Tenkan) {
-                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title:'Tenkan',visible:techChartVisibility.Tenkan});
+                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title:'Tenkan',visible:techChartVisibility.Tenkan,priceLineVisible:false});
                 sTenkan.setData(lineData(data,'Tenkan'));
                 techReportSeriesRegistry[mountId].Tenkan = sTenkan;
             }
             if (data.Kijun) {
-                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title:'Kijun',visible:techChartVisibility.Kijun});
+                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title:'Kijun',visible:techChartVisibility.Kijun,priceLineVisible:false});
                 sKijun.setData(lineData(data,'Kijun'));
                 techReportSeriesRegistry[mountId].Kijun = sKijun;
             }
             if (data.Kijun65) {
-                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title:'Kijun65',visible:techChartVisibility.Kijun65});
+                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title:'Kijun65',visible:techChartVisibility.Kijun65,priceLineVisible:false});
                 sKijun65.setData(lineData(data,'Kijun65'));
                 techReportSeriesRegistry[mountId].Kijun65 = sKijun65;
             }
 
             if (data.MA10) {
-                const sMA10 = c1.addLineSeries({color:'#d946ef',lineWidth:1.5,title:'MA10',visible:techChartVisibility.MA10});
+                const sMA10 = c1.addLineSeries({color:'#ffffff',lineWidth:1.5,title:'MA10',visible:techChartVisibility.MA10,priceLineVisible:false});
                 sMA10.setData(lineData(data,'MA10'));
                 techReportSeriesRegistry[mountId].MA10 = sMA10;
             }
             if (data.MA20) {
-                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title:'MA20',visible:techChartVisibility.MA20});
+                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title:'MA20',visible:techChartVisibility.MA20,priceLineVisible:false});
                 sMA20.setData(lineData(data,'MA20'));
                 techReportSeriesRegistry[mountId].MA20 = sMA20;
             }
             if (data.MA50) {
-                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title:'MA50',visible:techChartVisibility.MA50});
+                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title:'MA50',visible:techChartVisibility.MA50,priceLineVisible:false});
                 sMA50.setData(lineData(data,'MA50'));
                 techReportSeriesRegistry[mountId].MA50 = sMA50;
             }
