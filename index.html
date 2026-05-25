@@ -1690,14 +1690,11 @@
         }
         .chart-hint span { opacity: 0.7; }
 
-        /* 2×2 Grid */
+        /* Vertical list for the 4 charts */
         .chart-grid-4 {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        @media (max-width: 900px) {
-            .chart-grid-4 { grid-template-columns: 1fr; }
+            grid-template-columns: 1fr;
+            gap: 20px;
         }
 
         /* Single chart cell */
@@ -1750,7 +1747,7 @@
         .chart-cell-body {
             flex: 1;
             position: relative;
-            min-height: 380px;
+            min-height: 600px;
         }
 
         /* LightweightCharts host divs */
@@ -3547,6 +3544,23 @@
         // ── Utility: date string → Unix seconds ──
         function d2ts(s) { return Math.floor(new Date(s + 'T00:00:00Z').getTime() / 1000); }
 
+        // Helper to set chart range default to 90 days from the latest date
+        function applyDefaultChartRange(chartObj, dates, days = 90) {
+            if (!dates || dates.length === 0) return;
+            if (days >= dates.length) {
+                chartObj.timeScale().fitContent();
+            } else {
+                const fromIndex = Math.max(0, dates.length - days);
+                const toIndex = dates.length - 1;
+                const fromTs = d2ts(dates[fromIndex]);
+                const toTs = d2ts(dates[toIndex]);
+                chartObj.timeScale().setVisibleRange({
+                    from: fromTs,
+                    to: toTs
+                });
+            }
+        }
+
         // ── Detect price scale: indices store raw points (>50), stocks store price/1000 ──
         function priceScale(data) {
             // If closes values are already large (>50), they are index points, no scaling needed
@@ -3659,7 +3673,7 @@
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
 
-            const h1 = 220, h2 = 85, h3 = 85;
+            const h1 = 360, h2 = 120, h3 = 120;
 
             const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
             const d2 = document.createElement('div'); d2.style.cssText = `flex:none;height:${h2}px;border-top:1px solid rgba(255,255,255,0.04);`;
@@ -3704,7 +3718,7 @@
             }
 
             syncCharts([c1,c2,c3]);
-            c1.timeScale().fitContent();
+            applyDefaultChartRange(c1, data.dates, 90);
             return c1;
         }
 
@@ -3716,7 +3730,7 @@
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
 
-            const h1 = 200, h2 = 185;
+            const h1 = 320, h2 = 280;
             const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
             const d2 = document.createElement('div'); d2.style.cssText = `flex:none;height:${h2}px;border-top:1px solid rgba(255,255,255,0.04);`;
             root.append(d1, d2);
@@ -3774,7 +3788,7 @@
             if (data.T2_ST_Upper) c2.addLineSeries({color:'rgba(255,59,59,0.4)',lineWidth:1,lineStyle:2}).setData(lineData(data,'T2_ST_Upper'));
 
             syncCharts([c1,c2]);
-            c1.timeScale().fitContent();
+            applyDefaultChartRange(c1, data.dates, 90);
             return c1;
         }
 
@@ -3786,7 +3800,7 @@
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
 
-            const h1 = 265, h2 = 115;
+            const h1 = 400, h2 = 200;
             const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
             const d2 = document.createElement('div'); d2.style.cssText = `flex:none;height:${h2}px;border-top:1px solid rgba(255,255,255,0.04);`;
             root.append(d1, d2);
@@ -3837,7 +3851,7 @@
             }).setData(ohlcv(data));
 
             syncCharts([c1,c2]);
-            c1.timeScale().fitContent();
+            applyDefaultChartRange(c1, data.dates, 90);
             return c1;
         }
 
@@ -3849,7 +3863,7 @@
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
 
-            const h1 = 180, h2 = 68, h3 = 68, h4 = 68;
+            const h1 = 300, h2 = 100, h3 = 100, h4 = 100;
             const mk = (h, border=true) => {
                 const d = document.createElement('div');
                 d.style.cssText = `flex:none;height:${h}px;${border?'border-top:1px solid rgba(255,255,255,0.04);':''}`;
@@ -3911,7 +3925,7 @@
             if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig'}).setData(lineData(data,'MACD_Signal',1));
 
             syncCharts([c1,c2,c3,c4]);
-            c1.timeScale().fitContent();
+            applyDefaultChartRange(c1, data.dates, 90);
             return c1;
         }
 
@@ -4043,7 +4057,7 @@
             const {chart:c3,ro:r3}=mkChart(d3,h3); instances.push({chart:c3,ro:r3});
             if(data.RS13)c3.addLineSeries({color:'#e2e8f0',lineWidth:2,title:'RS13'}).setData(lineData(data,'RS13',1));
             if(data.RS52)c3.addLineSeries({color:'#fbbf24',lineWidth:2,title:'RS52'}).setData(lineData(data,'RS52',1));
-            syncCharts([c1,c2,c3]); c1.timeScale().fitContent();
+            syncCharts([c1,c2,c3]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
         function renderHeikinChartFs(mountId, data, instances) {
@@ -4064,7 +4078,7 @@
             const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
             c2.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'}).setData(ohlcv(data));
             if(data.T2_SMA)c2.addLineSeries({color:'#00ffaa',lineWidth:3}).setData(lineData(data,'T2_SMA'));
-            syncCharts([c1,c2]); c1.timeScale().fitContent();
+            syncCharts([c1,c2]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
         function renderHeatmapChartFs(mountId, data, instances) {
@@ -4084,7 +4098,7 @@
             }
             const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
             c2.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'}).setData(ohlcv(data));
-            syncCharts([c1,c2]); c1.timeScale().fitContent();
+            syncCharts([c1,c2]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
         function renderTechReportChartFs(mountId, data, instances) {
@@ -4114,7 +4128,7 @@
             if(data.MACD_Hist){const hArr=data.dates.map((dt,i)=>{const v=data.MACD_Hist[i];if(!v&&v!==0)return null;return{time:d2ts(dt),value:v,color:v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};}).filter(Boolean);c4.addHistogramSeries({priceLineVisible:false}).setData(hArr);}
             if(data.MACD)c4.addLineSeries({color:'#60a5fa',lineWidth:1.5}).setData(lineData(data,'MACD',1));
             if(data.MACD_Signal)c4.addLineSeries({color:'#fb923c',lineWidth:1.5}).setData(lineData(data,'MACD_Signal',1));
-            syncCharts([c1,c2,c3,c4]); c1.timeScale().fitContent();
+            syncCharts([c1,c2,c3,c4]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
         // ================================================================
