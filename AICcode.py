@@ -31,7 +31,7 @@ from tkinter import filedialog, messagebox
 from tinvest.data_loader import _normalize_columns, _clean_dataframe
 
 
-from tinvest.analyzer import analyze_stock, format_report
+from tinvest.analyzer import analyze_stock, format_report, evaluate_heatmap
 
 
 import os
@@ -2728,14 +2728,81 @@ class TinvestApp:
                 hot_pct = round((hot_aligned / 20.0) * 100, 1)
                 retailer_pct = round((retailer_aligned / 20.0) * 100, 1)
                 
-                # History (last 30 trading days) for mini charts
-                recent_df = df.tail(30)
-                history = {
-                    "dates": [pd.to_datetime(d).strftime("%Y-%m-%d") if not pd.isna(d) else "N/A" for d in recent_df['Date']],
-                    "closes": [float(c) * 1000 for c in recent_df['Close']],
-                    "volumes": [int(v) for v in recent_df['Volume']]
-                }
+                # Generate detailed text report
+                try:
+                    close_26 = df['Close'].iloc[-26] if len(df) > 26 else df['Close'].iloc[0]
+                    heatmap_eval_val = evaluate_heatmap(df)
+                    
+                    report_input = {
+                        "ticker": ticker.upper(),
+                        "price": float(df['Close'].iloc[-1]),
+                        "date": pd.to_datetime(df['Date'].iloc[-1]).strftime("%Y-%m-%d") if not pd.isna(df['Date'].iloc[-1]) else "N/A",
+                        "ichi": data.get("ichi"),
+                        "vsa": data.get("vsa"),
+                        "ma_trend": data.get("ma_trend"),
+                        "adv": data.get("adv"),
+                        "accum": data.get("accum"),
+                        "valuation": val,
+                        "state_rules": data.get("state_rules"),
+                        "close_26": float(close_26),
+                        "ma20": float(df['MA20'].iloc[-1]) if 'MA20' in df.columns else float(df['Close'].rolling(20).mean().iloc[-1]),
+                        "ma50": float(df['MA50'].iloc[-1]) if 'MA50' in df.columns else float(df['Close'].rolling(50).mean().iloc[-1]),
+                        "heatmap_eval": heatmap_eval_val,
+                        "mcdx_eval": mcdx_eval
+                    }
+                    report_text = format_report(report_input)
+                except Exception as e_rep:
+                    report_text = f"Không có báo cáo chi tiết cho mã {ticker}."
+
+                # Portfolio Engine compatibility indicators
+                mcdx_banker = float(df['MCDX_Banker'].iloc[-1]) if 'MCDX_Banker' in df.columns else 10
+                prev_mcdx_banker = float(df['MCDX_Banker'].iloc[-2]) if len(df) > 1 and 'MCDX_Banker' in df.columns else mcdx_banker
+                adx = float(df['ADX'].iloc[-1]) if 'ADX' in df.columns else 20
+                ha_color = str(df['HA_Color'].iloc[-1]) if 'HA_Color' in df.columns else 'Green'
+                ma20 = float(df['MA20'].iloc[-1]) if 'MA20' in df.columns else current_p / 1000
+                vol = float(df['Volume'].iloc[-1]) if 'Volume' in df.columns else 0
+                vol_avg = float(df['AvgVolume20'].iloc[-1]) if 'AvgVolume20' in df.columns else vol
+                
+                mcdx_weak = (mcdx_banker < prev_mcdx_banker) and (mcdx_banker < 15)
+                adx_low = adx < 20
+                heikin_red = (ha_color.lower() == 'red')
+                price_below_ma20 = (current_p / 1000) < ma20
+                tech_weak = mcdx_weak or adx_low or heikin_red or price_below_ma20
+                
+                sideways_near_res = False
+                p_res_vnd = float(val.get('r1', 0)) * 1000
+                if len(df) >= 4 and p_res_vnd > 0:
+                    recent_highs = df['High'].iloc[-4:].max() * 1000
+                    recent_lows = df['Low'].iloc[-4:].min() * 1000
+                    recent_vols = df['Volume'].iloc[-4:].mean()
+                    if recent_highs >= p_res_vnd * 0.98 and (recent_highs - recent_lows)/recent_lows < 0.05 and recent_vols > vol_avg:
+                        sideways_near_res = True
                         
+                # Determine State Signal
+                state_val = val.get("state", "NONE")
+                sig_map = {
+                    "STRONG": "Mua mạnh (Trend Leader)", 
+                    "ADD_2": "Gia tăng vị thế 2 (Confirm)",
+                    "ADD_1": "Gia tăng vị thế 1 (Pullback)", 
+                    "EARLY": "Mua sớm (Thăm dò)", 
+                    "NONE": "Chưa có tín hiệu dứt khoát"
+                }
+                holding_sig = sig_map.get(state_val, "Chưa có tín hiệu dứt khoát")
+                
+                rt_sig_map = {
+                    "BREAKOUT_BUY": "MUA BREAKOUT (Tiền tấn công)", 
+                    "PULLBACK_BUY": "MUA PULLBACK (Tiền gốc)",
+                    "RETEST_BUY": "MUA RETEST (Điểm Giàu)", 
+                    "CONTINUATION_BUY": "GIA TĂNG (Trend Confirm)",
+                    "TREND_FOLLOW": "ÔM TIẾP (Theo sóng)", 
+                    "TAKE_PROFIT": "CHỐT LÃI (Canh nhả hàng)",
+                    "EXIT_OR_SHORT": "THOÁT HÀNG (Rủi ro)", 
+                    "EXIT_FAST": "CHẠY NGAY (Bẫy giá)", 
+                    "SHORT": "Đứng ngoài hoàn toàn"
+                }
+                realtime_sig = rt_sig_map.get(data.get("state_rules", {}).get("signal", ""), "")
+                state_signal = (realtime_sig if realtime_sig else holding_sig).upper()
+
                 ticker_record = {
                     "Ticker": ticker,
                     "Price": int(current_p),
@@ -2743,6 +2810,7 @@ class TinvestApp:
                     "Entry": int(ep * 1000) if ep > 0 else None,
                     "Target": int(tp * 1000) if tp > 0 else None,
                     "Target2": int(tp2 * 1000) if tp2 > 0 else None,
+                    "ReportText": report_text,
                     "StopLoss": int(sl * 1000) if sl > 0 else None,
                     "RR": f"{round(rr_ratio, 1)}/1" if rr_ratio > 0 else "N/A",
                     "RiskScore": int(val_score),
@@ -2763,6 +2831,16 @@ class TinvestApp:
                     "AccumulationNotes": accum.get("notes", []),
                     "AccumulationRangePct": float(accum.get("range_pct", 0.0)),
                     "ReadyToBreak": bool(accum.get("ready_to_break", False)),
+                    
+                    # Portfolio Engine helpers
+                    "Support1": int(val.get("s1", 0) * 1000) if val.get("s1", 0) > 0 else None,
+                    "Resistance1": int(val.get("r1", 0) * 1000) if val.get("r1", 0) > 0 else None,
+                    "TrendStatus": str(ma_trend.get("trend_status", "Sideway")),
+                    "TechWeak": bool(tech_weak),
+                    "SidewaysNearRes": bool(sideways_near_res),
+                    "StateSignal": state_signal,
+                    "AntiTrap": bool(data.get("state_rules", {}).get("metrics", {}).get("anti_trap_block", False)),
+                    "AvoidEntry": bool(data.get("state_rules", {}).get("avoid_entry", False)),
                     
                     # MCDX Cash Flow
                     "MCDX": {

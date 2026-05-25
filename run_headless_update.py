@@ -726,6 +726,55 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             logger.warning(f"⚠️ Không thể sinh báo cáo chi tiết cho mã {ticker}: {e_rep}")
             report_text = f"Không có báo cáo chi tiết cho mã {ticker}."
 
+        # Portfolio Engine compatibility indicators
+        mcdx_banker = float(df['MCDX_Banker'].iloc[-1]) if 'MCDX_Banker' in df.columns else 10
+        prev_mcdx_banker = float(df['MCDX_Banker'].iloc[-2]) if len(df) > 1 and 'MCDX_Banker' in df.columns else mcdx_banker
+        adx = float(df['ADX'].iloc[-1]) if 'ADX' in df.columns else 20
+        ha_color = str(df['HA_Color'].iloc[-1]) if 'HA_Color' in df.columns else 'Green'
+        ma20 = float(df['MA20'].iloc[-1]) if 'MA20' in df.columns else current_p / 1000
+        vol = float(df['Volume'].iloc[-1]) if 'Volume' in df.columns else 0
+        vol_avg = float(df['AvgVolume20'].iloc[-1]) if 'AvgVolume20' in df.columns else vol
+        
+        mcdx_weak = (mcdx_banker < prev_mcdx_banker) and (mcdx_banker < 15)
+        adx_low = adx < 20
+        heikin_red = (ha_color.lower() == 'red')
+        price_below_ma20 = (current_p / 1000) < ma20
+        tech_weak = mcdx_weak or adx_low or heikin_red or price_below_ma20
+        
+        sideways_near_res = False
+        p_res_vnd = float(val.get('r1', 0)) * 1000
+        if len(df) >= 4 and p_res_vnd > 0:
+            recent_highs = df['High'].iloc[-4:].max() * 1000
+            recent_lows = df['Low'].iloc[-4:].min() * 1000
+            recent_vols = df['Volume'].iloc[-4:].mean()
+            if recent_highs >= p_res_vnd * 0.98 and (recent_highs - recent_lows)/recent_lows < 0.05 and recent_vols > vol_avg:
+                sideways_near_res = True
+                
+        # Determine State Signal
+        state_val = val.get("state", "NONE")
+        sig_map = {
+            "STRONG": "Mua mạnh (Trend Leader)", 
+            "ADD_2": "Gia tăng vị thế 2 (Confirm)",
+            "ADD_1": "Gia tăng vị thế 1 (Pullback)", 
+            "EARLY": "Mua sớm (Thăm dò)", 
+            "NONE": "Chưa có tín hiệu dứt khoát"
+        }
+        holding_sig = sig_map.get(state_val, "Chưa có tín hiệu dứt khoát")
+        
+        rt_sig_map = {
+            "BREAKOUT_BUY": "MUA BREAKOUT (Tiền tấn công)", 
+            "PULLBACK_BUY": "MUA PULLBACK (Tiền gốc)",
+            "RETEST_BUY": "MUA RETEST (Điểm Giàu)", 
+            "CONTINUATION_BUY": "GIA TĂNG (Trend Confirm)",
+            "TREND_FOLLOW": "ÔM TIẾP (Theo sóng)", 
+            "TAKE_PROFIT": "CHỐT LÃI (Canh nhả hàng)",
+            "EXIT_OR_SHORT": "THOÁT HÀNG (Rủi ro)", 
+            "EXIT_FAST": "CHẠY NGAY (Bẫy giá)", 
+            "SHORT": "Đứng ngoài hoàn toàn"
+        }
+        realtime_sig = rt_sig_map.get(data.get("state_rules", {}).get("signal", ""), "")
+        state_signal = (realtime_sig if realtime_sig else holding_sig).upper()
+
         # Create ticker record
         ticker_record = {
             "Ticker": ticker,
@@ -755,6 +804,16 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             "AccumulationNotes": accum.get("notes", []),
             "AccumulationRangePct": float(accum.get("range_pct", 0.0)),
             "ReadyToBreak": bool(accum.get("ready_to_break", False)),
+            
+            # Portfolio Engine helpers
+            "Support1": int(val.get("s1", 0) * 1000) if val.get("s1", 0) > 0 else None,
+            "Resistance1": int(val.get("r1", 0) * 1000) if val.get("r1", 0) > 0 else None,
+            "TrendStatus": str(ma_trend.get("trend_status", "Sideway")),
+            "TechWeak": bool(tech_weak),
+            "SidewaysNearRes": bool(sideways_near_res),
+            "StateSignal": state_signal,
+            "AntiTrap": bool(data.get("state_rules", {}).get("metrics", {}).get("anti_trap_block", False)),
+            "AvoidEntry": bool(data.get("state_rules", {}).get("avoid_entry", False)),
             
             # MCDX Cash Flow
             "MCDX": {
@@ -1128,6 +1187,31 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
             # Convert Date to string
             df['Date'] = pd.to_datetime(df['Date'])
             df = df.sort_values('Date').reset_index(drop=True)
+            
+            # Calculate RS13 / RS52 against VNINDEX
+            df_vn = data_dict.get("VNINDEX")
+            if df_vn is not None and not df_vn.empty:
+                try:
+                    df_vn_temp = df_vn.copy()
+                    df_vn_temp['Date'] = pd.to_datetime(df_vn_temp['Date'])
+                    df_vn_indexed = df_vn_temp.set_index('Date')
+                    
+                    bench_close = df['Date'].map(df_vn_indexed['Close']).ffill().bfill()
+                    rs_raw = df['Close'] / (bench_close + 1e-10)
+                    
+                    rs52_min = rs_raw.rolling(window=260, min_periods=1).min()
+                    rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
+                    df['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
+                    
+                    rs13_min = rs_raw.rolling(window=65, min_periods=1).min()
+                    rs13_max = rs_raw.rolling(window=65, min_periods=1).max()
+                    df['RS13'] = 100 * (rs_raw - rs13_min) / (rs13_max - rs13_min + 0.0001)
+                except Exception as e_rs:
+                    df['RS13'] = 50.0
+                    df['RS52'] = 50.0
+            else:
+                df['RS13'] = 50.0
+                df['RS52'] = 50.0
             
             record = {
                 "ticker": t,
