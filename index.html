@@ -1694,20 +1694,24 @@
         .chart-grid-4 {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 20px;
+            gap: 32px;
         }
 
         /* Single chart cell */
         .chart-cell {
             background: #000000;
-            border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            transition: border-color 0.2s;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
-        .chart-cell:hover { border-color: rgba(124,58,237,0.35); }
+        .chart-cell:hover {
+            border-color: rgba(139, 92, 246, 0.4);
+            box-shadow: 0 6px 24px rgba(139, 92, 246, 0.15);
+        }
 
         .chart-cell-header {
             display: flex;
@@ -1748,6 +1752,76 @@
             flex: 1;
             position: relative;
             min-height: 600px;
+        }
+        .chart-cell-evaluation {
+            background: rgba(139, 92, 246, 0.03);
+            border-top: 1px dashed rgba(255, 255, 255, 0.06);
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+            padding: 10px 14px;
+            font-size: 0.78rem;
+            color: #d1d5db;
+            line-height: 1.45;
+        }
+        .chart-cell-evaluation .eval-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .chart-cell-evaluation .eval-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .chart-cell-evaluation .eval-row:last-child {
+            margin-bottom: 0;
+        }
+        .chart-cell-evaluation .eval-row span {
+            color: #9ca3af;
+        }
+        .chart-cell-evaluation .eval-row strong {
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+        }
+        .eval-badge-inline {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 6px;
+            line-height: 1.3;
+        }
+        .eval-badge-inline.bullish {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .eval-badge-inline.bearish {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .eval-badge-inline.neutral {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .chart-cell-footer {
+            background: rgba(255, 255, 255, 0.015);
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 10px 14px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            font-family: 'Outfit', sans-serif;
         }
 
         /* LightweightCharts host divs */
@@ -1948,6 +2022,10 @@
                                 <button class="chart-expand-btn" onclick="expandChart('market','gp')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="market-mount-gp"></div>
+                            <div class="chart-cell-evaluation" id="market-eval-gp"></div>
+                            <div class="chart-cell-footer">
+                                💡 <strong>Ý nghĩa:</strong> Hệ thống GreenPink kết hợp với Octopus giúp xác định động lượng dòng tiền lớn (Banker/Hot Money) và các điểm đảo chiều sớm của xu hướng giá thông qua hai đường xFast/xSlow.
+                            </div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
@@ -1955,6 +2033,10 @@
                                 <button class="chart-expand-btn" onclick="expandChart('market','heikin')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="market-mount-heikin"></div>
+                            <div class="chart-cell-evaluation" id="market-eval-heikin"></div>
+                            <div class="chart-cell-footer">
+                                💡 <strong>Ý nghĩa:</strong> Sử dụng nến Heikin-Ashi để làm mịn xu hướng giá kết hợp dải Hull MA và chỉ báo NW Stop, giúp loại bỏ nhiễu ngắn hạn và xác định điểm mua/bán (Buy/Sell) mạnh mẽ.
+                            </div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
@@ -1962,6 +2044,10 @@
                                 <button class="chart-expand-btn" onclick="expandChart('market','heatmap')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="market-mount-heatmap"></div>
+                            <div class="chart-cell-evaluation" id="market-eval-heatmap"></div>
+                            <div class="chart-cell-footer">
+                                💡 <strong>Ý nghĩa:</strong> Bản đồ nhiệt (Heatmap Bands) theo dõi các vùng cung cầu và phân phối giá của cổ phiếu, kết hợp Money Flow giúp phát hiện dòng tiền âm thầm gom hàng hoặc rút lui.
+                            </div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
@@ -1969,6 +2055,10 @@
                                 <button class="chart-expand-btn" onclick="expandChart('market','techreport')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="market-mount-techreport"></div>
+                            <div class="chart-cell-evaluation" id="market-eval-techreport"></div>
+                            <div class="chart-cell-footer">
+                                💡 <strong>Ý nghĩa:</strong> Tổng hợp các chỉ báo xu hướng và động lượng kinh điển bao gồm Ichimoku Cloud, hệ thống MA Lines (MA10/20/50), dòng tiền MCDX, sức mạnh xu hướng ADX và chỉ báo MACD.
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -2947,8 +3037,8 @@
             container.style.display = 'block';
             
             let riskClass = 'green';
-            if (t.RiskScore >= 7) riskClass = 'red';
-            else if (t.RiskScore >= 4) riskClass = 'orange';
+            if (t.RiskScore >= 70) riskClass = 'red';
+            else if (t.RiskScore >= 40) riskClass = 'orange';
 
             let vsaStatusText = t.Diagnostics.vsa.status;
             let vsaActionText = t.Diagnostics.vsa.action;
@@ -2967,6 +3057,7 @@
                                 <span class="action-badge ${getActionClass(t.Action)}">${t.Action}</span>
                             </div>
                             <div class="stock-price-box">
+                                <span style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 2px;">Giá hiện tại</span>
                                 <span class="stock-price">${formatPrice(t.Price)}</span>
                                 <span class="stock-vol">Vol: ${formatVolume(t.Volume)}</span>
                             </div>
@@ -2978,9 +3069,15 @@
                                 <strong>${formatPrice(t.Entry)}</strong>
                             </div>
                             <div class="detail-metric-row">
-                                <span>Mục tiêu chốt lời (Target):</span>
+                                <span>Mục tiêu chốt lời (Target 1):</span>
                                 <strong class="text-green">${formatPrice(t.Target)}</strong>
                             </div>
+                            ${t.Target2 ? `
+                            <div class="detail-metric-row">
+                                <span>Mục tiêu chốt lời (Target 2):</span>
+                                <strong class="text-green">${formatPrice(t.Target2)}</strong>
+                            </div>
+                            ` : ''}
                             <div class="detail-metric-row">
                                 <span>Cắt lỗ (Bán một phần):</span>
                                 <strong class="text-red">${formatPrice(t.StopLoss)}</strong>
@@ -3001,7 +3098,7 @@
                                 <span>Đánh giá Rủi ro:</span>
                                 <span class="risk-badge">
                                     <span class="risk-dot ${riskClass}"></span>
-                                    <strong>${t.RiskScore}/10 (${t.RiskPct.toFixed(1)}%)</strong>
+                                    <strong>${t.RiskScore}/100 (${t.RiskPct.toFixed(1)}%)</strong>
                                 </span>
                             </div>
                         </div>
@@ -3059,7 +3156,7 @@
                         <div class="eval-metrics">
                             <div class="eval-score-container">
                                 <div class="eval-score-label">Điểm số Cơ Hội</div>
-                                <div class="eval-score-value">${t.OpportunityScore}<span>/10</span></div>
+                                <div class="eval-score-value">${t.OpportunityScore}<span>/100</span></div>
                                 <div class="eval-score-desc">${t.OpportunityDesc}</div>
                             </div>
                             <div class="divider-h"></div>
@@ -3143,6 +3240,10 @@
                                 <button class="chart-expand-btn" onclick="expandChart('${containerId}','gp')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="${containerId}-mount-gp"></div>
+                            <div class="chart-cell-evaluation" id="${containerId}-eval-gp"></div>
+                            <div class="chart-cell-footer">
+                                💡 <strong>Ý nghĩa:</strong> Hệ thống GreenPink kết hợp với Octopus giúp xác định động lượng dòng tiền lớn (Banker/Hot Money) và các điểm đảo chiều sớm của xu hướng giá thông qua hai đường xFast/xSlow.
+                            </div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
@@ -3150,6 +3251,10 @@
                                 <button class="chart-expand-btn" onclick="expandChart('${containerId}','heikin')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="${containerId}-mount-heikin"></div>
+                            <div class="chart-cell-evaluation" id="${containerId}-eval-heikin"></div>
+                            <div class="chart-cell-footer">
+                                💡 <strong>Ý nghĩa:</strong> Sử dụng nến Heikin-Ashi để làm mịn xu hướng giá kết hợp dải Hull MA và chỉ báo NW Stop, giúp loại bỏ nhiễu ngắn hạn và xác định điểm mua/bán (Buy/Sell) mạnh mẽ.
+                            </div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
@@ -3157,6 +3262,10 @@
                                 <button class="chart-expand-btn" onclick="expandChart('${containerId}','heatmap')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="${containerId}-mount-heatmap"></div>
+                            <div class="chart-cell-evaluation" id="${containerId}-eval-heatmap"></div>
+                            <div class="chart-cell-footer">
+                                💡 <strong>Ý nghĩa:</strong> Bản đồ nhiệt (Heatmap Bands) theo dõi các vùng cung cầu và phân phối giá của cổ phiếu, kết hợp Money Flow giúp phát hiện dòng tiền âm thầm gom hàng hoặc rút lui.
+                            </div>
                         </div>
                         <div class="chart-cell">
                             <div class="chart-cell-header">
@@ -3164,6 +3273,10 @@
                                 <button class="chart-expand-btn" onclick="expandChart('${containerId}','techreport')">⛶ Mở rộng</button>
                             </div>
                             <div class="chart-cell-body" id="${containerId}-mount-techreport"></div>
+                            <div class="chart-cell-evaluation" id="${containerId}-eval-techreport"></div>
+                            <div class="chart-cell-footer">
+                                💡 <strong>Ý nghĩa:</strong> Tổng hợp các chỉ báo xu hướng và động lượng kinh điển bao gồm Ichimoku Cloud, hệ thống MA Lines (MA10/20/50), dòng tiền MCDX, sức mạnh xu hướng ADX và chỉ báo MACD.
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -3394,8 +3507,8 @@
                 });
 
                 let riskClass = 'green';
-                if (t.RiskScore >= 7) riskClass = 'red';
-                else if (t.RiskScore >= 4) riskClass = 'orange';
+                if (t.RiskScore >= 70) riskClass = 'red';
+                else if (t.RiskScore >= 40) riskClass = 'orange';
 
                 const card = document.createElement('div');
                 card.className = 'ticker-card';
@@ -3432,7 +3545,7 @@
                         <div class="risk-rating">
                             <span>Rủi ro:</span>
                             <span class="risk-dot ${riskClass}"></span>
-                            <strong style="color: white">${t.RiskScore}/10</strong>
+                            <strong style="color: white">${t.RiskScore}/100</strong>
                         </div>
                     </div>
 
@@ -3631,13 +3744,24 @@
         }
 
         // ── Create a LWC chart inside a cell-body div ──
-        function mkChart(hostEl, h, extraOpts = {}) {
+        function mkChart(hostEl, h, dates = null, extraOpts = {}) {
             hostEl.style.height = h + 'px';
             const chart = LightweightCharts.createChart(hostEl, {
-                ...LWC_THEME, width: hostEl.clientWidth, height: h, ...extraOpts
+                ...LWC_THEME, width: hostEl.clientWidth || 100, height: h, ...extraOpts
             });
-            const ro = new ResizeObserver(() =>
-                chart.resize(hostEl.clientWidth, hostEl.offsetHeight || h));
+            let rangeSet = false;
+            const ro = new ResizeObserver(() => {
+                const w = hostEl.clientWidth;
+                if (w > 0) {
+                    chart.resize(w, hostEl.offsetHeight || h);
+                    if (dates && !rangeSet) {
+                        rangeSet = true;
+                        requestAnimationFrame(() => {
+                            applyDefaultChartRange(chart, dates, 90);
+                        });
+                    }
+                }
+            });
             ro.observe(hostEl);
             return { chart, ro };
         }
@@ -3681,7 +3805,7 @@
             root.append(d1, d2, d3);
 
             // Pane 1: Candles + GreenPink cloud + xFast/xSlow + BB
-            const {chart: c1, ro: ro1} = mkChart(d1, h1);
+            const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates);
             instances.push({chart: c1, ro: ro1});
 
             const cs = c1.addCandlestickSeries({
@@ -3736,7 +3860,7 @@
             root.append(d1, d2);
 
             // Pane 1: Heikin-Ashi candles + Hull + NW stop + TC trend
-            const {chart: c1, ro: ro1} = mkChart(d1, h1);
+            const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates);
             instances.push({chart:c1,ro:ro1});
 
             if (data.HK_Flower_Open && data.HK_Flower_Close) {
@@ -3806,7 +3930,7 @@
             root.append(d1, d2);
 
             // Pane 1: Heatmap bands + Flower candles
-            const {chart: c1, ro: ro1} = mkChart(d1, h1);
+            const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates);
             instances.push({chart:c1,ro:ro1});
 
             [
@@ -3872,7 +3996,7 @@
             const d1 = mk(h1,false), d2 = mk(h2), d3 = mk(h3), d4 = mk(h4);
 
             // Pane 1: Candles + MA + Ichimoku
-            const {chart: c1, ro: ro1} = mkChart(d1, h1);
+            const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates);
             instances.push({chart:c1,ro:ro1});
 
             // Ichimoku spans first (behind candles)
@@ -3968,6 +4092,124 @@
 
             // Cross-chart time-scale sync (all 4 primary panes scroll together)
             syncCharts(primaryCharts);
+
+            // Update evaluations for each chart cell
+            updateChartEvaluations(mountPrefix, ticker);
+        }
+
+        // ── Helper to determine evaluation badge color and content ──
+        function getEvalBadge(status) {
+            if (!status) return '';
+            const s = status.toLowerCase();
+            let cls = 'neutral';
+            let label = status;
+            if (s.includes('bull') || s.includes('uptrend') || s.includes('buy') || s.includes('tăng') || s.includes('tích cực') || s.includes('mạnh')) {
+                cls = 'bullish';
+            } else if (s.includes('bear') || s.includes('downtrend') || s.includes('sell') || s.includes('giảm') || s.includes('tiêu cực') || s.includes('yếu')) {
+                cls = 'bearish';
+            }
+            return `<span class="eval-badge-inline ${cls}">${label}</span>`;
+        }
+
+        // ── Populate dynamic evaluations for each chart cell ──
+        function updateChartEvaluations(mountPrefix, ticker) {
+            const isMarket = mountPrefix === 'market';
+            const ids = ['gp', 'heikin', 'heatmap', 'techreport'];
+
+            let indexData = null;
+            let stockData = null;
+            if (isMarket) {
+                indexData = rawData.market_indices ? rawData.market_indices[ticker] : null;
+            } else {
+                stockData = rawData.tickers_analysis.find(t => t.Ticker === ticker);
+            }
+
+            ids.forEach(type => {
+                const evalEl = document.getElementById(`${mountPrefix}-eval-${type}`);
+                if (!evalEl) return;
+
+                let html = '';
+                if (isMarket) {
+                    if (!indexData) {
+                        evalEl.innerHTML = '<div>Chưa có dữ liệu đánh giá</div>';
+                        return;
+                    }
+                    const diag = indexData.diagnostics || {};
+                    const sr = indexData.support_resistance || { s1: 0, s2: 0, r1: 0, r2: 0 };
+                    
+                    if (type === 'gp') {
+                        html = `
+                            <div class="eval-title">🎯 Đánh giá Động lượng Dòng tiền (GreenPink + Octopus)</div>
+                            <div class="eval-row"><span>Xu hướng chính:</span> <strong>${indexData.regime} ${getEvalBadge(indexData.regime)}</strong></div>
+                            <div class="eval-row"><span>Bùng nổ theo đà (FTD):</span> <strong>${indexData.ftd_active ? `CÓ (Ngày ${indexData.ftd_date})` : 'CHƯA'} ${getEvalBadge(indexData.ftd_active ? 'Tích cực' : 'Trung lập')}</strong></div>
+                            <div class="eval-row"><span>Số ngày phân phối:</span> <strong class="${indexData.distribution_count >= 4 ? 'text-red' : 'text-primary'}">${indexData.distribution_count} ngày ${getEvalBadge(indexData.distribution_count >= 4 ? 'Rủi ro cao' : 'An toàn')}</strong></div>
+                            <div class="eval-row"><span>Khuyến nghị tỷ trọng:</span> <strong>${indexData.alloc}</strong></div>
+                        `;
+                    } else if (type === 'heikin') {
+                        html = `
+                            <div class="eval-title">🎯 Đánh giá Xu hướng Giá (Heikin-Ashi & MA Lines)</div>
+                            <div class="eval-row"><span>Xu hướng nến mịn Heikin-Ashi:</span> <strong>${indexData.regime} ${getEvalBadge(indexData.regime)}</strong></div>
+                            <div class="eval-row"><span>Chẩn đoán hệ thống MA Lines:</span> <strong>${diag.ma?.status || 'N/A'} ${getEvalBadge(diag.ma?.status)}</strong></div>
+                            <div class="eval-row"><span>Hành động đề xuất (MA):</span> <strong>${diag.ma?.action || 'N/A'}</strong></div>
+                        `;
+                    } else if (type === 'heatmap') {
+                        html = `
+                            <div class="eval-title">🎯 Phân tích Vùng Cung Cầu & Cản (Heatmap)</div>
+                            <div class="eval-row"><span>Trạng thái Vùng cung cầu (Heatmap):</span> <strong>${indexData.heatmap_eval || 'N/A'} ${getEvalBadge(indexData.heatmap_eval)}</strong></div>
+                            <div class="eval-row"><span>Vùng Hỗ trợ gần nhất:</span> <strong>S1: ${formatPrice(sr.s1, true)} | S2: ${formatPrice(sr.s2, true)}</strong></div>
+                            <div class="eval-row"><span>Vùng Kháng cự gần nhất:</span> <strong>R1: ${formatPrice(sr.r1, true)} | R2: ${formatPrice(sr.r2, true)}</strong></div>
+                        `;
+                    } else if (type === 'techreport') {
+                        html = `
+                            <div class="eval-title">🎯 Tổng hợp Báo cáo Kỹ thuật đa chỉ báo (Tech Report)</div>
+                            <div class="eval-row"><span>Ichimoku Cloud:</span> <strong>${diag.ichimoku?.status || 'N/A'} ${getEvalBadge(diag.ichimoku?.status)}</strong></div>
+                            <div class="eval-row"><span>Dòng tiền Tạo lập (MCDX):</span> <strong>${indexData.mcdx_eval?.status || 'N/A'} ${getEvalBadge(indexData.mcdx_eval?.status)}</strong></div>
+                            <div class="eval-row"><span>Động lượng RSI:</span> <strong>${diag.rsi?.status || 'N/A'} ${getEvalBadge(diag.rsi?.status)}</strong></div>
+                            <div class="eval-row"><span>Động lượng MACD:</span> <strong>${diag.macd?.status || 'N/A'} ${getEvalBadge(diag.macd?.status)}</strong></div>
+                            <div class="eval-row"><span>Sức mạnh ADX:</span> <strong>${diag.adx?.status || 'N/A'} ${getEvalBadge(diag.adx?.status)}</strong></div>
+                        `;
+                    }
+                } else {
+                    if (!stockData) {
+                        evalEl.innerHTML = '<div>Chưa có dữ liệu đánh giá cổ phiếu</div>';
+                        return;
+                    }
+                    const diag = stockData.Diagnostics || {};
+                    const mcdx = stockData.MCDX || {};
+
+                    if (type === 'gp') {
+                        html = `
+                            <div class="eval-title">🎯 Đánh giá Động lượng Dòng tiền (GreenPink + Octopus)</div>
+                            <div class="eval-row"><span>Dòng tiền VSA:</span> <strong>${diag.vsa?.status || 'N/A'} ${getEvalBadge(diag.vsa?.status)}</strong></div>
+                            <div class="eval-row"><span>Hành động dòng tiền (VSA):</span> <strong>${diag.vsa?.action || 'N/A'}</strong></div>
+                            <div class="eval-row"><span>Điểm số Cơ Hội (Opportunity):</span> <strong>${stockData.OpportunityScore}/10 (${stockData.OpportunityDesc})</strong></div>
+                        `;
+                    } else if (type === 'heikin') {
+                        html = `
+                            <div class="eval-title">🎯 Đánh giá Xu hướng Giá (Heikin-Ashi & Breakout)</div>
+                            <div class="eval-row"><span>Hệ thống MA Lines:</span> <strong>${diag.ma?.status || 'N/A'} ${getEvalBadge(diag.ma?.status)}</strong></div>
+                            <div class="eval-row"><span>Mức nén chặt nền:</span> <strong>${stockData.ReadyToBreak ? 'CÓ (Chờ bùng nổ)' : 'CHƯA'} ${getEvalBadge(stockData.ReadyToBreak ? 'Tích cực' : 'Trung lập')}</strong></div>
+                            <div class="eval-row"><span>Gợi ý Hành động:</span> <strong>${diag.ma?.action || 'N/A'}</strong></div>
+                        `;
+                    } else if (type === 'heatmap') {
+                        html = `
+                            <div class="eval-title">🎯 Đánh giá Vùng Tích Lũy & Định Giá (Heatmap)</div>
+                            <div class="eval-row"><span>Chất lượng Nền tích lũy:</span> <strong>${stockData.AccumulationQuality} ${getEvalBadge(stockData.AccumulationQuality)}</strong></div>
+                            <div class="eval-row"><span>Biên tích lũy nền:</span> <strong>${stockData.AccumulationRangePct?.toFixed(1)}% (Độ an toàn: ${stockData.SafetyRating}/5 sao)</strong></div>
+                            <div class="eval-row"><span>Vùng gợi ý:</span> <strong>Mua quanh: ${formatPrice(stockData.Entry)} | Mục tiêu: ${formatPrice(stockData.Target)} | Cắt lỗ: ${formatPrice(stockData.StopLoss)}</strong></div>
+                        `;
+                    } else if (type === 'techreport') {
+                        html = `
+                            <div class="eval-title">🎯 Tổng hợp Báo cáo Kỹ thuật đa chỉ báo (Tech Report)</div>
+                            <div class="eval-row"><span>Ichimoku Cloud:</span> <strong>${diag.ichimoku?.status || 'N/A'} ${getEvalBadge(diag.ichimoku?.status)}</strong></div>
+                            <div class="eval-row"><span>Dòng tiền Tạo lập (MCDX):</span> <strong>Banker: ${mcdx.banker_pct}% | Hot Money: ${mcdx.hot_pct}% | Nhỏ lẻ: ${mcdx.retailer_pct}%</strong></div>
+                            <div class="eval-row"><span>Động lượng RSI / MACD:</span> <strong>RSI: ${diag.rsi?.status || 'N/A'} | MACD: ${diag.macd?.status || 'N/A'}</strong></div>
+                            <div class="eval-row"><span>Động lượng ADX (Sức mạnh):</span> <strong>${diag.adx?.status || 'N/A'} ${getEvalBadge(diag.adx?.status)}</strong></div>
+                        `;
+                    }
+                }
+                evalEl.innerHTML = html;
+            });
         }
 
         // ================================================================
@@ -4044,7 +4286,7 @@
             const h1=Math.round(total*0.55), h2=Math.round(total*0.225), h3=Math.round(total*0.225);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
             const d1=mk(h1,false),d2=mk(h2),d3=mk(h3);
-            const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
+            const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates); instances.push({chart:c1,ro:r1});
             const cs=c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'});
             cs.setData(ohlcv(data));
             if(data.GP_xFast)c1.addLineSeries({color:'#39ff14',lineWidth:2,title:'xFast'}).setData(lineData(data,'GP_xFast'));
@@ -4067,7 +4309,7 @@
             const h1=Math.round(total*0.5),h2=Math.round(total*0.5);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
             const d1=mk(h1,false),d2=mk(h2);
-            const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
+            const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates); instances.push({chart:c1,ro:r1});
             if(data.HK_Flower_Open&&data.HK_Flower_Close){
                 const hk=c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'});
                 const arr=[]; const hkSc=priceScale(data); for(let i=0;i<data.dates.length;i++){const ho=data.HK_Flower_Open[i],hc=data.HK_Flower_Close[i],hh=data.HK_Flower_High[i],hl=data.HK_Flower_Low[i]; if(!ho||!hc)continue; const col=data.HK_BarColor&&data.HK_BarColor[i]; const clr=col==='brightGreen'?'#00ff6a':col==='red'?'#ff3b3b':'#ffffff'; arr.push({time:d2ts(data.dates[i]),open:ho*hkSc,high:hh*hkSc,low:hl*hkSc,close:hc*hkSc,color:clr,borderColor:clr,wickColor:clr}); }
@@ -4088,7 +4330,7 @@
             const h1=Math.round(total*0.68),h2=Math.round(total*0.32);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
             const d1=mk(h1,false),d2=mk(h2);
-            const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
+            const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates); instances.push({chart:c1,ro:r1});
             [{col:'HM_Band_Hi',color:'rgba(0,255,106,0.4)'},{col:'HM_Band_KH',color:'rgba(34,211,238,0.4)'},{col:'HM_Band_KM',color:'rgba(251,191,36,0.4)'},{col:'HM_Band_KL',color:'rgba(249,115,22,0.4)'},{col:'HM_Band_Lo',color:'rgba(255,59,59,0.4)'}]
             .forEach(b=>{if(data[b.col])c1.addLineSeries({color:b.color,lineWidth:1,lineStyle:2}).setData(lineData(data,b.col));});
             if(data.HM_Flower_Open&&data.HM_Flower_Close){
@@ -4108,7 +4350,7 @@
             const h1=Math.round(total*0.46),h2=Math.round(total*0.18),h3=Math.round(total*0.18),h4=Math.round(total*0.18);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
             const d1=mk(h1,false),d2=mk(h2),d3=mk(h3),d4=mk(h4);
-            const {chart:c1,ro:r1}=mkChart(d1,h1); instances.push({chart:c1,ro:r1});
+            const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates); instances.push({chart:c1,ro:r1});
             if(data.SpanA)c1.addLineSeries({color:'rgba(0,255,106,0.4)',lineWidth:1}).setData(lineData(data,'SpanA'));
             if(data.SpanB)c1.addLineSeries({color:'rgba(255,59,59,0.4)',lineWidth:1}).setData(lineData(data,'SpanB'));
             if(data.Tenkan)c1.addLineSeries({color:'#3b82f6',lineWidth:1.2}).setData(lineData(data,'Tenkan'));

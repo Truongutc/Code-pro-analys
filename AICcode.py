@@ -2188,6 +2188,8 @@ class TinvestApp:
                     # Cập nhật Registry (Danh sách mã niêm yết) - Bây giờ tính cho cả mã đứng im
                     if d == missing_dates[-1]:
                         all_tickers = df_day['Ticker'].unique().tolist()
+                        # Filter out covered warrants (keep only 3-letter alphanumeric tickers)
+                        all_tickers = [t for t in all_tickers if len(t) == 3 and t.isalnum()]
                         self.storage.save_active_registry(all_tickers)
                         self.log_sync(f"   [*] Đã cập nhật Registry: {len(all_tickers)} mã niêm yết.")
 
@@ -2636,8 +2638,9 @@ class TinvestApp:
                     continue
                     
                 current_vol = int(df['Volume'].iloc[-1]) if 'Volume' in df.columns else 0
-                if current_vol < 20000:
-                    continue
+                # Allow low-volume stocks on web search as requested by user
+                # if current_vol < 20000:
+                #     continue
                     
                 res = data.get("adv") or {}
                 accum = data.get("accum") or {}
@@ -2647,6 +2650,7 @@ class TinvestApp:
                 current_p = float(df['Close'].iloc[-1]) * 1000
                 ep = val.get("price", 0)
                 tp = val.get("tp1", 0)
+                tp2 = val.get("tp2", 0)
                 sl = val.get("cutloss_partial", 0)
                 rr_ratio = val.get("rr_ratio", 0)
                 val_score = val.get("risk_score", 0)
@@ -2738,6 +2742,7 @@ class TinvestApp:
                     "Volume": int(current_vol),
                     "Entry": int(ep * 1000) if ep > 0 else None,
                     "Target": int(tp * 1000) if tp > 0 else None,
+                    "Target2": int(tp2 * 1000) if tp2 > 0 else None,
                     "StopLoss": int(sl * 1000) if sl > 0 else None,
                     "RR": f"{round(rr_ratio, 1)}/1" if rr_ratio > 0 else "N/A",
                     "RiskScore": int(val_score),
@@ -2788,12 +2793,14 @@ class TinvestApp:
                     # History for Chart.js
                     "History": history
                 }
-                tickers_analysis.append(ticker_record)
-                
-                for cat in matched_categories:
-                    filtered_results[cat].append(ticker)
-                for rule_key in matched_rules:
-                    filtered_results[rule_key].append(ticker)
+                # Only append if ticker is in active registry (not delisted/warrants)
+                current_reg = self.storage.get_active_registry() or set()
+                if ticker in current_reg:
+                    tickers_analysis.append(ticker_record)
+                    for cat in matched_categories:
+                        filtered_results[cat].append(ticker)
+                    for rule_key in matched_rules:
+                        filtered_results[rule_key].append(ticker)
             
             # Format market breadth
             mb_data = {}

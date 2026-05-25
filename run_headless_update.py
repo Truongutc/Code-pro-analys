@@ -164,6 +164,8 @@ def run_sync_and_update():
             # Update Active Registry on the last day
             if d == missing_dates[-1]:
                 all_tickers = df_day['Ticker'].unique().tolist()
+                # Filter out covered warrants (keep only 3-letter alphanumeric tickers)
+                all_tickers = [t for t in all_tickers if len(t) == 3 and t.isalnum()]
                 storage.save_active_registry(all_tickers)
                 logger.info(f"   [*] Đã cập nhật Registry: {len(all_tickers)} mã niêm yết.")
                 
@@ -193,6 +195,14 @@ def run_sync_and_update():
     compute_and_export_dashboard(storage, affected_tickers, vietstock_status=status)
 
 def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=None):
+    # Rule 2: Kiểm tra hủy niêm yết (10 phiên không giao dịch) và cập nhật registry
+    current_reg = storage.get_active_registry()
+    if current_reg:
+        delisted_tickers = storage.identify_delisted_tickers(days_threshold=10)
+        if delisted_tickers:
+            logger.info(f"[*] Rule 2: Phát hiện {len(delisted_tickers)} mã không giao dịch 10 phiên (hủy niêm yết/ngừng hoạt động).")
+            storage.remove_from_registry(delisted_tickers)
+
     # Load existing analysis results if file exists to merge instead of overwrite
     existing_tickers_analysis = {}
     existing_market_indices = {}
@@ -326,8 +336,9 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             
         # Get price indicators
         current_vol = int(df['Volume'].iloc[-1]) if 'Volume' in df.columns else 0
-        if current_vol < 20000:  # Allow low volumes in JSON but filter inside dashboard
-            continue
+        # Allow low-volume stocks on web search as requested by user
+        # if current_vol < 20000:
+        #     continue
             
         res = data.get("adv") or {}
         accum = data.get("accum") or {}
@@ -337,6 +348,7 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         current_p = float(df['Close'].iloc[-1]) * 1000
         ep = val.get("price", 0)
         tp = val.get("tp1", 0)
+        tp2 = val.get("tp2", 0)
         sl = val.get("cutloss_partial", 0)
         rr_ratio = val.get("rr_ratio", 0)
         val_score = val.get("risk_score", 0)
@@ -437,6 +449,7 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             "Volume": int(current_vol),
             "Entry": int(ep * 1000) if ep > 0 else None,
             "Target": int(tp * 1000) if tp > 0 else None,
+            "Target2": int(tp2 * 1000) if tp2 > 0 else None,
             "StopLoss": int(sl * 1000) if sl > 0 else None,
             "RR": f"{round(rr_ratio, 1)}/1" if rr_ratio > 0 else "N/A",
             "RiskScore": int(val_score),
@@ -501,8 +514,9 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         if t not in newly_analyzed_symbols and t in merged_tickers_analysis:
             del merged_tickers_analysis[t]
             
-    # Final sorted tickers list
-    tickers_analysis = list(merged_tickers_analysis.values())
+    # Final sorted tickers list (only active registry tickers, excluding delisted/warrants)
+    current_reg = storage.get_active_registry() or set()
+    tickers_analysis = [r for r in merged_tickers_analysis.values() if r["Ticker"] in current_reg]
     tickers_analysis.sort(key=lambda x: (
         1 if x.get("Action") == "BUY" else (2 if x.get("Action") == "WAIT" else 3),
         x.get("Ticker", "")
