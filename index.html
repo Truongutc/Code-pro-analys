@@ -4645,9 +4645,10 @@
                 // Buy/sell markers on HK
                 const markers = [];
                 for (let i = 0; i < data.dates.length; i++) {
-                    const trend = data.HK_Trend ? data.HK_Trend[i] : 1;
-                    const isBuy = ((data.HK_BuySignal && data.HK_BuySignal[i] && data.HK_BuySignal[i] !== 'nan' && data.HK_BuySignal[i] !== 'None') || (data.HK_BuyManh && data.HK_BuyManh[i] && data.HK_BuyManh[i] !== 'nan' && data.HK_BuyManh[i] !== 'None')) && (trend === 1);
-                    const isSell = ((data.HK_SellSignal && data.HK_SellSignal[i] && data.HK_SellSignal[i] !== 'nan' && data.HK_SellSignal[i] !== 'None') || (data.HK_SellManh && data.HK_SellManh[i] && data.HK_SellManh[i] !== 'nan' && data.HK_SellManh[i] !== 'None')) && (trend === -1);
+                    const isBuy = (data.HK_BuySignal && (data.HK_BuySignal[i] === 1 || data.HK_BuySignal[i] === true)) ||
+                                  (data.HK_BuyManh && (data.HK_BuyManh[i] === 1 || data.HK_BuyManh[i] === true));
+                    const isSell = (data.HK_SellSignal && (data.HK_SellSignal[i] === 1 || data.HK_SellSignal[i] === true)) ||
+                                   (data.HK_SellManh && (data.HK_SellManh[i] === 1 || data.HK_SellManh[i] === true));
                     if (isBuy) {
                         markers.push({time:d2ts(data.dates[i]),position:'belowBar',color:'#00ff6a',shape:'arrowUp',text:'B'});
                     }
@@ -5390,6 +5391,22 @@
                 const hk=c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'});
                 const arr=[]; const hkSc=priceScale(data); for(let i=0;i<data.dates.length;i++){const ho=data.HK_Flower_Open[i],hc=data.HK_Flower_Close[i],hh=data.HK_Flower_High[i],hl=data.HK_Flower_Low[i]; if(!ho||!hc)continue; const col=data.HK_BarColor&&data.HK_BarColor[i]; const clr=col==='brightGreen'?'#00ff6a':col==='red'?'#ff3b3b':'#ffffff'; arr.push({time:d2ts(data.dates[i]),open:ho*hkSc,high:hh*hkSc,low:hl*hkSc,close:hc*hkSc,color:clr,borderColor:clr,wickColor:clr}); }
                 hk.setData(arr);
+
+                // Buy/sell markers on HK (Fullscreen)
+                const markers = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    const isBuy = (data.HK_BuySignal && (data.HK_BuySignal[i] === 1 || data.HK_BuySignal[i] === true)) ||
+                                  (data.HK_BuyManh && (data.HK_BuyManh[i] === 1 || data.HK_BuyManh[i] === true));
+                    const isSell = (data.HK_SellSignal && (data.HK_SellSignal[i] === 1 || data.HK_SellSignal[i] === true)) ||
+                                   (data.HK_SellManh && (data.HK_SellManh[i] === 1 || data.HK_SellManh[i] === true));
+                    if (isBuy) {
+                        markers.push({time:d2ts(data.dates[i]),position:'belowBar',color:'#00ff6a',shape:'arrowUp',text:'B'});
+                    }
+                    if (isSell) {
+                        markers.push({time:d2ts(data.dates[i]),position:'aboveBar',color:'#ff3b3b',shape:'arrowDown',text:'S'});
+                    }
+                }
+                if (markers.length) hk.setMarkers(markers.sort((a,b)=>a.time-b.time));
             }
             if(data.HK_NW) c1.addLineSeries({color:'#38bdf8',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'HK_NW'));
             const {chart:c2,ro:r2}=mkChart(d2,h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c2,ro:r2});
