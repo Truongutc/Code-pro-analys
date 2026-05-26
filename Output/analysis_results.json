@@ -1,6 +1,7 @@
 {
-  "last_update": "2026-05-26 15:59:50",
+  "last_update": "2026-05-26 22:10:47",
   "vietstock_status": "LIMITED_BYPASSED",
+  "stocks_updated_count": 41,
   "market_breadth": {
     "dates": [
       "2000-07-28",
@@ -31415,9 +31416,9 @@
   },
   "market_indices": {
     "VNINDEX": {
-      "price": 1886030.0,
-      "ReportText": "\nTHỊ TRƯỜNG VNINDEX (2026-05-25)\n * CHỈ SỐ: 1,886,030\n * TRẠNG THÁI: ⚠️ UPTREND RỦI RO (Suy yếu/Phân phối)\n * HÀNH ĐỘNG: HẠ TỶ TRỌNG – Áp lực phân phối lớn.\n * KHÁNG CỰ (R): 1,933,110 | 2,029,766\n * HỖ TRỢ (S): 1,859,220 | 1,784,894\n   (S/R: Dựa trên tín hiệu mua)\n   - XÁC NHẬN FTD: Đang Kích Hoạt (Từ phiên 2026-03-27 - WEAK)\n   - Nỗ lực hồi phục (RA) : Ngày thứ 4\n   - Ngày Phân Phối      : 4 ngày\n\n [2.1 CHẨN ĐOÁN CHỈ BÁO THỊ TRƯỜNG]\n   ● [MA] Giá nằm Dưới MA20, thiếu xung lực rõ ràng.\n   ● [MA Hành động] Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA.\n   ● [Ichimoku] Trạng thái tích lũy mờ nhạt, chưa có tín hiệu Ichimoku nổi bật.\n   ● [RSI Setup] PHÂN KỲ ĐỈNH (Bearish Divergence): Giá tạo đỉnh mới nhưng RSI thấp hơn.\n   [MACD Setup] PHÂN KỲ ĐỈNH MACD (Bearish Divergence): Giá kéo đỉnh mới nhưng MACD đỉnh lại thấp hơn. | MACD > 0 (Trend tăng trung hạn).\n   ● [ADX Setup] ADX 22.2 (20–25) không có độ dốc: Tín hiệu chưa rõ ràng.\n\n [2.2 ĐÁNH GIÁ NẾN NHIỆT & ELLIOTT]\n   ● Heatmap: CÓ THỂ ĐẢO CHIỀU TĂNG (Đỏ -> Vàng/Trắng)\n   ● Elliott: N/A\n\n [CHỈ BÁO DÒNG TIỀN TẠO LẬP - MCDX]\n   ● Trạng thái : RỦI RO PHÂN PHỐI / FOMO\n   ● Hành động  : HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n   ● Chi tiết   : Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn.\n\n 🔥 TÍN HIỆU: ADD_1 (GIA TĂNG 1)\n\n [2.3 ĐẶC ĐIỂM TRẠNG THÁI THỊ TRƯỜNG (ROBOT)]\n   ● Xu Hướng Cốt Lõi    : Trạng thái Trung tính\n   ● Hành Vi Vận Động     : Bình thường\n   ● Tín Hiệu Khuyến Nghị: Chưa có tín hiệu\n   ● Xác Suất Thắng      : Trung bình (~ 50%) (Hệ số: 0)\n   ● Tỷ Trọng Khuyên     : 50-70% cổ phiếu (Đang tích lũy/chuyển giao trong nhịp hồi có FTD -> ưu tiên nắm giữ cổ phiếu Leader)\n   ● ADX: 22.2 | MACD Hist: -7.40 | Vol Spike: False | Trend Bias: 0.0\n\n 🎯 TỔNG KẾT CHIẾN LƯỢC TỪ AI:\n  💰 DÒNG TIỀN TẠO LẬP (MCDX - Tham khảo): RỦI RO PHÂN PHỐI / FOMO -> HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n  👉 THỊ TRƯỜNG [UPTREND_UNDER_PRESSURE] - CÓ FTD NHƯNG ÁP LỰC BÁN ĐANG TĂNG (4 phiên phân phối).\n     - ⚠️ HÀNH ĐỘNG NGAY      : BÁN BỚT HÀNG YẾU NGAY HÔM NAY. Không chờ hồi lên cản mới bán!\n     - Cơ Cấu Danh Mục        : Loại bỏ ngay các mã gãy MA20 / mã thua lỗ nhiều. Chỉ giữ 50-70% cổ phiếu Leader khỏe.\n     - 🛡️ Kịch Bản Xấu Nhất   : Nếu Index thủng 1,859,220 -> GIỮ TIỀN MẶT 70%+. Hàng yếu sẽ rớt gấp 2-3 lần Index.\n     - 🛒 Mua Mới Được Không?  : CẤM FOMO. Chỉ test lượng nhỏ nếu Index đạp chuẩn về sâu 1,784,894 rồi nảy lên giữ được.\n     - 📌 FTD Còn Sống Không?  : FTD (WEAK) sẽ BỊ HỦY nếu Index đóng cửa dưới mốc FTD cũ. Lúc đó -> chuyển sang DOWNTREND.\n\n  📊 ĐÁNH GIÁ TỔNG HỢP TỪ ROBOT:\n     Xu hướng: Trạng thái Trung tính | Hành vi: Bình thường | Tín hiệu: Chưa có tín hiệu\n     Xác suất tiếp diễn xu hướng hiện tại: Trung bình (~ 50%)\n     ➡️ TỶ TRỌNG KHUYẾN NGHỊ: NẮM GIỮ 50-70% CỔ PHIẾU.",
-      "date": "2026-05-25",
+      "price": 1884180.0,
+      "ReportText": "\nTHỊ TRƯỜNG VNINDEX (2026-05-26)\n * CHỈ SỐ: 1,884,180\n * TRẠNG THÁI: ⚠️ UPTREND RỦI RO (Suy yếu/Phân phối)\n * HÀNH ĐỘNG: HẠ TỶ TRỌNG – Áp lực phân phối lớn.\n * KHÁNG CỰ (R): 1,933,110 | 2,029,766\n * HỖ TRỢ (S): 1,859,220 | 1,788,011\n   (S/R: Dựa trên tín hiệu mua)\n   - XÁC NHẬN FTD: Đang Kích Hoạt (Từ phiên 2026-03-27 - WEAK)\n   - Nỗ lực hồi phục (RA) : Ngày thứ 4\n   - Ngày Phân Phối      : 4 ngày\n\n [2.1 CHẨN ĐOÁN CHỈ BÁO THỊ TRƯỜNG]\n   ● [MA] Giá nằm Dưới MA20, thiếu xung lực rõ ràng.\n   ● [MA Hành động] Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA.\n   ● [Ichimoku] STRONG UPTREND (Xu hướng MẠNH NHẤT): Giá trên mây, Tenkan > Kijun, Chikou trống đường.\n   ● [RSI Setup] PHÂN KỲ ĐỈNH (Bearish Divergence): Giá tạo đỉnh mới nhưng RSI thấp hơn.\n   [MACD Setup] PHÂN KỲ ĐỈNH MACD (Bearish Divergence): Giá kéo đỉnh mới nhưng MACD đỉnh lại thấp hơn. | MACD > 0 (Trend tăng trung hạn).\n   ● [ADX Setup] ADX 20.9 (20–25) không có độ dốc: Tín hiệu chưa rõ ràng.\n\n [2.2 ĐÁNH GIÁ NẾN NHIỆT & ELLIOTT]\n   ● Heatmap: YẾU (Nến chuyển Vàng -> Đỏ)\n   ● Elliott: N/A\n\n [CHỈ BÁO DÒNG TIỀN TẠO LẬP - MCDX]\n   ● Trạng thái : RỦI RO PHÂN PHỐI / FOMO\n   ● Hành động  : HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n   ● Chi tiết   : Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn.\n\n 🔥 TÍN HIỆU: ADD_1 (GIA TĂNG 1)\n\n [2.3 ĐẶC ĐIỂM TRẠNG THÁI THỊ TRƯỜNG (ROBOT)]\n   ● Xu Hướng Cốt Lõi    : Trạng thái Trung tính\n   ● Hành Vi Vận Động     : Đuối sức (nguy cơ đảo chiều)\n   ● Tín Hiệu Khuyến Nghị: Chưa có tín hiệu\n   ● Xác Suất Thắng      : Trung bình (~ 50%) (Hệ số: 0)\n   ● Tỷ Trọng Khuyên     : 50-70% cổ phiếu (Đang tích lũy/chuyển giao trong nhịp hồi có FTD -> ưu tiên nắm giữ cổ phiếu Leader)\n   ● ADX: 20.9 | MACD Hist: -8.33 | Vol Spike: False | Trend Bias: 0.0\n\n 🎯 TỔNG KẾT CHIẾN LƯỢC TỪ AI:\n  💰 DÒNG TIỀN TẠO LẬP (MCDX - Tham khảo): RỦI RO PHÂN PHỐI / FOMO -> HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n  👉 THỊ TRƯỜNG [UPTREND_UNDER_PRESSURE] - CÓ FTD NHƯNG ÁP LỰC BÁN ĐANG TĂNG (4 phiên phân phối).\n     - ⚠️ HÀNH ĐỘNG NGAY      : BÁN BỚT HÀNG YẾU NGAY HÔM NAY. Không chờ hồi lên cản mới bán!\n     - Cơ Cấu Danh Mục        : Loại bỏ ngay các mã gãy MA20 / mã thua lỗ nhiều. Chỉ giữ 50-70% cổ phiếu Leader khỏe.\n     - 🛡️ Kịch Bản Xấu Nhất   : Nếu Index thủng 1,859,220 -> GIỮ TIỀN MẶT 70%+. Hàng yếu sẽ rớt gấp 2-3 lần Index.\n     - 🛒 Mua Mới Được Không?  : CẤM FOMO. Chỉ test lượng nhỏ nếu Index đạp chuẩn về sâu 1,788,011 rồi nảy lên giữ được.\n     - 📌 FTD Còn Sống Không?  : FTD (WEAK) sẽ BỊ HỦY nếu Index đóng cửa dưới mốc FTD cũ. Lúc đó -> chuyển sang DOWNTREND.\n\n  📊 ĐÁNH GIÁ TỔNG HỢP TỪ ROBOT:\n     Xu hướng: Trạng thái Trung tính | Hành vi: Đuối sức (nguy cơ đảo chiều) | Tín hiệu: Chưa có tín hiệu\n     Xác suất tiếp diễn xu hướng hiện tại: Trung bình (~ 50%)\n     ➡️ TỶ TRỌNG KHUYẾN NGHỊ: NẮM GIỮ 50-70% CỔ PHIẾU.",
+      "date": "2026-05-26",
       "regime": "UPTREND_UNDER_PRESSURE",
       "action": "HẠ TỶ TRỌNG – Áp lực phân phối lớn.",
       "ftd_active": true,
@@ -31427,7 +31428,7 @@
       "distribution_count": 4,
       "support_resistance": {
         "s1": 1859220.0,
-        "s2": 1784893.8,
+        "s2": 1788010.6,
         "r1": 1933110.0,
         "r2": 2029765.5
       },
@@ -31435,27 +31436,27 @@
       "alloc_note": "Đang tích lũy/chuyển giao trong nhịp hồi có FTD -> ưu tiên nắm giữ cổ phiếu Leader",
       "diagnostics": {
         "ma": {
-          "status": "Giá nằm Dưới MA20, thiếu xung lực rõ ràng.",
-          "action": "Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA."
+          "status": "N/A",
+          "action": "N/A"
         },
         "ichimoku": {
-          "status": "Trạng thái tích lũy mờ nhạt, chưa có tín hiệu Ichimoku nổi bật.",
-          "action": "Tiếp tục quan sát diễn biến hoặc tham khảo indicator khac."
+          "status": "N/A",
+          "action": "N/A"
         },
         "rsi": {
-          "status": "PHÂN KỲ ĐỈNH (Bearish Divergence): Giá tạo đỉnh mới nhưng RSI thấp hơn.",
-          "action": "Lực mua yếu đi rõ rệt. Cẩn trọng sập, chuẩn bị CHỐT LỜI/SHORT."
+          "status": "55.72",
+          "action": "N/A"
         },
         "macd": {
-          "status": "PHÂN KỲ ĐỈNH MACD (Bearish Divergence): Giá kéo đỉnh mới nhưng MACD đỉnh lại thấp hơn. | MACD > 0 (Trend tăng trung hạn).",
-          "action": "Lực kéo kéo xả (Rủi ro Sập). Chờ xác nhận để CHỐT LỜI/SHORT."
+          "status": "26.43",
+          "action": "N/A"
         },
         "adx": {
-          "status": "ADX 22.2 (20–25) không có độ dốc: Tín hiệu chưa rõ ràng.",
-          "action": "Chờ ADX dốc lên hoặc vượt 25 mới xác nhận trend."
+          "status": "N/A",
+          "action": "N/A"
         }
       },
-      "heatmap_eval": "CÓ THỂ ĐẢO CHIỀU TĂNG (Đỏ -> Vàng/Trắng)",
+      "heatmap_eval": "YẾU (Nến chuyển Vàng -> Đỏ)",
       "mcdx_eval": {
         "status": "RỦI RO PHÂN PHỐI / FOMO",
         "action": "HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN",
@@ -31463,9 +31464,9 @@
       }
     },
     "HNX-INDEX": {
-      "price": 271800.0,
-      "ReportText": "\nTHỊ TRƯỜNG HNX-INDEX (2026-05-25)\n * CHỈ SỐ: 271,800\n * TRẠNG THÁI: 📈 UPTREND (Tăng giá xác nhận)\n * HÀNH ĐỘNG: TRADE MẠNH – Tập trung vào cổ phiếu Leader.\n * KHÁNG CỰ (R): 298,980 | 313,929\n * HỖ TRỢ (S): 258,890 | 252,885\n   (S/R: Dựa trên tín hiệu mua)\n   - XÁC NHẬN FTD: Đang Kích Hoạt (Từ phiên 2026-03-25 - WEAK)\n   - Nỗ lực hồi phục (RA) : Ngày thứ 12\n   - Ngày Phân Phối      : 0 ngày\n\n [2.1 CHẨN ĐOÁN CHỈ BÁO THỊ TRƯỜNG]\n   ● [MA] Giá nằm Tên MA20, thiếu xung lực rõ ràng.\n   ● [MA Hành động] Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA.\n   ● [Ichimoku] Trạng thái tích lũy mờ nhạt, chưa có tín hiệu Ichimoku nổi bật.\n   ● [RSI Setup] Quá mua (RSI > 70) trong Uptrend: Trend đang rất khỏe.\n   [MACD Setup] MACD > 0 (Trend tăng trung hạn).\n   ● [ADX Setup] ADX 21.4 (20–25), đang DỐC LÊN: Trend mới BẮT ĐẦU hình thành (bias: TĂNG). | 📈 ADX tăng từ 15.5 → 21.4: Trend ĐANG MẠNH DẦN. Cứ HOLD, đừng chốt sớm.\n\n [2.2 ĐÁNH GIÁ NẾN NHIỆT & ELLIOTT]\n   ● Heatmap: Trạng thái: Vàng (Lưỡng lự)\n   ● Elliott: N/A\n\n [CHỈ BÁO DÒNG TIỀN TẠO LẬP - MCDX]\n   ● Trạng thái : RỦI RO PHÂN PHỐI / FOMO\n   ● Hành động  : HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n   ● Chi tiết   : Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn.\n\n 🔥 TÍN HIỆU: ADD_2 (GIA TĂNG 2)\n\n [2.3 ĐẶC ĐIỂM TRẠNG THÁI THỊ TRƯỜNG (ROBOT)]\n   ● Xu Hướng Cốt Lõi    : Tăng nhưng yếu dần\n   ● Hành Vi Vận Động     : RETEST\n   ● Tín Hiệu Khuyến Nghị: CHỐT LÃI\n   ● Xác Suất Thắng      : Khá (~ 60%) (Hệ số: 2)\n   ● Tỷ Trọng Khuyên     : 10-20% cổ phiếu (Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp)\n   ● ADX: 21.4 | MACD Hist: 1.94 | Vol Spike: False | Trend Bias: 1.0\n\n 🎯 TỔNG KẾT CHIẾN LƯỢC TỪ AI:\n  💰 DÒNG TIỀN TẠO LẬP (MCDX - Tham khảo): RỦI RO PHÂN PHỐI / FOMO -> HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n  👉 THỊ TRƯỜNG [UPTREND] - FTD XÁC NHẬN + ĐỒNG THUẬN TĂNG. MÔI TRƯỜNG THUẬN LỢI.\n     - Phân Bổ Tỷ Trọng      : Duy trì 10-20% cổ phiếu. Ưu tiên mã đang dẫn dắt (Leader).\n     - 🛒 Vùng Mua Gia Tăng   : Nhặt thêm hàng khi Index test lại hỗ trợ 258,890. Mạnh dạn gom nếu về 252,885.\n     - 🎯 Vùng Chốt Một Phần  : Tỉa lộc khi Index chạm cản 298,980 - 313,929. Không bán sạch khi trend còn sống.\n     - ✂ Báo Động Đỏ Khi Nào? : Nếu Index đóng cửa thủng hỗ trợ 258,890 kèm Volume lớn -> Hạ về 50% tiền mặt ngay.\n\n  📊 ĐÁNH GIÁ TỔNG HỢP TỪ ROBOT:\n     Xu hướng: Tăng nhưng yếu dần | Hành vi: RETEST | Tín hiệu: CHỐT LÃI\n     Xác suất tiếp diễn xu hướng hiện tại: Khá (~ 60%)\n     ➡️ TỶ TRỌNG KHUYẾN NGHỊ: NẮM GIỮ 10-20% CỔ PHIẾU.\n     ⛔ BỘ LỌC RỦI RO: ĐANG BẬT - TUYỆT ĐỐI KHÔNG MUA MỚI.",
-      "date": "2026-05-25",
+      "price": 278150.0,
+      "ReportText": "\nTHỊ TRƯỜNG HNX-INDEX (2026-05-26)\n * CHỈ SỐ: 278,150\n * TRẠNG THÁI: 📈 UPTREND (Tăng giá xác nhận)\n * HÀNH ĐỘNG: TRADE MẠNH – Tập trung vào cổ phiếu Leader.\n * KHÁNG CỰ (R): 305,965 | 321,263\n * HỖ TRỢ (S): 261,895 | 255,890\n   (S/R: Dựa trên tín hiệu mua)\n   - XÁC NHẬN FTD: Đang Kích Hoạt (Từ phiên 2026-03-25 - WEAK)\n   - Nỗ lực hồi phục (RA) : Ngày thứ 12\n   - Ngày Phân Phối      : 0 ngày\n\n [2.1 CHẨN ĐOÁN CHỈ BÁO THỊ TRƯỜNG]\n   ● [MA] Giá nằm Tên MA20, thiếu xung lực rõ ràng.\n   ● [MA Hành động] Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA.\n   ● [Ichimoku] Trạng thái tích lũy mờ nhạt, chưa có tín hiệu Ichimoku nổi bật.\n   ● [RSI Setup] Quá mua (RSI > 70) trong Uptrend: Trend đang rất khỏe.\n   [MACD Setup] MACD > 0 (Trend tăng trung hạn).\n   ● [ADX Setup] ADX 23.9 (20–25), đang DỐC LÊN: Trend mới BẮT ĐẦU hình thành (bias: TĂNG). | 📈 ADX tăng từ 16.9 → 23.9: Trend ĐANG MẠNH DẦN. Cứ HOLD, đừng chốt sớm.\n\n [2.2 ĐÁNH GIÁ NẾN NHIỆT & ELLIOTT]\n   ● Heatmap: TĂNG TỐT (Nến chuyển Vàng -> Trắng)\n   ● Elliott: N/A\n\n [CHỈ BÁO DÒNG TIỀN TẠO LẬP - MCDX]\n   ● Trạng thái : RỦI RO PHÂN PHỐI / FOMO\n   ● Hành động  : HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n   ● Chi tiết   : Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn.\n\n 🔥 TÍN HIỆU: ADD_2 (GIA TĂNG 2)\n\n [2.3 ĐẶC ĐIỂM TRẠNG THÁI THỊ TRƯỜNG (ROBOT)]\n   ● Xu Hướng Cốt Lõi    : Tăng nhưng yếu dần\n   ● Hành Vi Vận Động     : Bình thường\n   ● Tín Hiệu Khuyến Nghị: CHỐT LÃI\n   ● Xác Suất Thắng      : Khá (~ 60%) (Hệ số: 2)\n   ● Tỷ Trọng Khuyên     : 10-20% cổ phiếu (Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp)\n   ● ADX: 23.9 | MACD Hist: 2.43 | Vol Spike: False | Trend Bias: 1.0\n\n 🎯 TỔNG KẾT CHIẾN LƯỢC TỪ AI:\n  💰 DÒNG TIỀN TẠO LẬP (MCDX - Tham khảo): RỦI RO PHÂN PHỐI / FOMO -> HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n  👉 THỊ TRƯỜNG [UPTREND] - FTD XÁC NHẬN + ĐỒNG THUẬN TĂNG. MÔI TRƯỜNG THUẬN LỢI.\n     - Phân Bổ Tỷ Trọng      : Duy trì 10-20% cổ phiếu. Ưu tiên mã đang dẫn dắt (Leader).\n     - 🛒 Vùng Mua Gia Tăng   : Nhặt thêm hàng khi Index test lại hỗ trợ 261,895. Mạnh dạn gom nếu về 255,890.\n     - 🎯 Vùng Chốt Một Phần  : Tỉa lộc khi Index chạm cản 305,965 - 321,263. Không bán sạch khi trend còn sống.\n     - ✂ Báo Động Đỏ Khi Nào? : Nếu Index đóng cửa thủng hỗ trợ 261,895 kèm Volume lớn -> Hạ về 50% tiền mặt ngay.\n\n  📊 ĐÁNH GIÁ TỔNG HỢP TỪ ROBOT:\n     Xu hướng: Tăng nhưng yếu dần | Hành vi: Bình thường | Tín hiệu: CHỐT LÃI\n     Xác suất tiếp diễn xu hướng hiện tại: Khá (~ 60%)\n     ➡️ TỶ TRỌNG KHUYẾN NGHỊ: NẮM GIỮ 10-20% CỔ PHIẾU.\n     ⛔ BỘ LỌC RỦI RO: ĐANG BẬT - TUYỆT ĐỐI KHÔNG MUA MỚI.",
+      "date": "2026-05-26",
       "regime": "UPTREND",
       "action": "TRADE MẠNH – Tập trung vào cổ phiếu Leader.",
       "ftd_active": true,
@@ -31474,36 +31475,36 @@
       "ra_day": 12,
       "distribution_count": 0,
       "support_resistance": {
-        "s1": 258890.0,
-        "s2": 252885.0,
-        "r1": 298980.0,
-        "r2": 313929.00000000006
+        "s1": 261894.99999999997,
+        "s2": 255890.0,
+        "r1": 305965.0,
+        "r2": 321263.25
       },
       "alloc": "10-20%",
       "alloc_note": "Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp",
       "diagnostics": {
         "ma": {
-          "status": "Giá nằm Tên MA20, thiếu xung lực rõ ràng.",
-          "action": "Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA."
+          "status": "N/A",
+          "action": "N/A"
         },
         "ichimoku": {
-          "status": "Trạng thái tích lũy mờ nhạt, chưa có tín hiệu Ichimoku nổi bật.",
-          "action": "Tiếp tục quan sát diễn biến hoặc tham khảo indicator khac."
+          "status": "N/A",
+          "action": "N/A"
         },
         "rsi": {
-          "status": "Quá mua (RSI > 70) trong Uptrend: Trend đang rất khỏe.",
-          "action": "Giữ lệnh, không chốt non."
+          "status": "79.95",
+          "action": "N/A"
         },
         "macd": {
-          "status": "MACD > 0 (Trend tăng trung hạn).",
-          "action": ""
+          "status": "5.11",
+          "action": "N/A"
         },
         "adx": {
-          "status": "ADX 21.4 (20–25), đang DỐC LÊN: Trend mới BẮT ĐẦU hình thành (bias: TĂNG). | 📈 ADX tăng từ 15.5 → 21.4: Trend ĐANG MẠNH DẦN. Cứ HOLD, đừng chốt sớm.",
-          "action": "Theo dõi sát. Chuẩn bị vào lệnh theo hướng TĂNG khi ADX vượt 25."
+          "status": "N/A",
+          "action": "N/A"
         }
       },
-      "heatmap_eval": "Trạng thái: Vàng (Lưỡng lự)",
+      "heatmap_eval": "TĂNG TỐT (Nến chuyển Vàng -> Trắng)",
       "mcdx_eval": {
         "status": "RỦI RO PHÂN PHỐI / FOMO",
         "action": "HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN",
@@ -33258,6 +33259,193 @@
           0,
           54600,
           48400
+        ]
+      }
+    },
+    {
+      "Ticker": "HNX-INDEX",
+      "Price": 278150,
+      "Volume": 84483387,
+      "AvgVolume10": 65946508,
+      "Entry": 278150,
+      "Target": 321263,
+      "Target2": 321263,
+      "ReportText": "\n======================================================================\n  💎 AIC code = AI + cơm! 💎 BÁO CÁO PHÂN TÍCH TỔNG HỢP: HNX-INDEX\n  Ngày: 2026-05-26  |  Giá: 278.15\n======================================================================\n\n  [1. PHÂN TÍCH CHỈ BÁO & SETUP HÀNH ĐỘNG]\n  ● Tổng quan kỹ thuật: Trung bình (Điểm đánh giá: 45/100)\n\n  [HỆ THỐNG ĐƯỜNG TRUNG BÌNH - MA]\n  ● Nhận định: Giá nằm Tên MA20, thiếu xung lực rõ ràng.\n  ● Hành động: Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA.\n\n  [HỆ THỐNG MÂY ICHIMOKU]\n  ● Nhận định: Trạng thái tích lũy mờ nhạt, chưa có tín hiệu Ichimoku nổi bật.\n  ● Hành động: Tiếp tục quan sát diễn biến hoặc tham khảo indicator khac.\n\n  [CHỈ BÁO ĐỘNG LƯỢNG - RSI (80.0)]\n  ● Setup    : Quá mua (RSI > 70) trong Uptrend: Trend đang rất khỏe.\n  ● Khuyến nghị: Giữ lệnh, không chốt non.\n\n  [CHỈ BÁO DÒNG TIỀN - MACD (Đà tăng mạnh (MACD > 0 & Hist > 0))]\n  ● Setup    : MACD > 0 (Trend tăng trung hạn).\n  ● Khuyến nghị: \n\n  [XUNG LỰC XU HƯỚNG - ADX (WHITE)]\n  ● Setup    : ADX 23.9 (20–25), đang DỐC LÊN: Trend mới BẮT ĐẦU hình thành (bias: TĂNG). | 📈 ADX tăng từ 16.9 → 23.9: Trend ĐANG MẠNH DẦN. Cứ HOLD, đừng chốt sớm.\n  ● Khuyến nghị: Theo dõi sát. Chuẩn bị vào lệnh theo hướng TĂNG khi ADX vượt 25. | 🔥 ENTRY LONG MẠNH: DI+ (40.9) ≥ 35 + ADX tăng — Trend tăng cực mạnh.\n\n  [HỆ THỐNG BẢN ĐỒ NHIỆT]\n  ● Đánh giá Heatmap: TĂNG TỐT (Nến chuyển Vàng -> Trắng)\n\n  [CHỈ BÁO DÒNG TIỀN TẠO LẬP - MCDX]\n  ● Trạng thái : RỦI RO PHÂN PHỐI / FOMO\n  ● Hành động  : HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n  ● Chi tiết   : Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn.\n\n  [1.5 BIỆN LUẬN LÝ DO (TÍN HIỆU CƠ SỞ CHẨN ĐOÁN)]\n  ● ADX (Xung lực): 23.90 (Chop: False) | Biên độ giá: 32.99 / ATR: 4.27\n  ● Cấu Trúc (S_Bias): 0 | Xu Hướng (T_Bias): 1.0 (Trend Khoẻ: False)\n  ● Động Lượng MACD: 5.11 | Hist: 2.43\n  ● Thanh Khoản (Vol): Spike=False | Dry=False\n  ● Điểm Nổ Nến: Breakout_Up=False | Nến Lực=True\n\n  [3. MỨC GIÁ QUAN TRỌNG - S/R]\n  ● Giá hiện tại: 278.15\n  ● Hỗ trợ (S): S1: 261.89 | S2: 255.89\n  ● Kháng cự (R): R1: 305.96 | R2: 321.26\n\n----------------------------------------------------------------------\n  🎯 TỔNG KẾT CHIẾN LƯỢC TỪ AI (AIC PROFESSIONAL):\n  👉 CHIẾN LƯỢC CỐT LÕI : CHỐT LÃI (CANH NHẢ HÀNG)\n     ● Tỷ trọng khuyến nghị : 50–70% (Gia tăng 2) | 🛡️ CHẶN MUA ĐUỔI\n     - Lý do hệ thống       : ⚠️ BỘ LỌC CHẶN MUA: RSI quá nhiệt (80.0)\n     - 💰 Tiền lớn (MCDX)   : RỦI RO PHÂN PHỐI / FOMO -> HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n     - 🛡️ Vị thế FULL TIỀN    : KIÊN NHẪN ĐỢI. Không FOMO. Canh nhặt khi giá lùi về vùng an toàn 261.89.\n     - 💎 Vị thế ĐANG CẦM CỔ : DỪNG MUA GIA TĂNG. Nâng chặn lãi lên 254.04. Chủ động chốt lộc 1/2 tại 321.26.\n     - ✂ Vị thế ĐANG KẸP     : CANH HỒI PHỤC HẠ TỶ TRỌNG. Cơ cấu bớt hàng khi giá hồi về vùng kháng cự 305.96.\n     - 📈 Điểm Gia Tăng (Ngắm trước): Gia tăng thêm 20–30% (thăm dò) khi ĐÓNG CỬA vượt 292,060 | Break đỉnh gần nhất (292.06) | ⚠️ Chưa thấy rõ nền nghỉ — cần thêm vài phiên nén trước khi buy | Mức độ an toàn: 67%\n     - 🎯 Mốc Chốt Lời       : TP1: 321.26 | TP2: 321.26\n     - 🛑 Mốc Cắt Lỗ (SL)    : 254.04 (Thủng là Bán)\n======================================================================\n",
+      "StopLoss": 254038,
+      "RR": "1.8/1",
+      "RiskScore": 0,
+      "RiskPct": 8.67,
+      "Action": "WAIT (Chờ tín hiệu rõ ràng)",
+      "Categories": [
+        "ACCUMULATION",
+        "UPCLOUD",
+        "WHITE_ADX",
+        "ADD_2"
+      ],
+      "Rules": [
+        "RSI_GT_50",
+        "PRICE_ABOVE_MA20",
+        "PRICE_ABOVE_MA50",
+        "MA20_GT_MA50",
+        "MCDX_RED",
+        "PRICE_ABOVE_KIJUN",
+        "PRICE_ABOVE_TENKAN",
+        "MACD_ABOVE_SIGNAL",
+        "WEEK_HIGH_BREAKOUT",
+        "ACCUMULATION_BREAKOUT"
+      ],
+      "CutlossFull": 251180,
+      "TrailingStop": 254038,
+      "OpportunityScore": 45,
+      "OpportunityDesc": "Trung bình",
+      "SafetyRating": 67,
+      "TopupPrice": 292060,
+      "TopupDesc": "Break đỉnh gần nhất (292.06) | ⚠️ Chưa thấy rõ nền nghỉ — cần thêm vài phiên nén trước khi buy",
+      "AccumulationQuality": "MEDIUM",
+      "AccumulationNotes": [
+        "Biên độ bắt đầu thu hẹp (<12%)",
+        "Áp lực bán cạn kiệt (Volume low)"
+      ],
+      "AccumulationRangePct": 11.86,
+      "ReadyToBreak": false,
+      "Support1": 261894,
+      "Resistance1": 305965,
+      "TrendStatus": "Sideway",
+      "TechWeak": false,
+      "SidewaysNearRes": false,
+      "StateSignal": "CHỐT LÃI (CANH NHẢ HÀNG)",
+      "AntiTrap": true,
+      "AvoidEntry": true,
+      "MCDX": {
+        "banker_pct": 69.9,
+        "hot_pct": 30.1,
+        "retailer_pct": 0.0,
+        "status": "RỦI RO PHÂN PHỐI / FOMO",
+        "action": "HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN",
+        "details": "Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn."
+      },
+      "Diagnostics": {
+        "rsi": {
+          "status": "Quá mua (RSI > 70) trong Uptrend: Trend đang rất khỏe.",
+          "action": "Giữ lệnh, không chốt non."
+        },
+        "macd": {
+          "status": "MACD > 0 (Trend tăng trung hạn).",
+          "action": ""
+        },
+        "adx": {
+          "status": "ADX 23.9 (20–25), đang DỐC LÊN: Trend mới BẮT ĐẦU hình thành (bias: TĂNG). | 📈 ADX tăng từ 16.9 → 23.9: Trend ĐANG MẠNH DẦN. Cứ HOLD, đừng chốt sớm.",
+          "action": "Theo dõi sát. Chuẩn bị vào lệnh theo hướng TĂNG khi ADX vượt 25. | 🔥 ENTRY LONG MẠNH: DI+ (40.9) ≥ 35 + ADX tăng — Trend tăng cực mạnh."
+        },
+        "ichimoku": {
+          "status": "Trạng thái tích lũy mờ nhạt, chưa có tín hiệu Ichimoku nổi bật.",
+          "action": "Tiếp tục quan sát diễn biến hoặc tham khảo indicator khac."
+        },
+        "ma": {
+          "status": "Giá nằm Tên MA20, thiếu xung lực rõ ràng.",
+          "action": "Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA."
+        },
+        "vsa": {
+          "status": "VSA Dominant: NEUTRAL",
+          "action": "VSA Score: 0/4"
+        }
+      },
+      "History": {
+        "dates": [
+          "2026-04-09",
+          "2026-04-10",
+          "2026-04-13",
+          "2026-04-14",
+          "2026-04-15",
+          "2026-04-16",
+          "2026-04-17",
+          "2026-04-20",
+          "2026-04-21",
+          "2026-04-22",
+          "2026-04-23",
+          "2026-04-24",
+          "2026-04-28",
+          "2026-04-29",
+          "2026-05-04",
+          "2026-05-05",
+          "2026-05-07",
+          "2026-05-08",
+          "2026-05-11",
+          "2026-05-12",
+          "2026-05-13",
+          "2026-05-14",
+          "2026-05-15",
+          "2026-05-18",
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-25",
+          "2026-05-26"
+        ],
+        "closes": [
+          250980.0,
+          251910.0,
+          251660.0,
+          252410.0,
+          252720.0,
+          256490.0,
+          260000.0,
+          257329.99999999997,
+          253270.0,
+          255360.0,
+          253230.0,
+          251950.0,
+          249440.0,
+          250660.0,
+          250040.0,
+          247420.0,
+          248460.0,
+          246490.0,
+          248060.0,
+          253280.0,
+          254620.0,
+          255070.0,
+          257420.00000000003,
+          259250.0,
+          259500.0,
+          261329.99999999997,
+          264370.0,
+          267450.0,
+          271800.0,
+          278150.0
+        ],
+        "volumes": [
+          76194142,
+          78907531,
+          72121550,
+          59389816,
+          70869803,
+          63602672,
+          58023331,
+          38168370,
+          60785475,
+          39692698,
+          59042956,
+          41482278,
+          36834108,
+          53996023,
+          48775617,
+          47024017,
+          52110338,
+          48763194,
+          67233400,
+          43828485,
+          81786356,
+          38480046,
+          62250433,
+          98444357,
+          80972904,
+          89612993,
+          53741749,
+          16747093,
+          52945769,
+          84483387
         ]
       }
     },
@@ -37170,6 +37358,188 @@
       }
     },
     {
+      "Ticker": "VNINDEX",
+      "Price": 1884180,
+      "Volume": 729758151,
+      "AvgVolume10": 762102170,
+      "Entry": 1884180,
+      "Target": 2029765,
+      "Target2": 2029765,
+      "ReportText": "\n======================================================================\n  💎 AIC code = AI + cơm! 💎 BÁO CÁO PHÂN TÍCH TỔNG HỢP: VNINDEX\n  Ngày: 2026-05-26  |  Giá: 1,884.18\n======================================================================\n\n  [1. PHÂN TÍCH CHỈ BÁO & SETUP HÀNH ĐỘNG]\n  ● Tổng quan kỹ thuật: Yếu (Điểm đánh giá: 30/100)\n\n  [HỆ THỐNG ĐƯỜNG TRUNG BÌNH - MA]\n  ● Nhận định: Giá nằm Dưới MA20, thiếu xung lực rõ ràng.\n  ● Hành động: Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA.\n\n  [HỆ THỐNG MÂY ICHIMOKU]\n  ● Nhận định: STRONG UPTREND (Xu hướng MẠNH NHẤT): Giá trên mây, Tenkan > Kijun, Chikou trống đường.\n  ● Hành động: All-in mindset. Canh giá Pullback về Tenkan (nhanh) hoặc Kijun (an toàn) để BUY.\n\n  [CHỈ BÁO ĐỘNG LƯỢNG - RSI (55.7)]\n  ● Setup    : PHÂN KỲ ĐỈNH (Bearish Divergence): Giá tạo đỉnh mới nhưng RSI thấp hơn.\n  ● Khuyến nghị: Lực mua yếu đi rõ rệt. Cẩn trọng sập, chuẩn bị CHỐT LỜI/SHORT.\n\n  [CHỈ BÁO DÒNG TIỀN - MACD (Tiêu cực (Histogram giảm))]\n  ● Setup    : PHÂN KỲ ĐỈNH MACD (Bearish Divergence): Giá kéo đỉnh mới nhưng MACD đỉnh lại thấp hơn. | MACD > 0 (Trend tăng trung hạn).\n  ● Khuyến nghị: Lực kéo kéo xả (Rủi ro Sập). Chờ xác nhận để CHỐT LỜI/SHORT.\n\n  [XUNG LỰC XU HƯỚNG - ADX (RED)]\n  ● Setup    : ADX 20.9 (20–25) không có độ dốc: Tín hiệu chưa rõ ràng.\n  ● Khuyến nghị: Chờ ADX dốc lên hoặc vượt 25 mới xác nhận trend.\n\n  [HỆ THỐNG BẢN ĐỒ NHIỆT]\n  ● Đánh giá Heatmap: YẾU (Nến chuyển Vàng -> Đỏ)\n\n  [CHỈ BÁO DÒNG TIỀN TẠO LẬP - MCDX]\n  ● Trạng thái : RỦI RO PHÂN PHỐI / FOMO\n  ● Hành động  : HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n  ● Chi tiết   : Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn.\n\n  [1.5 BIỆN LUẬN LÝ DO (TÍN HIỆU CƠ SỞ CHẨN ĐOÁN)]\n  ● ADX (Xung lực): 20.94 (Chop: False) | Biên độ giá: 94.31 / ATR: 30.63\n  ● Cấu Trúc (S_Bias): 0 | Xu Hướng (T_Bias): 0.0 (Trend Khoẻ: False)\n  ● Động Lượng MACD: 26.43 | Hist: -8.33\n  ● Thanh Khoản (Vol): Spike=False | Dry=False\n  ● Điểm Nổ Nến: Breakout_Up=False | Nến Lực=False\n\n  [3. MỨC GIÁ QUAN TRỌNG - S/R]\n  ● Giá hiện tại: 1,884.18\n  ● Hỗ trợ (S): S1: 1,859.22 | S2: 1,788.01\n  ● Kháng cự (R): R1: 1,933.11 | R2: 2,029.77\n\n----------------------------------------------------------------------\n  🎯 TỔNG KẾT CHIẾN LƯỢC TỪ AI (AIC PROFESSIONAL):\n  👉 CHIẾN LƯỢC CỐT LÕI : GIA TĂNG VỊ THẾ 1 (PULLBACK)\n     ● Tỷ trọng khuyến nghị : 30–50% (Thăm dò/Gia tăng 1)\n     - Lý do hệ thống       : Sức khoẻ: Yếu (30đ). Tín hiệu: Gia tăng vị thế 1 (Pullback).\n     - 💰 Tiền lớn (MCDX)   : RỦI RO PHÂN PHỐI / FOMO -> HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN\n     - 🛡️ Vị thế FULL TIỀN    : MỞ VỊ THẾ TẤN CÔNG. Vị thế đang khỏe (Yếu). Giải ngân thêm khi vượt 1,933.11.\n     - 💎 Vị thế ĐANG CẦM CỔ : GIA TĂNG TỶ TRỌNG. Tiếp tục gồng lãi. Mục tiêu kỳ vọng 2,029.77.\n     - ✂ Vị thế ĐANG KẸP     : CƠ HỘI ĐẢO NGƯỢC: Cổ đang có tín hiệu tốt. Giữ vị thế và chờ về mốc SL 1,822.04.\n     - 📈 Điểm Gia Tăng (Ngắm trước): Gia tăng chưa đủ uy tín, theo dõi thêm khi ĐÓNG CỬA vượt 1,899,440 | Break Swing High gần nhất (1899.44) | ⚠️ Chưa thấy rõ nền nghỉ — cần thêm vài phiên nén trước khi buy | Mức độ an toàn: 56%\n     - 🎯 Mốc Chốt Lời       : TP1: 2,029.77 | TP2: 2,029.77\n     - 🛑 Mốc Cắt Lỗ (SL)    : 1,822.04 (Thủng là Bán)\n======================================================================\n",
+      "StopLoss": 1822035,
+      "RR": "2.3/1",
+      "RiskScore": 5,
+      "RiskPct": 3.3,
+      "Action": "WAIT (Chờ tín hiệu rõ ràng)",
+      "Categories": [
+        "ACCUMULATION",
+        "UPCLOUD",
+        "ADD_1"
+      ],
+      "Rules": [
+        "RSI_GT_50",
+        "PRICE_ABOVE_MA50",
+        "MA20_GT_MA50",
+        "MCDX_RED",
+        "PRICE_ABOVE_KIJUN"
+      ],
+      "CutlossFull": 1724579,
+      "TrailingStop": 1822035,
+      "OpportunityScore": 30,
+      "OpportunityDesc": "Yếu",
+      "SafetyRating": 56,
+      "TopupPrice": 1899440,
+      "TopupDesc": "Break Swing High gần nhất (1899.44) | ⚠️ Chưa thấy rõ nền nghỉ — cần thêm vài phiên nén trước khi buy",
+      "AccumulationQuality": "HIGH",
+      "AccumulationNotes": [
+        "Nền thắt chặt (Tight Base <7%)",
+        "Áp lực bán cạn kiệt (Volume low)",
+        "Xuất hiện điểm cạn cung (No/Test Supply)"
+      ],
+      "AccumulationRangePct": 5.01,
+      "ReadyToBreak": false,
+      "Support1": 1859220,
+      "Resistance1": 1933110,
+      "TrendStatus": "Sideway",
+      "TechWeak": true,
+      "SidewaysNearRes": false,
+      "StateSignal": "GIA TĂNG VỊ THẾ 1 (PULLBACK)",
+      "AntiTrap": false,
+      "AvoidEntry": false,
+      "MCDX": {
+        "banker_pct": 40.9,
+        "hot_pct": 59.1,
+        "retailer_pct": 0.0,
+        "status": "RỦI RO PHÂN PHỐI / FOMO",
+        "action": "HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN",
+        "details": "Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn."
+      },
+      "Diagnostics": {
+        "rsi": {
+          "status": "PHÂN KỲ ĐỈNH (Bearish Divergence): Giá tạo đỉnh mới nhưng RSI thấp hơn.",
+          "action": "Lực mua yếu đi rõ rệt. Cẩn trọng sập, chuẩn bị CHỐT LỜI/SHORT."
+        },
+        "macd": {
+          "status": "PHÂN KỲ ĐỈNH MACD (Bearish Divergence): Giá kéo đỉnh mới nhưng MACD đỉnh lại thấp hơn. | MACD > 0 (Trend tăng trung hạn).",
+          "action": "Lực kéo kéo xả (Rủi ro Sập). Chờ xác nhận để CHỐT LỜI/SHORT."
+        },
+        "adx": {
+          "status": "ADX 20.9 (20–25) không có độ dốc: Tín hiệu chưa rõ ràng.",
+          "action": "Chờ ADX dốc lên hoặc vượt 25 mới xác nhận trend."
+        },
+        "ichimoku": {
+          "status": "STRONG UPTREND (Xu hướng MẠNH NHẤT): Giá trên mây, Tenkan > Kijun, Chikou trống đường.",
+          "action": "All-in mindset. Canh giá Pullback về Tenkan (nhanh) hoặc Kijun (an toàn) để BUY."
+        },
+        "ma": {
+          "status": "Giá nằm Dưới MA20, thiếu xung lực rõ ràng.",
+          "action": "Quan sát thêm các mốc giá, chưa có Setup chuẩn theo MA."
+        },
+        "vsa": {
+          "status": "VSA Dominant: NEUTRAL",
+          "action": "VSA Score: 0/4"
+        }
+      },
+      "History": {
+        "dates": [
+          "2026-04-09",
+          "2026-04-10",
+          "2026-04-13",
+          "2026-04-14",
+          "2026-04-15",
+          "2026-04-16",
+          "2026-04-17",
+          "2026-04-20",
+          "2026-04-21",
+          "2026-04-22",
+          "2026-04-23",
+          "2026-04-24",
+          "2026-04-28",
+          "2026-04-29",
+          "2026-05-04",
+          "2026-05-05",
+          "2026-05-07",
+          "2026-05-08",
+          "2026-05-11",
+          "2026-05-12",
+          "2026-05-13",
+          "2026-05-14",
+          "2026-05-15",
+          "2026-05-18",
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-25",
+          "2026-05-26"
+        ],
+        "closes": [
+          1736680.0,
+          1750000.0,
+          1758960.0,
+          1775650.0,
+          1800650.0,
+          1819830.0,
+          1817170.0,
+          1837110.0,
+          1833480.0,
+          1857300.0,
+          1870360.0,
+          1853290.0,
+          1875840.0,
+          1854100.0,
+          1854060.0,
+          1874850.0,
+          1891200.0,
+          1915370.0,
+          1895500.0,
+          1901100.0,
+          1898370.0,
+          1925460.0,
+          1921600.0,
+          1927940.0,
+          1912930.0,
+          1913230.0,
+          1896890.0,
+          1881820.0,
+          1886030.0,
+          1884180.0
+        ],
+        "volumes": [
+          1006848400,
+          925131100,
+          825933100,
+          826661400,
+          867853100,
+          890369200,
+          708729100,
+          643588600,
+          841329000,
+          641338600,
+          1014702100,
+          625709200,
+          631088700,
+          684081700,
+          671298200,
+          762314900,
+          787614800,
+          944197112,
+          960671699,
+          733300648,
+          972787205,
+          675088585,
+          744584792,
+          820722199,
+          1007594006,
+          1197618071,
+          677251003,
+          93042466,
+          702575224,
+          729758151
+        ]
+      }
+    },
+    {
       "Ticker": "VNS",
       "Price": 7640,
       "Volume": 0,
@@ -38197,22 +38567,32 @@
   ],
   "filtered_results": {
     "ACCUMULATION": [
+      "HNX-INDEX",
       "SGN",
-      "TMX"
+      "TMX",
+      "VNINDEX"
     ],
     "PERFECT_MA": [],
     "HEIKIN_BUY": [],
-    "UPCLOUD": [],
-    "WHITE_ADX": [],
+    "UPCLOUD": [
+      "HNX-INDEX",
+      "VNINDEX"
+    ],
+    "WHITE_ADX": [
+      "HNX-INDEX"
+    ],
     "EARLY": [
       "TCT"
     ],
     "ADD_1": [
       "GHC",
       "SGN",
-      "TMX"
+      "TMX",
+      "VNINDEX"
     ],
-    "ADD_2": [],
+    "ADD_2": [
+      "HNX-INDEX"
+    ],
     "STRONG": [],
     "RSI_BULLISH_DIVERGENCE": [],
     "MACD_BULLISH_DIVERGENCE": [],
@@ -38223,27 +38603,42 @@
     "PRICE_CROSS_MA50": [],
     "RSI_EXIT_OVERSOLD": [],
     "RSI_CROSS_70": [],
-    "RSI_GT_50": [],
-    "PRICE_ABOVE_MA20": [
-      "GHC"
+    "RSI_GT_50": [
+      "HNX-INDEX",
+      "VNINDEX"
     ],
-    "PRICE_ABOVE_MA50": [],
+    "PRICE_ABOVE_MA20": [
+      "GHC",
+      "HNX-INDEX"
+    ],
+    "PRICE_ABOVE_MA50": [
+      "HNX-INDEX",
+      "VNINDEX"
+    ],
     "MA20_GT_MA50": [
       "APH",
+      "HNX-INDEX",
       "LMC",
       "PVV",
       "SGN",
       "SMB",
+      "VNINDEX",
       "VQC",
       "VTH",
       "XPH"
     ],
-    "MCDX_RED": [],
+    "MCDX_RED": [
+      "HNX-INDEX",
+      "VNINDEX"
+    ],
     "PRICE_ABOVE_KIJUN": [
-      "GHC"
+      "GHC",
+      "HNX-INDEX",
+      "VNINDEX"
     ],
     "PRICE_ABOVE_TENKAN": [
       "HHC",
+      "HNX-INDEX",
       "TCT"
     ],
     "MACD_CROSS_SIGNAL": [],
@@ -38252,9 +38647,14 @@
       "HAF",
       "HAN",
       "HGM",
-      "HHC"
+      "HHC",
+      "HNX-INDEX"
     ],
-    "WEEK_HIGH_BREAKOUT": [],
-    "ACCUMULATION_BREAKOUT": []
+    "WEEK_HIGH_BREAKOUT": [
+      "HNX-INDEX"
+    ],
+    "ACCUMULATION_BREAKOUT": [
+      "HNX-INDEX"
+    ]
   }
 }
