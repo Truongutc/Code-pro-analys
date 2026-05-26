@@ -1134,50 +1134,29 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
     Output: Output/history/{TICKER}.json  (one file per ticker)
     """
     import math
+    from concurrent.futures import ThreadPoolExecutor
+    
     history_dir = os.path.join(output_dir, "history")
     os.makedirs(history_dir, exist_ok=True)
     
-    def safe_val(v):
-        """Convert numpy/pandas scalars to JSON-safe Python types."""
-        if v is None:
-            return None
-        try:
-            fv = float(v)
-            if math.isnan(fv) or math.isinf(fv):
-                return None
-            # Return int if it's a whole number (cleaner JSON)
-            if fv == int(fv) and abs(fv) < 1e12:
-                return int(fv)
-            return round(fv, 6)
-        except (TypeError, ValueError):
-            return None
-    
-    def serialize_col(series):
-        """Serialize a pandas Series to a list of JSON-safe values."""
-        return [safe_val(v) for v in series]
-    
     # Columns needed for each chart type
-    # Chart 1: GreenPink + Octopus + RS13/RS52
     GP_COLS = ['GP_E14', 'GP_E21', 'GP_xFast', 'GP_xSlow',
                'GP_BB_Top', 'GP_BB_Bot',
                'OCT_A1', 'OCT_B1', 'OCT_Color',
                'OCT_BB_Top', 'OCT_BB_Bot',
                'RS13', 'RS52']
     
-    # Chart 2: Heikin-Ashi + 2Trend
     HK_COLS = ['HK_Flower_Open', 'HK_Flower_High', 'HK_Flower_Low', 'HK_Flower_Close',
                'HK_MHull', 'HK_SHull', 'HK_NW', 'HK_Trend', 'HK_BarColor',
                'HK_BuySignal', 'HK_BuyManh', 'HK_SellSignal', 'HK_SellManh',
                'TC_Trend', 'TC_TrendColor', 'TC_StopLine', 'TC_StopColor',
                'T2_SMA', 'T2_SMA_Trend', 'T2_ST_Upper', 'T2_ST_Lower', 'T2_ST_Trend']
     
-    # Chart 3: Heatmap
     HM_COLS = ['HM_PFE', 'HM_STC', 'HM_MoneyFlow',
                'HM_Flower_Open', 'HM_Flower_High', 'HM_Flower_Low', 'HM_Flower_Close',
                'HM_Band_Hi', 'HM_Band_KH', 'HM_Band_KM', 'HM_Band_KL', 'HM_Band_Lo',
                'HM_Band_Long_Hr', 'HM_Band_Long_Ls']
     
-    # Chart 4: Technical Report (Candlestick + Ichimoku + MCDX + ADX + MACD)
     TR_COLS = ['MA10', 'MA20', 'MA50',
                'Tenkan', 'Kijun', 'Kijun65', 'SpanA', 'SpanB',
                'MCDX_Banker', 'MCDX_HotMoney', 'MCDX_Retailer', 'MCDX_Banker_MA',
@@ -1187,39 +1166,38 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
     
     ALL_INDICATOR_COLS = list(dict.fromkeys(GP_COLS + HK_COLS + HM_COLS + TR_COLS))
     
-    exported = 0
-    errors = 0
-    
-    # Export indices first (VNINDEX, HNX-INDEX)
+    df_vn = data_dict.get("VNINDEX")
+    df_vn_indexed = None
+    if df_vn is not None and not df_vn.empty:
+        try:
+            df_vn_temp = df_vn.copy()
+            df_vn_temp['Date'] = pd.to_datetime(df_vn_temp['Date'])
+            df_vn_indexed = df_vn_temp.set_index('Date')
+        except Exception as e_vn:
+            logger.warning(f"Could not build VNINDEX index for RS: {e_vn}")
+
     all_tickers_to_export = list(data_dict.keys())
     
-    for t in all_tickers_to_export:
+    def process_single_ticker(t):
         try:
-            # Prefer the enriched df from analysis_cache (has more indicators)
             cached = analysis_cache.get(t)
             if cached and 'df' in cached and cached['df'] is not None:
                 df = cached['df'].copy()
             else:
                 df = data_dict.get(t)
                 if df is None or df.empty:
-                    continue
+                    return False
                 df = df.copy()
             
             if df.empty or 'Date' not in df.columns:
-                continue
+                return False
             
-            # Convert Date to string
             df['Date'] = pd.to_datetime(df['Date'])
             df = df.sort_values('Date').reset_index(drop=True)
             
             # Calculate RS13 / RS52 against VNINDEX
-            df_vn = data_dict.get("VNINDEX")
-            if df_vn is not None and not df_vn.empty:
+            if df_vn_indexed is not None:
                 try:
-                    df_vn_temp = df_vn.copy()
-                    df_vn_temp['Date'] = pd.to_datetime(df_vn_temp['Date'])
-                    df_vn_indexed = df_vn_temp.set_index('Date')
-                    
                     bench_close = df['Date'].map(df_vn_indexed['Close']).ffill().bfill()
                     rs_raw = df['Close'] / (bench_close + 1e-10)
                     
@@ -1230,26 +1208,22 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
                     rs13_min = rs_raw.rolling(window=65, min_periods=1).min()
                     rs13_max = rs_raw.rolling(window=65, min_periods=1).max()
                     df['RS13'] = 100 * (rs_raw - rs13_min) / (rs13_max - rs13_min + 0.0001)
-                except Exception as e_rs:
+                except Exception:
                     df['RS13'] = 50.0
                     df['RS52'] = 50.0
             else:
                 df['RS13'] = 50.0
                 df['RS52'] = 50.0
             
-            # --- Project 26 Future Days for Ichimoku Cloud ---
             df_extended = df.copy()
             if len(df) > 0:
                 try:
                     last_date = df['Date'].iloc[-1]
                     future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=26)
-                    df_future = pd.DataFrame({'Date': future_dates})
                     
-                    # Calculate raw SpanA and SpanB (unshifted) to project them forward
                     raw_a = (df['Tenkan'] + df['Kijun']) / 2 if 'Tenkan' in df.columns and 'Kijun' in df.columns else np.nan
                     raw_b = (df['High'].rolling(52).max() + df['Low'].rolling(52).min()) / 2 if 'High' in df.columns and 'Low' in df.columns else np.nan
                     
-                    # Populate future SpanA and SpanB
                     future_spans = []
                     for i in range(1, 27):
                         source_idx = -26 + i
@@ -1260,51 +1234,44 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
                     df_future_cloud = pd.DataFrame(future_spans)
                     df_extended = pd.concat([df, df_future_cloud], ignore_index=True)
                 except Exception as ex_future:
-                    logger.warning(f"Could not project future Ichimoku spans for {t}: {ex_future}")
+                    pass
 
             record = {
                 "ticker": t,
-                "dates": [d.strftime("%Y-%m-%d") for d in df_extended['Date']],
-                # OHLCV (required for all chart types)
-                "opens":   serialize_col(df_extended['Open']),
-                "highs":   serialize_col(df_extended['High']),
-                "lows":    serialize_col(df_extended['Low']),
-                "closes":  serialize_col(df_extended['Close']),
-                "volumes": serialize_col(df_extended['Volume']),
+                "dates": df_extended['Date'].dt.strftime("%Y-%m-%d").tolist(),
+                "opens":   df_extended['Open'].round(6).where(df_extended['Open'].notna(), None).tolist(),
+                "highs":   df_extended['High'].round(6).where(df_extended['High'].notna(), None).tolist(),
+                "lows":    df_extended['Low'].round(6).where(df_extended['Low'].notna(), None).tolist(),
+                "closes":  df_extended['Close'].round(6).where(df_extended['Close'].notna(), None).tolist(),
+                "volumes": df_extended['Volume'].round(6).where(df_extended['Volume'].notna(), None).tolist(),
             }
             
-            # Add indicator columns if present
             for col in ALL_INDICATOR_COLS:
                 if col in df_extended.columns:
-                    # Special case: bool/string/object columns
-                    if df_extended[col].dtype == bool or df_extended[col].dtype == object or col in ['HK_BuySignal', 'HK_BuyManh', 'HK_SellSignal', 'HK_SellManh']:
-                        # Robust boolean/object serialization to avoid "nan" string representation
-                        def clean_val(v):
-                            if pd.isna(v) or v is None:
-                                return None
-                            if isinstance(v, (bool, np.bool_)):
-                                return bool(v)
-                            # Convert string representations to actual boolean if matching
-                            sv = str(v).lower()
-                            if sv in ('true', '1', '1.0'):
-                                return True
-                            if sv in ('false', '0', '0.0', 'nan', 'none', 'null'):
-                                return False
-                            return str(v)
-                        record[col] = [clean_val(v) for v in df_extended[col]]
+                    series = df_extended[col]
+                    if series.dtype == bool or col in ['HK_BuySignal', 'HK_BuyManh', 'HK_SellSignal', 'HK_SellManh']:
+                        record[col] = [bool(v) if pd.notna(v) and v is not None else None for v in series]
+                    elif series.dtype == object:
+                        record[col] = series.where(series.notna(), None).tolist()
                     else:
-                        record[col] = serialize_col(df_extended[col])
+                        series_rounded = series.round(6)
+                        record[col] = series_rounded.where(series_rounded.notna(), None).tolist()
             
-            # Write JSON (no indent for smaller file size)
             out_path = os.path.join(history_dir, f"{t}.json")
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(record, f, ensure_ascii=False, separators=(',', ':'))
-            
-            exported += 1
+            return True
         except Exception as ex:
             logger.error(f"   ! Lỗi xuất history JSON mã {t}: {ex}")
-            errors += 1
-    
+            return False
+
+    max_workers = min(16, (os.cpu_count() or 4) * 2)
+    logger.info(f"⚡ Đang xuất JSON song song sử dụng {max_workers} threads...")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(process_single_ticker, all_tickers_to_export))
+        
+    exported = sum(1 for r in results if r)
+    errors = len(all_tickers_to_export) - exported
     logger.info(f"✅ Đã xuất history JSON: {exported} mã thành công, {errors} lỗi → {history_dir}")
 
 
