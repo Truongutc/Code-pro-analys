@@ -517,6 +517,10 @@ def evaluate_stock_valuation(ticker: str, df: pd.DataFrame, entry_info: dict) ->
     elif opp_col >= 40: opp_desc = "Trung bình"
     
     # Cập nhật dán nhãn hành động dựa trên Tỷ trọng khuyến nghị của phần đánh giá tổng hợp
+    ma_diag = evaluate_ma(df, -1)
+    ma_status = ma_diag.get("status", "")
+    is_trend_broken = "GAY" in ma_status or "DOWNTREND" in ma_status or "BAN" in ma_status
+
     target_pct = "0% (Theo dõi thêm)"
     if risk_col > 60 or is_trend_broken:
         target_pct = "0% (Đứng ngoài phòng thủ)"

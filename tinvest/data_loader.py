@@ -43,6 +43,7 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     out['ATR14'] = tr.rolling(14).mean()
 
     # ── 3. Volume ──────────────────────────────────────────────────────────
+    out['AvgVolume10'] = out['Volume'].rolling(10).mean()
     out['AvgVolume20'] = out['Volume'].rolling(20).mean()
 
     # ── 4. Ichimoku Cloud ──────────────────────────────────────────────────

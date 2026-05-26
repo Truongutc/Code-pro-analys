@@ -3788,7 +3788,7 @@
                             <div class="chart-cell-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <span class="chart-cell-label">📊 Kỹ thuật</span>
-                                    \${getTechTogglesHtml()}
+                                    ${getTechTogglesHtml()}
                                 </div>
                                 <button class="chart-expand-btn" onclick="expandChart('${containerId}','techreport')">⛶ Mở rộng</button>
                             </div>
@@ -3959,6 +3959,26 @@
             applyCustomFilters();
         }
 
+        function removeVietnameseTones(str) {
+            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a");
+            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e");
+            str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i");
+            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o");
+            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u");
+            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y");
+            str = str.replace(/đ/g,"d");
+            str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+            str = str.replace(/È|É|Ẹ|Ẻ|E|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+            str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+            str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+            str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+            str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+            str = str.replace(/Đ/g, "D");
+            str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
+            str = str.replace(/\u02C6|\u0306|\u031B/g, "");
+            return str;
+        }
+
         // Apply custom filters logically using AND matching
         function applyCustomFilters() {
             let list = [...rawData.tickers_analysis];
@@ -3968,18 +3988,18 @@
                 list = list.filter(t => {
                     for (const filterKey of activeCustomFilters) {
                         if (filterKey === 'VOL_AVG10_GT_100K') {
-                            const val = t.AvgVolume10 !== undefined ? t.AvgVolume10 : 0;
+                            const val = t.AvgVolume10 !== undefined ? t.AvgVolume10 : (t.Volume || 0);
                             if (val <= 100000) {
                                 return false;
                             }
                         } else if (filterKey === 'ACTION_YES_GREEN') {
-                            const a = (t.Action || '').toUpperCase();
-                            if (!a.includes('CÂN NHẮC') && !a.includes('CAN NHAC')) {
+                            const a = removeVietnameseTones(t.Action || '').toUpperCase();
+                            if (!a.includes('CAN NHAC')) {
                                 return false;
                             }
                         } else if (filterKey === 'ACTION_YES_PURPLE') {
-                            const a = (t.Action || '').toUpperCase();
-                            if (!a.includes('RẤT NÊN') && !a.includes('ƯU TIÊN') && !a.includes('RAT NEN') && !a.includes('UU TIEN')) {
+                            const a = removeVietnameseTones(t.Action || '').toUpperCase();
+                            if (!a.includes('RAT NEN') && !a.includes('UU TIEN')) {
                                 return false;
                             }
                         } else {
@@ -4336,10 +4356,77 @@
         // ================================================================
         //  renderGPChart  — in a cell body div (mountId), returns primary chart
         // ================================================================
-        function renderGPChart(mountId, data, instances) {
+        function getHistoricalDataOnly(data) {
+            let histLen = data.dates.length;
+            for (let i = data.dates.length - 1; i >= 0; i--) {
+                if (data.closes[i] !== null && data.closes[i] !== undefined) {
+                    histLen = i + 1;
+                    break;
+                }
+            }
+            const histData = {};
+            for (const key in data) {
+                if (Array.isArray(data[key])) {
+                    histData[key] = data[key].slice(0, histLen);
+                } else {
+                    histData[key] = data[key];
+                }
+            }
+            return histData;
+        }
+
+        function addColoredLineSegments(chart, dates, values, colors, scaleFactor = 1) {
+            let currentSegment = [];
+            let currentColor = null;
+            
+            for (let i = 0; i < dates.length; i++) {
+                const v = values[i];
+                if (v === null || v === undefined) {
+                    if (currentSegment.length > 0) {
+                        chart.addLineSeries({ color: currentColor, lineWidth: 3, priceLineVisible: false, lastValueVisible: false, title: '' })
+                             .setData(currentSegment);
+                        currentSegment = [];
+                    }
+                    currentColor = null;
+                    continue;
+                }
+                
+                const col = colors ? colors[i] : '#808080';
+                const t = d2ts(dates[i]);
+                const val = v * scaleFactor;
+                
+                if (currentColor === null) {
+                    currentColor = col;
+                    currentSegment.push({ time: t, value: val });
+                } else if (col !== currentColor) {
+                    // End previous segment, overlap by 1 point to make the line continuous
+                    currentSegment.push({ time: t, value: val });
+                    chart.addLineSeries({ color: currentColor, lineWidth: 3, priceLineVisible: false, lastValueVisible: false, title: '' })
+                         .setData(currentSegment);
+                    
+                    currentColor = col;
+                    currentSegment = [{ time: t, value: val }];
+                } else {
+                    currentSegment.push({ time: t, value: val });
+                }
+            }
+            
+            if (currentSegment.length > 0) {
+                chart.addLineSeries({ color: currentColor, lineWidth: 3, priceLineVisible: false, lastValueVisible: false, title: '' })
+                     .setData(currentSegment);
+            }
+        }
+
+        // ================================================================
+        //  renderGPChart  — in a cell body div (mountId), returns primary chart
+        // ================================================================
+        function renderGPChart(mountId, rawDataInput, instances) {
             const root = document.getElementById(mountId);
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+
+            // Filter out projected future dates
+            const data = getHistoricalDataOnly(rawDataInput);
 
             const h1 = 360, h2 = 120, h3 = 120;
 
@@ -4352,11 +4439,7 @@
             const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c1, ro: ro1});
 
-            // BB bands (behind everything)
-            if (data.GP_BB_Top) c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Top'));
-            if (data.GP_BB_Bot) c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Bot'));
-
-            // GP Cloud: colored fill between xFast (green) and xSlow (red)
+            // GP Cloud: colored fill between xFast (green) and xSlow (red) with #080b13 layout background mask
             if (data.GP_xFast && data.GP_xSlow) {
                 const sc = priceScale(data);
                 const gpBullish = [], gpBearish = [], gpMask = [];
@@ -4376,24 +4459,28 @@
                     gpMask.push({time: t, value: bot});
                 }
                 c1.addAreaSeries({
-                    topColor: 'rgba(0, 255, 0, 0.35)', bottomColor: 'rgba(0, 255, 0, 0.05)',
-                    lineColor: '#00ff00', lineWidth: 2,
+                    topColor: 'rgba(0, 255, 0, 0.25)', bottomColor: 'rgba(0, 255, 0, 0.01)',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
                     priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(gpBullish);
                 c1.addAreaSeries({
-                    topColor: 'rgba(255, 105, 180, 0.35)', bottomColor: 'rgba(255, 105, 180, 0.05)',
-                    lineColor: '#ff69b4', lineWidth: 2,
+                    topColor: 'rgba(255, 105, 180, 0.25)', bottomColor: 'rgba(255, 105, 180, 0.01)',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
                     priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(gpBearish);
                 c1.addAreaSeries({
-                    topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
+                    topColor: '#080b13', bottomColor: '#080b13',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
                     priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(gpMask);
-            } else {
-                if (data.GP_xFast) c1.addLineSeries({color:'#00ff00',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));
-                if (data.GP_xSlow) c1.addLineSeries({color:'#ff69b4',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));
             }
+            
+            if (data.GP_xFast) c1.addLineSeries({color:'#00ff00',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));
+            if (data.GP_xSlow) c1.addLineSeries({color:'#ff0000',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));
+
+            // Bollinger Bands
+            if (data.GP_BB_Top) c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Top'));
+            if (data.GP_BB_Bot) c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Bot'));
 
             // Candles on top
             c1.addCandlestickSeries({
@@ -4403,21 +4490,29 @@
                 priceLineVisible: false, lastValueVisible: false
             }).setData(ohlcv(data));
 
-            // Pane 2: Octopus (A1 histogram colored + B1 dashed)
+            // Pane 2: Octopus (A1 and B1 dynamically colored line segments + BB cloud)
             const {chart: c2, ro: ro2} = mkChart(d2, h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c2, ro: ro2});
-            if (data.OCT_A1) {
-                const octData = data.dates.map((dt, i) => {
-                    const v = data.OCT_A1[i];
-                    if (v === null || v === undefined) return null;
-                    const col = data.OCT_Color ? data.OCT_Color[i] : '#808080';
-                    return { time: d2ts(dt), value: v, color: col };
-                }).filter(Boolean);
-                c2.addHistogramSeries({
-                    priceLineVisible: false, lastValueVisible: true, title: ''
-                }).setData(octData);
+            
+            // Draw BB cloud for Octopus
+            if (data.OCT_BB_Top && data.OCT_BB_Bot) {
+                const octBBTopData = lineData(data, 'OCT_BB_Top', 1);
+                const octBBBotData = lineData(data, 'OCT_BB_Bot', 1);
+                c2.addAreaSeries({
+                    topColor: 'rgba(173, 216, 230, 0.15)', bottomColor: 'rgba(173, 216, 230, 0.01)',
+                    lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(octBBTopData);
+                c2.addAreaSeries({
+                    topColor: '#080b13', bottomColor: '#080b13',
+                    lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(octBBBotData);
             }
-            if (data.OCT_B1) c2.addLineSeries({color:'#a78bfa',lineWidth:1.5,lineStyle:2,priceLineVisible:false,lastValueVisible:true,title: ''}).setData(lineData(data,'OCT_B1',1));
+            
+            if (data.OCT_A1) addColoredLineSegments(c2, data.dates, data.OCT_A1, data.OCT_Color, 1);
+            if (data.OCT_B1) addColoredLineSegments(c2, data.dates, data.OCT_B1, data.OCT_Color, 1);
+
             // zero baseline
             if (data.dates.length > 0) {
                 c2.addLineSeries({color:'rgba(255,255,255,0.12)',lineWidth:1,priceLineVisible:false,lastValueVisible:false})
@@ -4443,10 +4538,12 @@
         // ================================================================
         //  renderHeikinChart  — Heikin-Ashi + 2Trend
         // ================================================================
-        function renderHeikinChart(mountId, data, instances) {
+        function renderHeikinChart(mountId, rawDataInput, instances) {
             const root = document.getElementById(mountId);
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+
+            const data = getHistoricalDataOnly(rawDataInput);
 
             const h1 = 320, h2 = 280;
             const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
@@ -4520,8 +4617,9 @@
                 // Buy/sell markers on HK
                 const markers = [];
                 for (let i = 0; i < data.dates.length; i++) {
-                    const isBuy = (data.HK_BuySignal && data.HK_BuySignal[i]) || (data.HK_BuyManh && data.HK_BuyManh[i]);
-                    const isSell = (data.HK_SellSignal && data.HK_SellSignal[i]) || (data.HK_SellManh && data.HK_SellManh[i]);
+                    const trend = data.HK_Trend ? data.HK_Trend[i] : 1;
+                    const isBuy = ((data.HK_BuySignal && data.HK_BuySignal[i] && data.HK_BuySignal[i] !== 'nan' && data.HK_BuySignal[i] !== 'None') || (data.HK_BuyManh && data.HK_BuyManh[i] && data.HK_BuyManh[i] !== 'nan' && data.HK_BuyManh[i] !== 'None')) && (trend === 1);
+                    const isSell = ((data.HK_SellSignal && data.HK_SellSignal[i] && data.HK_SellSignal[i] !== 'nan' && data.HK_SellSignal[i] !== 'None') || (data.HK_SellManh && data.HK_SellManh[i] && data.HK_SellManh[i] !== 'nan' && data.HK_SellManh[i] !== 'None')) && (trend === -1);
                     if (isBuy) {
                         markers.push({time:d2ts(data.dates[i]),position:'belowBar',color:'#00ff6a',shape:'arrowUp',text:'B'});
                     }
@@ -4591,10 +4689,12 @@
         // ================================================================
         //  renderHeatmapChart  — Bản đồ nhiệt
         // ================================================================
-        function renderHeatmapChart(mountId, data, instances) {
+        function renderHeatmapChart(mountId, rawDataInput, instances) {
             const root = document.getElementById(mountId);
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+
+            const data = getHistoricalDataOnly(rawDataInput);
 
             const h1 = 400, h2 = 200;
             const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
@@ -5130,56 +5230,88 @@
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChartFullscreen(); });
 
         // ── Fullscreen variants (larger heights) ──
-        function renderGPChartFs(mountId, data, instances) {
+        function renderGPChartFs(mountId, rawDataInput, instances) {
             const root = document.getElementById(mountId);
             root.innerHTML = ''; root.style.display='flex'; root.style.flexDirection='column';
+            
+            const data = getHistoricalDataOnly(rawDataInput);
+            
             const total = root.offsetHeight || window.innerHeight - 120;
             const h1=Math.round(total*0.55), h2=Math.round(total*0.225), h3=Math.round(total*0.225);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
             const d1=mk(h1,false),d2=mk(h2),d3=mk(h3);
             const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c1,ro:r1});
+            
+            // GP cloud fill
+            if (data.GP_xFast && data.GP_xSlow) {
+                const sc = priceScale(data);
+                const gpBullish = [], gpBearish = [], gpMask = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    const f = data.GP_xFast[i], s = data.GP_xSlow[i];
+                    if (f === null || s === null || f === undefined || s === undefined) continue;
+                    const t = d2ts(data.dates[i]);
+                    const top = Math.max(f, s) * sc;
+                    const bot = Math.min(f, s) * sc;
+                    if (f >= s) {
+                        gpBullish.push({time: t, value: top});
+                        gpBearish.push({time: t, value: null});
+                    } else {
+                        gpBullish.push({time: t, value: null});
+                        gpBearish.push({time: t, value: top});
+                    }
+                    gpMask.push({time: t, value: bot});
+                }
+                c1.addAreaSeries({
+                    topColor: 'rgba(0, 255, 0, 0.25)', bottomColor: 'rgba(0, 255, 0, 0.01)',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(gpBullish);
+                c1.addAreaSeries({
+                    topColor: 'rgba(255, 105, 180, 0.25)', bottomColor: 'rgba(255, 105, 180, 0.01)',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(gpBearish);
+                c1.addAreaSeries({
+                    topColor: '#080b13', bottomColor: '#080b13',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(gpMask);
+            }
+            
+            if (data.GP_xFast) c1.addLineSeries({color:'#00ff00',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));
+            if (data.GP_xSlow) c1.addLineSeries({color:'#ff0000',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));
+
             // BB bands
             if(data.GP_BB_Top)c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Top'));
             if(data.GP_BB_Bot)c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Bot'));
-            // GP cloud fill
-            if(data.GP_xFast&&data.GP_xSlow){
-                const sc=priceScale(data);
-                const gpBullish = [], gpBearish = [], gpMask = [];
-                for(let i=0;i<data.dates.length;i++){
-                    const f=data.GP_xFast[i],s=data.GP_xSlow[i];
-                    if(f===null||s===null||f===undefined||s===undefined)continue;
-                    const t=d2ts(data.dates[i]);
-                    const top = Math.max(f, s) * sc;
-                    const bot = Math.min(f, s) * sc;
-                    if(f>=s){
-                        gpBullish.push({time:t,value:top});
-                        gpBearish.push({time:t,value:null});
-                    }else{
-                        gpBullish.push({time:t,value:null});
-                        gpBearish.push({time:t,value:top});
-                    }
-                    gpMask.push({time:t,value:bot});
-                }
-                c1.addAreaSeries({topColor:'rgba(57,255,20,0.2)',bottomColor:'rgba(57,255,20,0.01)',lineColor:'#39ff14',lineWidth:2,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpBullish);
-                c1.addAreaSeries({topColor:'rgba(255,68,68,0.2)',bottomColor:'rgba(255,68,68,0.01)',lineColor:'#ff4444',lineWidth:2,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpBearish);
-                c1.addAreaSeries({topColor:'#000000',bottomColor:'#000000',lineColor:'rgba(0,0,0,0)',lineWidth:0,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpMask);
-            }
-            else{if(data.GP_xFast)c1.addLineSeries({color:'#39ff14',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));if(data.GP_xSlow)c1.addLineSeries({color:'#ff4444',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));}
+            
             // Candles on top
             c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',priceLineVisible:false,lastValueVisible:false}).setData(ohlcv(data));
+            
             // Octopus pane
             const {chart:c2,ro:r2}=mkChart(d2,h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c2,ro:r2});
-            if(data.OCT_A1) {
-                const octData = data.dates.map((dt, i) => {
-                    const v = data.OCT_A1[i];
-                    if (v === null || v === undefined) return null;
-                    const col = data.OCT_Color ? data.OCT_Color[i] : '#808080';
-                    return { time: d2ts(dt), value: v, color: col };
-                }).filter(Boolean);
-                c2.addHistogramSeries({priceLineVisible:false,lastValueVisible:true,title: ''}).setData(octData);
+            
+            // Draw BB cloud for Octopus
+            if (data.OCT_BB_Top && data.OCT_BB_Bot) {
+                const octBBTopData = lineData(data, 'OCT_BB_Top', 1);
+                const octBBBotData = lineData(data, 'OCT_BB_Bot', 1);
+                c2.addAreaSeries({
+                    topColor: 'rgba(173, 216, 230, 0.15)', bottomColor: 'rgba(173, 216, 230, 0.01)',
+                    lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(octBBTopData);
+                c2.addAreaSeries({
+                    topColor: '#080b13', bottomColor: '#080b13',
+                    lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(octBBBotData);
             }
-            if(data.OCT_B1)c2.addLineSeries({color:'#a78bfa',lineWidth:1.5,lineStyle:2,priceLineVisible:false,lastValueVisible:true,title: ''}).setData(lineData(data,'OCT_B1',1));
+            
+            if (data.OCT_A1) addColoredLineSegments(c2, data.dates, data.OCT_A1, data.OCT_Color, 1);
+            if (data.OCT_B1) addColoredLineSegments(c2, data.dates, data.OCT_B1, data.OCT_Color, 1);
+
             if(data.dates.length>0)c2.addLineSeries({color:'rgba(255,255,255,0.12)',lineWidth:1,priceLineVisible:false,lastValueVisible:false}).setData([{time:d2ts(data.dates[0]),value:0},{time:d2ts(data.dates[data.dates.length-1]),value:0}]);
+            
             // RS pane
             const {chart:c3,ro:r3}=mkChart(d3,h3, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c3,ro:r3});
             if(data.RS13)c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
@@ -5188,9 +5320,10 @@
             syncCharts([c1,c2,c3]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
-        function renderHeikinChartFs(mountId, data, instances) {
+        function renderHeikinChartFs(mountId, rawDataInput, instances) {
             const root=document.getElementById(mountId);
             root.innerHTML=''; root.style.display='flex'; root.style.flexDirection='column';
+            const data = getHistoricalDataOnly(rawDataInput);
             const total=root.offsetHeight||window.innerHeight-120;
             const h1=Math.round(total*0.55),h2=Math.round(total*0.45);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
@@ -5241,9 +5374,10 @@
             syncCharts([c1,c2]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
-        function renderHeatmapChartFs(mountId, data, instances) {
+        function renderHeatmapChartFs(mountId, rawDataInput, instances) {
             const root=document.getElementById(mountId);
             root.innerHTML=''; root.style.display='flex'; root.style.flexDirection='column';
+            const data = getHistoricalDataOnly(rawDataInput);
             const total=root.offsetHeight||window.innerHeight-120;
             const h1=Math.round(total*0.68),h2=Math.round(total*0.32);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};

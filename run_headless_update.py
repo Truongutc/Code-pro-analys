@@ -780,6 +780,7 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             "Ticker": ticker,
             "Price": int(current_p),
             "Volume": int(current_vol),
+            "AvgVolume10": int(df['AvgVolume10'].iloc[-1]) if 'AvgVolume10' in df.columns else int(df['Volume'].rolling(10).mean().iloc[-1]) if len(df) >= 10 else int(current_vol),
             "Entry": int(ep * 1000) if ep > 0 else None,
             "Target": int(tp * 1000) if tp > 0 else None,
             "Target2": int(tp2 * 1000) if tp2 > 0 else None,
@@ -1213,25 +1214,67 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
                 df['RS13'] = 50.0
                 df['RS52'] = 50.0
             
+            # --- Project 26 Future Days for Ichimoku Cloud ---
+            df_extended = df.copy()
+            if len(df) > 0:
+                try:
+                    last_date = df['Date'].iloc[-1]
+                    future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=26)
+                    df_future = pd.DataFrame({'Date': future_dates})
+                    
+                    # Calculate raw SpanA and SpanB (unshifted) to project them forward
+                    raw_a = (df['Tenkan'] + df['Kijun']) / 2 if 'Tenkan' in df.columns and 'Kijun' in df.columns else np.nan
+                    raw_b = (df['High'].rolling(52).max() + df['Low'].rolling(52).min()) / 2 if 'High' in df.columns and 'Low' in df.columns else np.nan
+                    
+                    # Populate future SpanA and SpanB
+                    future_spans = []
+                    for i in range(1, 27):
+                        source_idx = -26 + i
+                        val_a = raw_a.iloc[source_idx] if abs(source_idx) <= len(df) else np.nan
+                        val_b = raw_b.iloc[source_idx] if abs(source_idx) <= len(df) else np.nan
+                        future_spans.append({'Date': future_dates[i-1], 'SpanA': val_a, 'SpanB': val_b})
+                    
+                    df_future_cloud = pd.DataFrame(future_spans)
+                    for col in df.columns:
+                        if col not in df_future_cloud.columns:
+                            df_future_cloud[col] = np.nan
+                    
+                    df_extended = pd.concat([df, df_future_cloud], ignore_index=True)
+                except Exception as ex_future:
+                    logger.warning(f"Could not project future Ichimoku spans for {t}: {ex_future}")
+
             record = {
                 "ticker": t,
-                "dates": [d.strftime("%Y-%m-%d") for d in df['Date']],
+                "dates": [d.strftime("%Y-%m-%d") for d in df_extended['Date']],
                 # OHLCV (required for all chart types)
-                "opens":   serialize_col(df['Open']),
-                "highs":   serialize_col(df['High']),
-                "lows":    serialize_col(df['Low']),
-                "closes":  serialize_col(df['Close']),
-                "volumes": serialize_col(df['Volume']),
+                "opens":   serialize_col(df_extended['Open']),
+                "highs":   serialize_col(df_extended['High']),
+                "lows":    serialize_col(df_extended['Low']),
+                "closes":  serialize_col(df_extended['Close']),
+                "volumes": serialize_col(df_extended['Volume']),
             }
             
             # Add indicator columns if present
             for col in ALL_INDICATOR_COLS:
-                if col in df.columns:
-                    # Special case: bool/string columns
-                    if df[col].dtype == bool or df[col].dtype == object:
-                        record[col] = [bool(v) if isinstance(v, (bool, np.bool_)) else str(v) if v is not None else None for v in df[col]]
+                if col in df_extended.columns:
+                    # Special case: bool/string/object columns
+                    if df_extended[col].dtype == bool or df_extended[col].dtype == object or col in ['HK_BuySignal', 'HK_BuyManh', 'HK_SellSignal', 'HK_SellManh']:
+                        # Robust boolean/object serialization to avoid "nan" string representation
+                        def clean_val(v):
+                            if pd.isna(v) or v is None:
+                                return None
+                            if isinstance(v, (bool, np.bool_)):
+                                return bool(v)
+                            # Convert string representations to actual boolean if matching
+                            sv = str(v).lower()
+                            if sv in ('true', '1', '1.0'):
+                                return True
+                            if sv in ('false', '0', '0.0', 'nan', 'none', 'null'):
+                                return False
+                            return str(v)
+                        record[col] = [clean_val(v) for v in df_extended[col]]
                     else:
-                        record[col] = serialize_col(df[col])
+                        record[col] = serialize_col(df_extended[col])
             
             # Write JSON (no indent for smaller file size)
             out_path = os.path.join(history_dir, f"{t}.json")
