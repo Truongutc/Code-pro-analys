@@ -2762,6 +2762,7 @@ class TinvestApp:
                 ma20 = float(df['MA20'].iloc[-1]) if 'MA20' in df.columns else current_p / 1000
                 vol = float(df['Volume'].iloc[-1]) if 'Volume' in df.columns else 0
                 vol_avg = float(df['AvgVolume20'].iloc[-1]) if 'AvgVolume20' in df.columns else vol
+                avg_vol_10 = float(df['Volume'].tail(10).mean()) if 'Volume' in df.columns and len(df) >= 10 else vol
                 
                 mcdx_weak = (mcdx_banker < prev_mcdx_banker) and (mcdx_banker < 15)
                 adx_low = adx < 20
@@ -2807,6 +2808,7 @@ class TinvestApp:
                     "Ticker": ticker,
                     "Price": int(current_p),
                     "Volume": int(current_vol),
+                    "AvgVolume10": int(avg_vol_10),
                     "Entry": int(ep * 1000) if ep > 0 else None,
                     "Target": int(tp * 1000) if tp > 0 else None,
                     "Target2": int(tp2 * 1000) if tp2 > 0 else None,
@@ -3050,8 +3052,29 @@ class TinvestApp:
                             "mcdx_eval": {
                                 "status": str(mcdx_eval.get("status", "N/A")),
                                 "action": str(mcdx_eval.get("action", "N/A")),
-                                "details": str(mcdx_eval.get("details", "N/A"))
-                            }
+                                "details": str(mcdx_eval.get("details", "N/A")),
+                                "banker_pct": float(df_rich['MCDX_Banker'].iloc[-1]) if 'MCDX_Banker' in df_rich.columns else 0.0,
+                                "hot_pct": float(df_rich['MCDX_Hot'].iloc[-1]) if 'MCDX_Hot' in df_rich.columns else 0.0,
+                                "retailer_pct": float(df_rich['MCDX_Retailer'].iloc[-1]) if 'MCDX_Retailer' in df_rich.columns else 0.0
+                            },
+                            "state_rules": {
+                                "primary": str(state_rules.get('primary', 'N/A')),
+                                "secondary": str(state_rules.get('secondary', 'N/A')),
+                                "signal": str(state_rules.get('signal', 'N/A')),
+                                "regime": str(state_rules.get('regime', 'N/A')),
+                                "confidence": int(state_rules.get('confidence', 0)),
+                                "avoid_entry": bool(state_rules.get('avoid_entry', False)),
+                                "adx": float(state_rules.get('metrics', {}).get('adx', 0.0)),
+                                "macd_hist": float(state_rules.get('metrics', {}).get('hist', 0.0)),
+                                "trend_bias": float(state_rules.get('metrics', {}).get('trend_bias', 0.0)),
+                                "vol_spike": bool(state_rules.get('metrics', {}).get('vol_spike', False)),
+                                "vol_dry": bool(state_rules.get('metrics', {}).get('vol_dry', False)),
+                                "strong_trend": bool(state_rules.get('metrics', {}).get('strong_trend', False)),
+                                "breakout_up": bool(state_rules.get('metrics', {}).get('breakout_up', False)),
+                                "dist_ma20": float(state_rules.get('metrics', {}).get('dist_ma20', 0.0)),
+                                "rsi": float(state_rules.get('metrics', {}).get('rsi', 50.0))
+                            },
+                            "alloc_note": str(alloc_note)
                         }
                     except Exception as e_idx:
                         self.log_sync(f"⚠️ Lỗi phân tích Index {index_ticker}: {e_idx}")

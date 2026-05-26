@@ -516,15 +516,31 @@ def evaluate_stock_valuation(ticker: str, df: pd.DataFrame, entry_info: dict) ->
     elif opp_col > 60: opp_desc = "Tốt"
     elif opp_col >= 40: opp_desc = "Trung bình"
     
-    action = "WAIT"
-    if risk_col > 75:
-        action = "NO TRADE"
-    elif opp_col > 60 and risk_col <= 45 and rr >= 1.2:
-        action = "YES (Ưu tiên tham gia)"
-    elif state != "NONE" and rr >= 1.0 and risk_col <= 60:
-        action = "YES (Có thể cân nhắc)"
+    # Cập nhật dán nhãn hành động dựa trên Tỷ trọng khuyến nghị của phần đánh giá tổng hợp
+    target_pct = "0% (Theo dõi thêm)"
+    if risk_col > 60 or is_trend_broken:
+        target_pct = "0% (Đứng ngoài phòng thủ)"
     else:
-        action = "WAIT (Chờ xác nhận)"
+        if state == "STRONG": 
+            target_pct = "70–100% (Mua Mạnh/Gồng lãi)"
+        elif state == "ADD_2": 
+            target_pct = "50–70% (Gia tăng 2)"
+        elif state == "ADD_1": 
+            target_pct = "30–50% (Thăm dò/Gia tăng 1)"
+        elif state == "EARLY": 
+            target_pct = "15–25% (Mua sớm)"
+        elif opp_col >= 65:
+            target_pct = "20–40% (Giữ vị thế/Chờ điểm nổ)"
+        elif opp_col >= 45:
+            target_pct = "10–20% (Quan sát chặt)"
+
+    action = "WAIT (Chờ tín hiệu rõ ràng)"
+    if "0%" in target_pct:
+        action = "WAIT (Chờ tín hiệu rõ ràng)"
+    elif "70–100%" in target_pct or "50–70%" in target_pct:
+        action = "YES (Rất nên tham gia)"
+    else:
+        action = "YES (Có thể cân nhắc)"
 
     topup = _calculate_topup_level(df, inds, entry_info, exits)
     

@@ -291,23 +291,27 @@ def format_report(result: dict) -> str:
     ts_val = f"{ts:,.2f}" if ts > 0 else "MA20"
     
     # 1. Định nghĩa Tỷ trọng khuyến nghị (Dựa trên Tín hiệu và Sức khỏe kỹ thuật)
+    ma_status = tech.get('diagnostics', {}).get('ma', {}).get('status', '').upper()
+    is_trend_broken = "GÃY" in ma_status or "DOWNTREND" in ma_status or "BÁN" in ma_status
+    
     target_pct = "0% (Theo dõi thêm)"
-    
-    # Ưu tiên theo Tín hiệu đang nắm giữ (Holding signal)
-    if state == "STRONG": 
-        target_pct = "70–100% (Mua Mạnh/Gồng lãi)"
-    elif state == "ADD_2": 
-        target_pct = "50–70% (Gia tăng 2)"
-    elif state == "ADD_1": 
-        target_pct = "30–50% (Thăm dò/Gia tăng 1)"
-    elif state == "EARLY": 
-        target_pct = "15–25% (Mua sớm)"
-    
-    # Nếu không có vị thế, xét theo sức khỏe kỹ thuật chung
-    elif tech.get('health_score', 0) >= 65:
-        target_pct = "20–40% (Giữ vị thế/Chờ điểm nổ)"
-    elif tech.get('health_score', 0) >= 45:
-        target_pct = "10–20% (Quan sát chặt)"
+    if rs > 60 or is_trend_broken:
+        target_pct = "0% (Đứng ngoài phòng thủ)"
+    else:
+        # Ưu tiên theo Tín hiệu đang nắm giữ (Holding signal)
+        if state == "STRONG": 
+            target_pct = "70–100% (Mua Mạnh/Gồng lãi)"
+        elif state == "ADD_2": 
+            target_pct = "50–70% (Gia tăng 2)"
+        elif state == "ADD_1": 
+            target_pct = "30–50% (Thăm dò/Gia tăng 1)"
+        elif state == "EARLY": 
+            target_pct = "15–25% (Mua sớm)"
+        # Nếu không có vị thế, xét theo sức khỏe kỹ thuật chung
+        elif tech.get('health_score', 0) >= 65:
+            target_pct = "20–40% (Giữ vị thế/Chờ điểm nổ)"
+        elif tech.get('health_score', 0) >= 45:
+            target_pct = "10–20% (Quan sát chặt)"
     
     if anti_trap: target_pct += " | 🛡️ CHẶN MUA ĐUỔI"
 

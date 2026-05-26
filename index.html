@@ -675,6 +675,12 @@
             border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
+        .action-badge.strongly-buy {
+            background: rgba(139, 92, 246, 0.15);
+            color: #c084fc;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
         .action-badge.wait {
             background: rgba(245, 158, 11, 0.15);
             color: #fbbf24;
@@ -2486,15 +2492,24 @@
                                 <input type="checkbox" value="MACD_CROSS_SIGNAL" onchange="toggleFilterCheckbox('MACD_CROSS_SIGNAL')">
                                 <span>MACD cắt lên đường Tín hiệu (Signal)</span>
                             </label>
+                            <label class="filter-checkbox-row" id="row-VOL_AVG10_GT_100K">
+                                <input type="checkbox" value="VOL_AVG10_GT_100K" onchange="toggleFilterCheckbox('VOL_AVG10_GT_100K')">
+                                <span>KLGD trung bình 10 phiên > 100,000 CP</span>
+                            </label>
+                            <label class="filter-checkbox-row" id="row-ACTION_YES_GREEN">
+                                <input type="checkbox" value="ACTION_YES_GREEN" onchange="toggleFilterCheckbox('ACTION_YES_GREEN')">
+                                <span style="color: #10b981;">🟢 Tag Xanh: YES (Có thể cân nhắc)</span>
+                            </label>
+                            <label class="filter-checkbox-row" id="row-ACTION_YES_PURPLE">
+                                <input type="checkbox" value="ACTION_YES_PURPLE" onchange="toggleFilterCheckbox('ACTION_YES_PURPLE')">
+                                <span style="color: #c084fc;">🟣 Tag Tím: YES (Rất nên tham gia)</span>
+                            </label>
                         </div>
                     </div>
                 </div>
                 
-                <div class="filter-action-bar">
-                    <button class="filter-submit-btn" onclick="applyCustomFilters()">🚀 KHỞI CHẠY</button>
-                </div>
                 <div class="filter-results-summary" id="filterResultsCount">
-                    Sẵn sàng lọc cổ phiếu. Chọn các tiêu chí ở trên và bấm Khởi chạy.
+                    Chọn tiêu chí ở trên, kết quả sẽ tự động cập nhật.
                 </div>
             </section>
 
@@ -2771,6 +2786,7 @@
         function getActionClass(actionStr) {
             if (!actionStr) return 'wait';
             const s = actionStr.toUpperCase();
+            if (s.includes('RẤT NÊN') || s.includes('STRONGLY') || s.includes('ƯU TIÊN') || s.includes('RẤT MẠNH')) return 'strongly-buy';
             if (s.includes('BUY') || s.includes('YES') || s.includes('MUA') || s.includes('THAM GIA')) return 'buy';
             if (s.includes('SELL') || s.includes('BÁN') || s.includes('NO TRADE') || s.includes('ĐỨNG NGOÀI') || s.includes('HẠN CHẾ')) return 'sell';
             return 'wait';
@@ -3033,28 +3049,13 @@
                             <span class="index-price">${formatPrice(indexData.price, true)}</span>
                             <span class="action-badge ${getActionClass(indexData.action)}">${indexData.action}</span>
                             <span class="index-date">📅 ${indexData.date}</span>
-                        </div>
-                        <div class="rating-bar-container">
-                            <div class="rating-bar-bg">
-                                <div class="rating-bar-fill" style="width:${techScore}%; background:${barColor}"></div>
-                            </div>
-                            <div class="rating-label">Đánh giá Kỹ thuật Tổng quát: <strong style="color:${barColor}">${techScore}/100</strong></div>
-                        </div>
-                        <div style="margin-top:10px;">
-                            <span class="${regimeClass}" style="font-weight:700; font-size:0.95rem;">Xu hướng: ${indexData.regime}</span>
-                            <span style="margin-left:12px; font-size:0.85rem;">Tỷ trọng: <strong class="text-purple">${indexData.alloc}</strong></span>
-                        </div>
-                        <p class="alloc-note-text" style="margin-top:8px;">${indexData.alloc_note}</p>
-                    </div>
-                `;
-            }
-
-            // Diagnostics Grid
+                        // Diagnostics Grid
             const gridEl = document.getElementById('vnindexDiagGrid');
             if (gridEl) {
                 const diag = indexData.diagnostics || {};
                 const sr = indexData.support_resistance || { s1: 0, s2: 0, r1: 0, r2: 0 };
                 const mcdx = indexData.mcdx_eval || {};
+                const stateRules = indexData.state_rules || {};
 
                 function diagClass(st, act) {
                     const s = (st + ' ' + act).toLowerCase();
@@ -3063,45 +3064,57 @@
                     return 'neutral';
                 }
 
+                let regimeClass = indexData.regime.includes('UPTREND') ? 'bullish' : indexData.regime.includes('DOWNTREND') ? 'bearish' : 'neutral';
+
                 gridEl.innerHTML = `
-                    <!-- Card: Chỉ báo Kỹ thuật -->
+                    <!-- Card: BỘ CHỈ BÁO ROBOT -->
                     <div class="analysis-card">
-                        <h4>🔍 Chẩn đoán Kỹ thuật</h4>
+                        <h4>🤖 Bộ Chỉ Báo ROBOT</h4>
+                        <div class="diag-row"><span>Xu hướng chính</span><strong class="${regimeClass}">${stateRules.primary || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Xu hướng phụ</span><strong>${stateRules.secondary || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Tín hiệu Robot</span><strong class="${getActionClass(stateRules.signal)}">${stateRules.signal || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Trạng thái</span><strong>${stateRules.regime || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Độ tin cậy</span><strong>${stateRules.confidence || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Tránh mua (Avoid Entry)</span><strong class="${stateRules.avoid_entry ? 'bearish' : 'bullish'}">${stateRules.avoid_entry ? 'CÓ' : 'KHÔNG'}</strong></div>
+                        <div class="diag-row"><span>Chỉ báo ADX / RSI</span><strong>${stateRules.adx !== undefined ? parseFloat(stateRules.adx).toFixed(1) : 'N/A'} / ${stateRules.rsi !== undefined ? parseFloat(stateRules.rsi).toFixed(1) : 'N/A'}</strong></div>
+                        <div class="diag-row"><span>MACD Hist / Bias</span><strong>${stateRules.macd_hist !== undefined ? parseFloat(stateRules.macd_hist).toFixed(1) : 'N/A'} / ${stateRules.trend_bias !== undefined ? parseFloat(stateRules.trend_bias).toFixed(2) : 'N/A'}</strong></div>
+                    </div>
+
+                    <!-- Card: CHỈ BÁO DÒNG TIỀN MCDX -->
+                    <div class="analysis-card">
+                        <h4>🔥 Dòng Tiền MCDX</h4>
+                        <div class="diag-row"><span>Nguồn vốn lớn (Banker)</span><strong style="color: #ff3b3b;">${mcdx.banker_pct !== undefined ? parseFloat(mcdx.banker_pct).toFixed(1) + '%' : '0.0%'}</strong></div>
+                        <div class="diag-row"><span>Dòng tiền nóng (Hot)</span><strong style="color: #ffcc00;">${mcdx.hot_pct !== undefined ? parseFloat(mcdx.hot_pct).toFixed(1) + '%' : '0.0%'}</strong></div>
+                        <div class="diag-row"><span>Nhỏ lẻ (Retailer)</span><strong style="color: #34c759;">${mcdx.retailer_pct !== undefined ? parseFloat(mcdx.retailer_pct).toFixed(1) + '%' : '0.0%'}</strong></div>
+                        <div class="diag-row"><span>Trạng thái dòng tiền</span><strong>${mcdx.status || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Hành động đề xuất</span><strong>${mcdx.action || 'N/A'}</strong></div>
+                        <div class="diag-row" style="grid-column: 1 / -1; margin-top: 6px; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4;">
+                            <span>Chi tiết: ${mcdx.details || 'N/A'}</span>
+                        </div>
+                    </div>
+
+                    <!-- Card: CHẨN ĐOÁN KỸ THUẬT & HỖ TRỢ/KHÁNG CỰ -->
+                    <div class="analysis-card">
+                        <h4>🔍 Chẩn Đoán Kỹ Thuật</h4>
                         <div class="diag-row"><span>Hệ thống MA</span><strong class="${diagClass(diag.ma?.status, diag.ma?.action)}">${diag.ma?.status || 'N/A'}</strong></div>
                         <div class="diag-row"><span>Ichimoku Cloud</span><strong class="${diagClass(diag.ichimoku?.status, diag.ichimoku?.action)}">${diag.ichimoku?.status || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>RSI</span><strong class="${diagClass(diag.rsi?.status, diag.rsi?.action)}">${diag.rsi?.status || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>MACD</span><strong class="${diagClass(diag.macd?.status, diag.macd?.action)}">${diag.macd?.status || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>ADX</span><strong class="${diagClass(diag.adx?.status, diag.adx?.action)}">${diag.adx?.status || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>RSI / MACD</span><strong class="${diagClass(diag.rsi?.status, diag.rsi?.action)}">${diag.rsi?.status || 'N/A'}</strong> / <strong class="${diagClass(diag.macd?.status, diag.macd?.action)}">${diag.macd?.status || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Hỗ trợ S1 / S2</span><strong class="text-green">${formatPrice(sr.s1, true)} / ${formatPrice(sr.s2, true)}</strong></div>
+                        <div class="diag-row"><span>Kháng cự R1 / R2</span><strong class="text-red">${formatPrice(sr.r1, true)} / ${formatPrice(sr.r2, true)}</strong></div>
+                        <div class="diag-row"><span>Bản đồ nhiệt (Heatmap)</span><strong>${indexData.heatmap_eval || 'N/A'}</strong></div>
                     </div>
 
-                    <!-- Card: Khuyến nghị Hành động -->
+                    <!-- Card: TỔNG KẾT CHIẾN LƯỢC AI -->
                     <div class="analysis-card">
-                        <h4>🎯 Khuyến nghị Chi tiết</h4>
-                        <div class="diag-row"><span>MA Lines</span><strong>${diag.ma?.action || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>Ichimoku</span><strong>${diag.ichimoku?.action || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>RSI</span><strong>${diag.rsi?.action || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>MACD</span><strong>${diag.macd?.action || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>ADX</span><strong>${diag.adx?.action || 'N/A'}</strong></div>
-                    </div>
-
-                    <!-- Card: Hỗ trợ / Kháng cự -->
-                    <div class="analysis-card">
-                        <h4>📐 Hỗ trợ & Kháng cự</h4>
-                        <div class="diag-row"><span>Hỗ trợ S1</span><strong class="text-green">${formatPrice(sr.s1, true)}</strong></div>
-                        <div class="diag-row"><span>Hỗ trợ S2</span><strong class="text-green">${formatPrice(sr.s2, true)}</strong></div>
-                        <div class="diag-row"><span>Kháng cự R1</span><strong class="text-red">${formatPrice(sr.r1, true)}</strong></div>
-                        <div class="diag-row"><span>Kháng cự R2</span><strong class="text-red">${formatPrice(sr.r2, true)}</strong></div>
-                    </div>
-
-                    <!-- Card: Trạng thái Thị trường -->
-                    <div class="analysis-card">
-                        <h4>📊 Trạng thái Thị trường</h4>
+                        <h4>🎯 Chiến Lược AI & FTD</h4>
                         <div class="diag-row"><span>FTD (Bùng nổ theo đà)</span><strong class="${indexData.ftd_active ? 'bullish' : 'neutral'}">${indexData.ftd_active ? 'CÓ (' + indexData.ftd_date + ')' : 'CHƯA'}</strong></div>
                         <div class="diag-row"><span>Chất lượng FTD</span><strong>${indexData.ftd_quality || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>Ngày phục hồi (RA)</span><strong>${indexData.ra_day || 0} ngày</strong></div>
-                        <div class="diag-row"><span>Số ngày phân phối</span><strong class="${indexData.distribution_count >= 4 ? 'bearish' : 'neutral'}">${indexData.distribution_count} ngày</strong></div>
-                        <div class="diag-row"><span>MCDX</span><strong>${mcdx.status || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>Heatmap</span><strong>${indexData.heatmap_eval || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Phục hồi (RA) / Phân phối</span><strong>${indexData.ra_day || 0} ngày / <strong class="${indexData.distribution_count >= 4 ? 'bearish' : 'neutral'}">${indexData.distribution_count} ngày</strong></strong></div>
+                        <div class="diag-row"><span>Tỷ trọng cổ phiếu tối đa</span><strong class="text-purple">${indexData.alloc || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Hành động AI đề xuất</span><strong class="${getActionClass(indexData.action)}">${indexData.action || 'N/A'}</strong></div>
+                        <div class="diag-row" style="grid-column: 1 / -1; margin-top: 6px; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4;">
+                            <span>Kịch bản xấu nhất: Nếu thủng MA20 / Kijun, lập tức hạ tỷ trọng.</span>
+                        </div>
                     </div>
                 `;
             }
@@ -3173,21 +3186,21 @@
                 priceScaleId: 'left',
                 color: '#ffffff', // White
                 lineWidth: 2,
-                title: '% > MA10',
+                title: '',
                 visible: breadthMAVisible.MA10
             });
             const ma20Series = chart.addLineSeries({
                 priceScaleId: 'left',
                 color: '#00f0ff', // Cyan (Vibrant neon contrasting color)
                 lineWidth: 2,
-                title: '% > MA20',
+                title: '',
                 visible: breadthMAVisible.MA20
             });
             const ma50Series = chart.addLineSeries({
                 priceScaleId: 'left',
                 color: '#ff007f', // Fuchsia (Vibrant neon contrasting color)
                 lineWidth: 2,
-                title: '% > MA50',
+                title: '',
                 visible: breadthMAVisible.MA50
             });
             
@@ -3224,7 +3237,7 @@
                     borderDownColor: '#ff3b3b',
                     wickUpColor: '#00ff6a',
                     wickDownColor: '#ff3b3b',
-                    title: 'VNINDEX',
+                    title: '',
                     visible: breadthVNINDEXVisible
                 });
                 vnSeries.setData(ohlcv(vnHistory));
@@ -3234,7 +3247,7 @@
                     priceScaleId: 'right',
                     color: '#ef4444',
                     lineWidth: 2.5,
-                    title: 'VNINDEX (Close)',
+                    title: '',
                     visible: breadthVNINDEXVisible
                 });
                 const vnData = [];
@@ -3934,9 +3947,26 @@
             if (activeCustomFilters.size > 0) {
                 list = list.filter(t => {
                     for (const filterKey of activeCustomFilters) {
-                        const allowedTickers = rawData.filtered_results[filterKey] || [];
-                        if (!allowedTickers.includes(t.Ticker)) {
-                            return false; // Does not satisfy all selected criteria
+                        if (filterKey === 'VOL_AVG10_GT_100K') {
+                            const val = t.AvgVolume10 !== undefined ? t.AvgVolume10 : 0;
+                            if (val <= 100000) {
+                                return false;
+                            }
+                        } else if (filterKey === 'ACTION_YES_GREEN') {
+                            const a = (t.Action || '').toUpperCase();
+                            if (!a.includes('CÓ THỂ CÂN NHẮC') && !a.includes('CO THE CAN NHAC')) {
+                                return false;
+                            }
+                        } else if (filterKey === 'ACTION_YES_PURPLE') {
+                            const a = (t.Action || '').toUpperCase();
+                            if (!a.includes('RẤT NÊN THAM GIA') && !a.includes('RAT NEN THAM GIA')) {
+                                return false;
+                            }
+                        } else {
+                            const allowedTickers = rawData.filtered_results[filterKey] || [];
+                            if (!allowedTickers.includes(t.Ticker)) {
+                                return false; // Does not satisfy all selected criteria
+                            }
                         }
                     }
                     return true;
@@ -4171,9 +4201,8 @@
 
         // ── Detect price scale: indices store raw points (>50), stocks store price/1000 ──
         function priceScale(data) {
-            // If closes values are already large (>50), they are index points, no scaling needed
-            const sample = (data.closes || []).find(v => v != null && v !== 0);
-            return (sample && sample > 50) ? 1 : 1000;
+            // Keep prices raw (stocks are already divided by 1000 in history JSON, indices are raw)
+            return 1;
         }
 
         // ── Build OHLCV array from history data ──
@@ -4310,36 +4339,40 @@
             // GP Cloud: colored fill between xFast (green) and xSlow (red)
             if (data.GP_xFast && data.GP_xSlow) {
                 const sc = priceScale(data);
-                const gpTop = [], gpBot = [];
+                const gpBullish = [], gpBearish = [], gpMask = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const f = data.GP_xFast[i], s = data.GP_xSlow[i];
                     if (f === null || s === null || f === undefined || s === undefined) continue;
                     const t = d2ts(data.dates[i]);
+                    const top = Math.max(f, s) * sc;
+                    const bot = Math.min(f, s) * sc;
                     if (f >= s) {
-                        gpTop.push({time: t, value: f * sc}); // green line on top
-                        gpBot.push({time: t, value: s * sc}); // red line on bottom
+                        gpBullish.push({time: t, value: top});
+                        gpBearish.push({time: t, value: null});
                     } else {
-                        gpTop.push({time: t, value: s * sc}); // red dominates
-                        gpBot.push({time: t, value: f * sc});
+                        gpBullish.push({time: t, value: null});
+                        gpBearish.push({time: t, value: top});
                     }
+                    gpMask.push({time: t, value: bot});
                 }
-                if (gpTop.length) {
-                    // Top boundary (xFast when bullish, xSlow when bearish)
-                    c1.addAreaSeries({
-                        topColor: 'rgba(57,255,20,0.2)', bottomColor: 'rgba(57,255,20,0.05)',
-                        lineColor: '#39ff14', lineWidth: 2,
-                        priceLineVisible: false, lastValueVisible: false, title: 'xFast'
-                    }).setData(gpTop);
-                    // Bottom boundary
-                    c1.addAreaSeries({
-                        topColor: 'rgba(255,68,68,0.2)', bottomColor: 'rgba(255,68,68,0.05)',
-                        lineColor: '#ff4444', lineWidth: 2,
-                        priceLineVisible: false, lastValueVisible: false, title: 'xSlow'
-                    }).setData(gpBot);
-                }
+                c1.addAreaSeries({
+                    topColor: 'rgba(0, 255, 0, 0.35)', bottomColor: 'rgba(0, 255, 0, 0.05)',
+                    lineColor: '#00ff00', lineWidth: 2,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(gpBullish);
+                c1.addAreaSeries({
+                    topColor: 'rgba(255, 105, 180, 0.35)', bottomColor: 'rgba(255, 105, 180, 0.05)',
+                    lineColor: '#ff69b4', lineWidth: 2,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(gpBearish);
+                c1.addAreaSeries({
+                    topColor: '#000000', bottomColor: '#000000',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(gpMask);
             } else {
-                if (data.GP_xFast) c1.addLineSeries({color:'#39ff14',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));
-                if (data.GP_xSlow) c1.addLineSeries({color:'#ff4444',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));
+                if (data.GP_xFast) c1.addLineSeries({color:'#00ff00',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));
+                if (data.GP_xSlow) c1.addLineSeries({color:'#ff69b4',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));
             }
 
             // Candles on top
@@ -4350,17 +4383,21 @@
                 priceLineVisible: false, lastValueVisible: false
             }).setData(ohlcv(data));
 
-            // Pane 2: Octopus (A1 area fill + B1 dashed)
+            // Pane 2: Octopus (A1 histogram colored + B1 dashed)
             const {chart: c2, ro: ro2} = mkChart(d2, h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c2, ro: ro2});
             if (data.OCT_A1) {
-                c2.addAreaSeries({
-                    topColor: 'rgba(20,184,166,0.5)', bottomColor: 'rgba(20,184,166,0.05)',
-                    lineColor: '#14b8a6', lineWidth: 2,
-                    priceLineVisible: false, lastValueVisible: true, title: 'A1'
-                }).setData(lineData(data,'OCT_A1',1));
+                const octData = data.dates.map((dt, i) => {
+                    const v = data.OCT_A1[i];
+                    if (v === null || v === undefined) return null;
+                    const col = data.OCT_Color ? data.OCT_Color[i] : '#808080';
+                    return { time: d2ts(dt), value: v, color: col };
+                }).filter(Boolean);
+                c2.addHistogramSeries({
+                    priceLineVisible: false, lastValueVisible: true, title: ''
+                }).setData(octData);
             }
-            if (data.OCT_B1) c2.addLineSeries({color:'#a78bfa',lineWidth:2,lineStyle:2,priceLineVisible:false,lastValueVisible:true,title:'B1'}).setData(lineData(data,'OCT_B1',1));
+            if (data.OCT_B1) c2.addLineSeries({color:'#a78bfa',lineWidth:1.5,lineStyle:2,priceLineVisible:false,lastValueVisible:true,title: ''}).setData(lineData(data,'OCT_B1',1));
             // zero baseline
             if (data.dates.length > 0) {
                 c2.addLineSeries({color:'rgba(255,255,255,0.12)',lineWidth:1,priceLineVisible:false,lastValueVisible:false})
@@ -4370,8 +4407,8 @@
             // Pane 3: RS13 / RS52
             const {chart: c3, ro: ro3} = mkChart(d3, h3, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c3, ro: ro3});
-            if (data.RS13) c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title:'RS13',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
-            if (data.RS52) c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title:'RS52',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS52',1));
+            if (data.RS13) c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
+            if (data.RS52) c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS52',1));
             // 50 reference
             if (data.dates.length > 0) {
                 c3.addLineSeries({color:'rgba(239,68,68,0.4)',lineWidth:1,lineStyle:1,priceLineVisible:false,lastValueVisible:false})
@@ -4403,35 +4440,41 @@
             // TC Cloud: fill between TC_Trend and TC_StopLine (like TrendColor PineScript cloud)
             if (data.TC_Trend && data.TC_StopLine) {
                 const sc = priceScale(data);
-                const tcCloudBull = [], tcCloudBear = [];
+                const tcCloudBull = [], tcCloudBear = [], tcMask = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const tr = data.TC_Trend[i], sl = data.TC_StopLine[i];
                     if (tr === null || sl === null || tr === undefined || sl === undefined) continue;
                     const t = d2ts(data.dates[i]);
                     // T=1 means bullish (stopline below trend), T=-1 means bearish
                     const tcT = data.TC_T ? data.TC_T[i] : (tr > sl ? 1 : -1);
+                    const top = Math.max(tr, sl) * sc;
+                    const bot = Math.min(tr, sl) * sc;
                     if (tcT >= 0) {
-                        tcCloudBull.push({time: t, value: tr * sc});
-                        tcCloudBear.push({time: t, value: sl * sc});
+                        tcCloudBull.push({time: t, value: top});
+                        tcCloudBear.push({time: t, value: null});
                     } else {
-                        tcCloudBull.push({time: t, value: sl * sc});
-                        tcCloudBear.push({time: t, value: tr * sc});
+                        tcCloudBull.push({time: t, value: null});
+                        tcCloudBear.push({time: t, value: top});
                     }
+                    tcMask.push({time: t, value: bot});
                 }
-                if (tcCloudBull.length) {
-                    c1.addAreaSeries({
-                        topColor: 'rgba(39,194,46,0.22)', bottomColor: 'rgba(39,194,46,0.04)',
-                        lineColor: 'rgba(39,194,46,0.6)', lineWidth: 1.5,
-                        priceLineVisible: false, title: 'TrendLine'
-                    }).setData(tcCloudBull);
-                    c1.addAreaSeries({
-                        topColor: 'rgba(255,0,0,0.18)', bottomColor: 'rgba(255,0,0,0.04)',
-                        lineColor: 'rgba(255,0,0,0.5)', lineWidth: 1.5,
-                        priceLineVisible: false, title: 'StopLine'
-                    }).setData(tcCloudBear);
-                }
+                c1.addAreaSeries({
+                    topColor: 'rgba(39,194,46,0.22)', bottomColor: 'rgba(39,194,46,0.01)',
+                    lineColor: 'rgba(39,194,46,0.6)', lineWidth: 1.5,
+                    priceLineVisible: false, title: ''
+                }).setData(tcCloudBull);
+                c1.addAreaSeries({
+                    topColor: 'rgba(255,0,0,0.18)', bottomColor: 'rgba(255,0,0,0.01)',
+                    lineColor: 'rgba(255,0,0,0.5)', lineWidth: 1.5,
+                    priceLineVisible: false, title: ''
+                }).setData(tcCloudBear);
+                c1.addAreaSeries({
+                    topColor: '#000000', bottomColor: '#000000',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(tcMask);
             } else if (data.TC_Trend) {
-                c1.addLineSeries({color:'#f59e0b',lineWidth:2,title:'TC Trend'}).setData(lineData(data,'TC_Trend'));
+                c1.addLineSeries({color:'#f59e0b',lineWidth:2,title: ''}).setData(lineData(data,'TC_Trend'));
             }
 
             if (data.HK_Flower_Open && data.HK_Flower_Close) {
@@ -4457,16 +4500,20 @@
                 // Buy/sell markers on HK
                 const markers = [];
                 for (let i = 0; i < data.dates.length; i++) {
-                    if ((data.HK_BuySignal&&data.HK_BuySignal[i])||(data.HK_BuyManh&&data.HK_BuyManh[i]))
+                    const isBuy = (data.HK_BuySignal && data.HK_BuySignal[i]) || (data.HK_BuyManh && data.HK_BuyManh[i]);
+                    const isSell = (data.HK_SellSignal && data.HK_SellSignal[i]) || (data.HK_SellManh && data.HK_SellManh[i]);
+                    if (isBuy) {
                         markers.push({time:d2ts(data.dates[i]),position:'belowBar',color:'#00ff6a',shape:'arrowUp',text:'B'});
-                    if ((data.HK_SellSignal&&data.HK_SellSignal[i])||(data.HK_SellManh&&data.HK_SellManh[i]))
+                    }
+                    if (isSell) {
                         markers.push({time:d2ts(data.dates[i]),position:'aboveBar',color:'#ff3b3b',shape:'arrowDown',text:'S'});
+                    }
                 }
                 if (markers.length) hk.setMarkers(markers.sort((a,b)=>a.time-b.time));
             }
-            if (data.HK_MHull) c1.addLineSeries({color:'rgba(0,255,106,0.45)',lineWidth:1,title:'MHull',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'HK_MHull'));
-            if (data.HK_SHull) c1.addLineSeries({color:'rgba(255,59,59,0.45)',lineWidth:1,title:'SHull',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'HK_SHull'));
-            if (data.HK_NW)    c1.addLineSeries({color:'#38bdf8',lineWidth:2,title:'NW Stop',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'HK_NW'));
+            if (data.HK_MHull) c1.addLineSeries({color:'rgba(0,255,106,0.45)',lineWidth:1,title: '',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'HK_MHull'));
+            if (data.HK_SHull) c1.addLineSeries({color:'rgba(255,59,59,0.45)',lineWidth:1,title: '',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'HK_SHull'));
+            if (data.HK_NW)    c1.addLineSeries({color:'#38bdf8',lineWidth:2,title: '',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'HK_NW'));
 
             // Pane 2: Normal candles + 2Trend SMA (colored by trend state) + signals
             const {chart: c2, ro: ro2} = mkChart(d2, h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
@@ -4489,9 +4536,9 @@
                     smaColorData.push({time: d2ts(data.dates[i]), value: v * sc2,
                         color: s > 0 ? '#00ffaa' : s < 0 ? '#ff3b3b' : '#888888'});
                 }
-                c2.addLineSeries({lineWidth:2.5, title:'2Trend SMA', priceLineVisible:false, lastValueVisible:false}).setData(smaColorData);
+                c2.addLineSeries({lineWidth:2.5, title: '', priceLineVisible:false, lastValueVisible:false}).setData(smaColorData);
             } else if (data.T2_SMA) {
-                c2.addLineSeries({color:'#00ffaa',lineWidth:3,title:'2Trend',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'T2_SMA'));
+                c2.addLineSeries({color:'#00ffaa',lineWidth:3,title: '',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'T2_SMA'));
             }
             if (data.T2_ST_Lower) c2.addLineSeries({color:'rgba(0,255,170,0.4)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'T2_ST_Lower'));
             if (data.T2_ST_Upper) c2.addLineSeries({color:'rgba(255,59,59,0.4)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'T2_ST_Upper'));
@@ -4611,47 +4658,50 @@
             // Uses two area series (green cloud top, red cloud top) rendering cloud background
             if (data.SpanA && data.SpanB) {
                 const sc = priceScale(data);
-                // Build per-bar cloud data: green area when SpanA>SpanB, red area when SpanB>SpanA
-                const greenCloudData = [], redCloudData = [];
+                const bullishCloud = [], bearishCloud = [], maskCloud = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const a = data.SpanA[i], b = data.SpanB[i];
                     if (a === null || b === null || a === undefined || b === undefined) continue;
                     const t = d2ts(data.dates[i]);
-                    const top = Math.max(a, b) * sc, bot = Math.min(a, b) * sc;
+                    const top = Math.max(a, b) * sc;
+                    const bot = Math.min(a, b) * sc;
                     if (a >= b) {
-                        // Bullish cloud (green)
-                        greenCloudData.push({time: t, value: top});
-                        redCloudData.push({time: t, value: bot});
+                        bullishCloud.push({time: t, value: top});
+                        bearishCloud.push({time: t, value: null});
                     } else {
-                        // Bearish cloud (red)
-                        greenCloudData.push({time: t, value: bot});
-                        redCloudData.push({time: t, value: top});
+                        bullishCloud.push({time: t, value: null});
+                        bearishCloud.push({time: t, value: top});
                     }
+                    maskCloud.push({time: t, value: bot});
                 }
-                // Green cloud (bullish) fill
-                const sKumoGreenTop = c1.addAreaSeries({
-                    topColor: 'rgba(0,255,106,0.28)', bottomColor: 'rgba(0,255,106,0.08)',
+                const sKumoGreen = c1.addAreaSeries({
+                    topColor: 'rgba(0,255,106,0.22)', bottomColor: 'rgba(0,255,106,0.01)',
                     lineColor: 'rgba(0,255,106,0.65)', lineWidth: 1.5,
-                    title: 'SpanA', visible: techChartVisibility.SpanA, priceLineVisible: false
+                    title: '', visible: techChartVisibility.SpanA, priceLineVisible: false
                 });
-                sKumoGreenTop.setData(greenCloudData);
-                techReportSeriesRegistry[mountId].SpanA = sKumoGreenTop;
-                // Red cloud (bearish) fill - bottom boundary
-                const sKumoRedBot = c1.addAreaSeries({
-                    topColor: 'rgba(255,59,59,0.28)', bottomColor: 'rgba(255,59,59,0.08)',
+                sKumoGreen.setData(bullishCloud);
+                techReportSeriesRegistry[mountId].SpanA = sKumoGreen;
+                const sKumoRed = c1.addAreaSeries({
+                    topColor: 'rgba(255,59,59,0.22)', bottomColor: 'rgba(255,59,59,0.01)',
                     lineColor: 'rgba(255,59,59,0.65)', lineWidth: 1.5,
-                    title: 'SpanB', visible: techChartVisibility.SpanB, priceLineVisible: false
+                    title: '', visible: techChartVisibility.SpanB, priceLineVisible: false
                 });
-                sKumoRedBot.setData(redCloudData);
-                techReportSeriesRegistry[mountId].SpanB = sKumoRedBot;
+                sKumoRed.setData(bearishCloud);
+                techReportSeriesRegistry[mountId].SpanB = sKumoRed;
+                const sKumoMask = c1.addAreaSeries({
+                    topColor: '#000000', bottomColor: '#000000',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
+                    title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
+                });
+                sKumoMask.setData(maskCloud);
             } else {
                 if (data.SpanA) {
-                    const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:2,title:'SpanA',visible:techChartVisibility.SpanA,priceLineVisible:false});
+                    const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:2,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
                     sSpanA.setData(lineData(data,'SpanA'));
                     techReportSeriesRegistry[mountId].SpanA = sSpanA;
                 }
                 if (data.SpanB) {
-                    const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:2,title:'SpanB',visible:techChartVisibility.SpanB,priceLineVisible:false});
+                    const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:2,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
                     sSpanB.setData(lineData(data,'SpanB'));
                     techReportSeriesRegistry[mountId].SpanB = sSpanB;
                 }
@@ -4659,33 +4709,33 @@
             
             // Bright neon colors for other indicator lines (with priceLineVisible disabled to declutter)
             if (data.Tenkan) {
-                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title:'Tenkan',visible:techChartVisibility.Tenkan,priceLineVisible:false});
+                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title: '',visible:techChartVisibility.Tenkan,priceLineVisible:false});
                 sTenkan.setData(lineData(data,'Tenkan'));
                 techReportSeriesRegistry[mountId].Tenkan = sTenkan;
             }
             if (data.Kijun) {
-                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title:'Kijun',visible:techChartVisibility.Kijun,priceLineVisible:false});
+                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title: '',visible:techChartVisibility.Kijun,priceLineVisible:false});
                 sKijun.setData(lineData(data,'Kijun'));
                 techReportSeriesRegistry[mountId].Kijun = sKijun;
             }
             if (data.Kijun65) {
-                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title:'Kijun65',visible:techChartVisibility.Kijun65,priceLineVisible:false});
+                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title: '',visible:techChartVisibility.Kijun65,priceLineVisible:false});
                 sKijun65.setData(lineData(data,'Kijun65'));
                 techReportSeriesRegistry[mountId].Kijun65 = sKijun65;
             }
 
             if (data.MA10) {
-                const sMA10 = c1.addLineSeries({color:'#ffffff',lineWidth:1.5,title:'MA10',visible:techChartVisibility.MA10,priceLineVisible:false});
+                const sMA10 = c1.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',visible:techChartVisibility.MA10,priceLineVisible:false});
                 sMA10.setData(lineData(data,'MA10'));
                 techReportSeriesRegistry[mountId].MA10 = sMA10;
             }
             if (data.MA20) {
-                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title:'MA20',visible:techChartVisibility.MA20,priceLineVisible:false});
+                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title: '',visible:techChartVisibility.MA20,priceLineVisible:false});
                 sMA20.setData(lineData(data,'MA20'));
                 techReportSeriesRegistry[mountId].MA20 = sMA20;
             }
             if (data.MA50) {
-                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title:'MA50',visible:techChartVisibility.MA50,priceLineVisible:false});
+                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title: '',visible:techChartVisibility.MA50,priceLineVisible:false});
                 sMA50.setData(lineData(data,'MA50'));
                 techReportSeriesRegistry[mountId].MA50 = sMA50;
             }
@@ -4708,7 +4758,7 @@
                 lineColor: '#34d399',
                 lineWidth: 1,
                 priceLineVisible: false,
-                title: 'Retailer'
+                title: ''
             }).setData(greenData);
 
             // Hot Money (Yellow)
@@ -4719,7 +4769,7 @@
                     lineColor: '#fbbf24',
                     lineWidth: 1,
                     priceLineVisible: false,
-                    title: 'Hot'
+                    title: ''
                 }).setData(lineData(data, 'MCDX_HotMoney', 1));
             }
 
@@ -4731,7 +4781,7 @@
                     lineColor: '#f43f5e',
                     lineWidth: 1,
                     priceLineVisible: false,
-                    title: 'Banker'
+                    title: ''
                 }).setData(lineData(data, 'MCDX_Banker', 1));
             }
 
@@ -4741,7 +4791,7 @@
                     color: '#ffffff',
                     lineWidth: 1.5,
                     priceLineVisible: false,
-                    title: 'BankMA'
+                    title: ''
                 }).setData(lineData(data, 'MCDX_Banker_MA', 1));
             }
 
@@ -4787,13 +4837,13 @@
                     });
                 }
                 c3.addLineSeries({
-                    lineWidth: 2.5,
-                    title: 'ADX',
+                    lineWidth: 4,
+                    title: '',
                     priceLineVisible: false
                 }).setData(adxData);
             }
-            if (data.DI_Plus) c3.addLineSeries({color:'#34d399',lineWidth:1.5,title:'+DI',priceLineVisible:false}).setData(lineData(data,'DI_Plus',1));
-            if (data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5,title:'-DI',priceLineVisible:false}).setData(lineData(data,'DI_Minus',1));
+            if (data.DI_Plus) c3.addLineSeries({color:'#34d399',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'DI_Plus',1));
+            if (data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'DI_Minus',1));
             if (data.dates.length > 0)
                 c3.addLineSeries({color:'rgba(255,255,255,0.18)',lineWidth:1,lineStyle:1,priceLineVisible:false})
                   .setData([{time:d2ts(data.dates[0]),value:25},{time:d2ts(data.dates[data.dates.length-1]),value:25}]);
@@ -4808,10 +4858,10 @@
                     return {time:d2ts(dt), value:v,
                         color: v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};
                 }).filter(Boolean);
-                c4.addHistogramSeries({priceLineVisible:false,title:'Hist'}).setData(hArr);
+                c4.addHistogramSeries({priceLineVisible:false,title: ''}).setData(hArr);
             }
-            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title:'MACD',priceLineVisible:false}).setData(lineData(data,'MACD',1));
-            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig',priceLineVisible:false}).setData(lineData(data,'MACD_Signal',1));
+            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'MACD',1));
+            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'MACD_Signal',1));
 
             syncCharts([c1,c2,c3,c4]);
             applyDefaultChartRange(c1, data.dates, 90);
@@ -4901,14 +4951,17 @@
                     }
                     const diag = indexData.diagnostics || {};
                     const sr = indexData.support_resistance || { s1: 0, s2: 0, r1: 0, r2: 0 };
+                    const stateRules = indexData.state_rules || {};
+                    const mcdx = indexData.mcdx_eval || {};
                     
                     if (type === 'gp') {
                         html = `
                             <div class="eval-title">🎯 Đánh giá Động lượng Dòng tiền (GreenPink + Octopus)</div>
                             <div class="eval-row"><span>Xu hướng chính:</span> <strong>${indexData.regime} ${getEvalBadge(indexData.regime)}</strong></div>
+                            <div class="eval-row"><span>Tín hiệu Robot:</span> <strong>${stateRules.signal || 'N/A'} (Độ tin cậy: ${stateRules.confidence || 'N/A'})</strong></div>
+                            <div class="eval-row"><span>Tránh mua (Avoid Entry):</span> <strong>${stateRules.avoid_entry ? 'CÓ' : 'KHÔNG'} ${getEvalBadge(stateRules.avoid_entry ? 'Rủi ro cao' : 'An toàn')}</strong></div>
                             <div class="eval-row"><span>Bùng nổ theo đà (FTD):</span> <strong>${indexData.ftd_active ? `CÓ (Ngày ${indexData.ftd_date})` : 'CHƯA'} ${getEvalBadge(indexData.ftd_active ? 'Tích cực' : 'Trung lập')}</strong></div>
                             <div class="eval-row"><span>Số ngày phân phối:</span> <strong class="${indexData.distribution_count >= 4 ? 'text-red' : 'text-primary'}">${indexData.distribution_count} ngày ${getEvalBadge(indexData.distribution_count >= 4 ? 'Rủi ro cao' : 'An toàn')}</strong></div>
-                            <div class="eval-row"><span>Khuyến nghị tỷ trọng:</span> <strong>${indexData.alloc}</strong></div>
                         `;
                     } else if (type === 'heikin') {
                         html = `
@@ -4916,6 +4969,7 @@
                             <div class="eval-row"><span>Xu hướng nến mịn Heikin-Ashi:</span> <strong>${indexData.regime} ${getEvalBadge(indexData.regime)}</strong></div>
                             <div class="eval-row"><span>Chẩn đoán hệ thống MA Lines:</span> <strong>${diag.ma?.status || 'N/A'} ${getEvalBadge(diag.ma?.status)}</strong></div>
                             <div class="eval-row"><span>Hành động đề xuất (MA):</span> <strong>${diag.ma?.action || 'N/A'}</strong></div>
+                            <div class="eval-row"><span>Khoảng cách MA20 / ADX:</span> <strong>${stateRules.dist_ma20 !== undefined ? parseFloat(stateRules.dist_ma20).toFixed(1) + '%' : 'N/A'} / ${stateRules.adx !== undefined ? parseFloat(stateRules.adx).toFixed(1) : 'N/A'}</strong></div>
                         `;
                     } else if (type === 'heatmap') {
                         html = `
@@ -4923,15 +4977,15 @@
                             <div class="eval-row"><span>Trạng thái Vùng cung cầu (Heatmap):</span> <strong>${indexData.heatmap_eval || 'N/A'} ${getEvalBadge(indexData.heatmap_eval)}</strong></div>
                             <div class="eval-row"><span>Vùng Hỗ trợ gần nhất:</span> <strong>S1: ${formatPrice(sr.s1, true)} | S2: ${formatPrice(sr.s2, true)}</strong></div>
                             <div class="eval-row"><span>Vùng Kháng cự gần nhất:</span> <strong>R1: ${formatPrice(sr.r1, true)} | R2: ${formatPrice(sr.r2, true)}</strong></div>
+                            <div class="eval-row"><span>Chiến lược Phân bổ Vốn:</span> <strong>Tối đa ${indexData.alloc} CP</strong></div>
                         `;
                     } else if (type === 'techreport') {
                         html = `
                             <div class="eval-title">🎯 Tổng hợp Báo cáo Kỹ thuật đa chỉ báo (Tech Report)</div>
                             <div class="eval-row"><span>Ichimoku Cloud:</span> <strong>${diag.ichimoku?.status || 'N/A'} ${getEvalBadge(diag.ichimoku?.status)}</strong></div>
-                            <div class="eval-row"><span>Dòng tiền Tạo lập (MCDX):</span> <strong>${indexData.mcdx_eval?.status || 'N/A'} ${getEvalBadge(indexData.mcdx_eval?.status)}</strong></div>
-                            <div class="eval-row"><span>Động lượng RSI:</span> <strong>${diag.rsi?.status || 'N/A'} ${getEvalBadge(diag.rsi?.status)}</strong></div>
-                            <div class="eval-row"><span>Động lượng MACD:</span> <strong>${diag.macd?.status || 'N/A'} ${getEvalBadge(diag.macd?.status)}</strong></div>
-                            <div class="eval-row"><span>Sức mạnh ADX:</span> <strong>${diag.adx?.status || 'N/A'} ${getEvalBadge(diag.adx?.status)}</strong></div>
+                            <div class="eval-row"><span>Dòng tiền Tạo lập (MCDX):</span> <strong>${mcdx.status || 'N/A'} ${getEvalBadge(mcdx.status)}</strong></div>
+                            <div class="eval-row"><span>Chi tiết MCDX:</span> <strong>Banker: ${mcdx.banker_pct !== undefined ? parseFloat(mcdx.banker_pct).toFixed(1) + '%' : '0.0%'} | Hot: ${mcdx.hot_pct !== undefined ? parseFloat(mcdx.hot_pct).toFixed(1) + '%' : '0.0%'} | Nhỏ lẻ: ${mcdx.retailer_pct !== undefined ? parseFloat(mcdx.retailer_pct).toFixed(1) + '%' : '0.0%'}</strong></div>
+                            <div class="eval-row"><span>Động lượng RSI / MACD:</span> <strong>RSI: ${diag.rsi?.status || 'N/A'} | MACD: ${diag.macd?.status || 'N/A'} (Hist: ${stateRules.macd_hist !== undefined ? parseFloat(stateRules.macd_hist).toFixed(1) : 'N/A'})</strong></div>
                         `;
                     }
                 } else {
@@ -5068,19 +5122,48 @@
             if(data.GP_BB_Top)c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Top'));
             if(data.GP_BB_Bot)c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Bot'));
             // GP cloud fill
-            if(data.GP_xFast&&data.GP_xSlow){const sc=priceScale(data);const gpT=[],gpB=[];for(let i=0;i<data.dates.length;i++){const f=data.GP_xFast[i],s=data.GP_xSlow[i];if(f===null||s===null||f===undefined||s===undefined)continue;const t=d2ts(data.dates[i]);if(f>=s){gpT.push({time:t,value:f*sc});gpB.push({time:t,value:s*sc});}else{gpT.push({time:t,value:s*sc});gpB.push({time:t,value:f*sc});}}if(gpT.length){c1.addAreaSeries({topColor:'rgba(57,255,20,0.2)',bottomColor:'rgba(57,255,20,0.05)',lineColor:'#39ff14',lineWidth:2,priceLineVisible:false,lastValueVisible:false,title:'xFast'}).setData(gpT);c1.addAreaSeries({topColor:'rgba(255,68,68,0.2)',bottomColor:'rgba(255,68,68,0.05)',lineColor:'#ff4444',lineWidth:2,priceLineVisible:false,lastValueVisible:false,title:'xSlow'}).setData(gpB);}}
+            if(data.GP_xFast&&data.GP_xSlow){
+                const sc=priceScale(data);
+                const gpBullish = [], gpBearish = [], gpMask = [];
+                for(let i=0;i<data.dates.length;i++){
+                    const f=data.GP_xFast[i],s=data.GP_xSlow[i];
+                    if(f===null||s===null||f===undefined||s===undefined)continue;
+                    const t=d2ts(data.dates[i]);
+                    const top = Math.max(f, s) * sc;
+                    const bot = Math.min(f, s) * sc;
+                    if(f>=s){
+                        gpBullish.push({time:t,value:top});
+                        gpBearish.push({time:t,value:null});
+                    }else{
+                        gpBullish.push({time:t,value:null});
+                        gpBearish.push({time:t,value:top});
+                    }
+                    gpMask.push({time:t,value:bot});
+                }
+                c1.addAreaSeries({topColor:'rgba(57,255,20,0.2)',bottomColor:'rgba(57,255,20,0.01)',lineColor:'#39ff14',lineWidth:2,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpBullish);
+                c1.addAreaSeries({topColor:'rgba(255,68,68,0.2)',bottomColor:'rgba(255,68,68,0.01)',lineColor:'#ff4444',lineWidth:2,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpBearish);
+                c1.addAreaSeries({topColor:'#000000',bottomColor:'#000000',lineColor:'rgba(0,0,0,0)',lineWidth:0,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpMask);
+            }
             else{if(data.GP_xFast)c1.addLineSeries({color:'#39ff14',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));if(data.GP_xSlow)c1.addLineSeries({color:'#ff4444',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));}
             // Candles on top
             c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',priceLineVisible:false,lastValueVisible:false}).setData(ohlcv(data));
             // Octopus pane
             const {chart:c2,ro:r2}=mkChart(d2,h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c2,ro:r2});
-            if(data.OCT_A1)c2.addAreaSeries({topColor:'rgba(20,184,166,0.5)',bottomColor:'rgba(20,184,166,0.05)',lineColor:'#14b8a6',lineWidth:2,priceLineVisible:false,lastValueVisible:true,title:'A1'}).setData(lineData(data,'OCT_A1',1));
-            if(data.OCT_B1)c2.addLineSeries({color:'#a78bfa',lineWidth:2,lineStyle:2,priceLineVisible:false,lastValueVisible:true,title:'B1'}).setData(lineData(data,'OCT_B1',1));
+            if(data.OCT_A1) {
+                const octData = data.dates.map((dt, i) => {
+                    const v = data.OCT_A1[i];
+                    if (v === null || v === undefined) return null;
+                    const col = data.OCT_Color ? data.OCT_Color[i] : '#808080';
+                    return { time: d2ts(dt), value: v, color: col };
+                }).filter(Boolean);
+                c2.addHistogramSeries({priceLineVisible:false,lastValueVisible:true,title: ''}).setData(octData);
+            }
+            if(data.OCT_B1)c2.addLineSeries({color:'#a78bfa',lineWidth:1.5,lineStyle:2,priceLineVisible:false,lastValueVisible:true,title: ''}).setData(lineData(data,'OCT_B1',1));
             if(data.dates.length>0)c2.addLineSeries({color:'rgba(255,255,255,0.12)',lineWidth:1,priceLineVisible:false,lastValueVisible:false}).setData([{time:d2ts(data.dates[0]),value:0},{time:d2ts(data.dates[data.dates.length-1]),value:0}]);
             // RS pane
             const {chart:c3,ro:r3}=mkChart(d3,h3, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c3,ro:r3});
-            if(data.RS13)c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title:'RS13',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
-            if(data.RS52)c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title:'RS52',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS52',1));
+            if(data.RS13)c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
+            if(data.RS52)c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS52',1));
             if(data.dates.length>0)c3.addLineSeries({color:'rgba(239,68,68,0.4)',lineWidth:1,lineStyle:1,priceLineVisible:false,lastValueVisible:false}).setData([{time:d2ts(data.dates[0]),value:50},{time:d2ts(data.dates[data.dates.length-1]),value:50}]);
             syncCharts([c1,c2,c3]); applyDefaultChartRange(c1, data.dates, 90);
         }
@@ -5094,7 +5177,33 @@
             const d1=mk(h1,false),d2=mk(h2);
             const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c1,ro:r1});
             // TC Cloud
-            if(data.TC_Trend&&data.TC_StopLine){const sc=priceScale(data);const tcB=[],tcR=[];for(let i=0;i<data.dates.length;i++){const tr=data.TC_Trend[i],sl=data.TC_StopLine[i];if(tr===null||sl===null||tr===undefined||sl===undefined)continue;const t=d2ts(data.dates[i]);const tcT=data.TC_T?data.TC_T[i]:(tr>sl?1:-1);if(tcT>=0){tcB.push({time:t,value:tr*sc});tcR.push({time:t,value:sl*sc});}else{tcB.push({time:t,value:sl*sc});tcR.push({time:t,value:tr*sc});}}if(tcB.length){c1.addAreaSeries({topColor:'rgba(39,194,46,0.22)',bottomColor:'rgba(39,194,46,0.04)',lineColor:'rgba(39,194,46,0.6)',lineWidth:1.5,priceLineVisible:false}).setData(tcB);c1.addAreaSeries({topColor:'rgba(255,0,0,0.18)',bottomColor:'rgba(255,0,0,0.04)',lineColor:'rgba(255,0,0,0.5)',lineWidth:1.5,priceLineVisible:false}).setData(tcR);}}
+            if(data.TC_Trend&&data.TC_StopLine){
+                const sc=priceScale(data);
+                const tcCloudBull = [], tcCloudBear = [], tcMask = [];
+                for(let i=0;i<data.dates.length;i++){
+                    const tr=data.TC_Trend[i],sl=data.TC_StopLine[i];
+                    if(tr===null||sl===null||tr===undefined||sl===undefined)continue;
+                    const t=d2ts(data.dates[i]);
+                    const tcT=data.TC_T?data.TC_T[i]:(tr>sl?1:-1);
+                    const top = Math.max(tr, sl) * sc;
+                    const bot = Math.min(tr, sl) * sc;
+                    if(tcT>=0){
+                        tcCloudBull.push({time:t,value:top});
+                        tcCloudBear.push({time:t,value:null});
+                    }else{
+                        tcCloudBull.push({time:t,value:null});
+                        tcCloudBear.push({time:t,value:top});
+                    }
+                    tcMask.push({time:t,value:bot});
+                }
+                c1.addAreaSeries({topColor:'rgba(39,194,46,0.22)',bottomColor:'rgba(39,194,46,0.01)',lineColor:'rgba(39,194,46,0.6)',lineWidth:1.5,priceLineVisible:false}).setData(tcCloudBull);
+                c1.addAreaSeries({topColor:'rgba(255,0,0,0.18)',bottomColor:'rgba(255,0,0,0.01)',lineColor:'rgba(255,0,0,0.5)',lineWidth:1.5,priceLineVisible:false}).setData(tcCloudBear);
+                c1.addAreaSeries({
+                    topColor: '#000000', bottomColor: '#000000',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
+                }).setData(tcMask);
+            }
             else if(data.TC_Trend)c1.addLineSeries({color:'#f59e0b',lineWidth:2.5}).setData(lineData(data,'TC_Trend'));
             if(data.HK_Flower_Open&&data.HK_Flower_Close){
                 const hk=c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'});
@@ -5153,59 +5262,72 @@
             // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB
             if (data.SpanA && data.SpanB) {
                 const sc = priceScale(data);
-                const gcD = [], rcD = [];
+                const bullishCloud = [], bearishCloud = [], maskCloud = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const a = data.SpanA[i], b = data.SpanB[i];
                     if (a === null || b === null || a === undefined || b === undefined) continue;
                     const t = d2ts(data.dates[i]);
-                    const top = Math.max(a, b) * sc, bot = Math.min(a, b) * sc;
-                    if (a >= b) { gcD.push({time:t,value:top}); rcD.push({time:t,value:bot}); }
-                    else        { gcD.push({time:t,value:bot}); rcD.push({time:t,value:top}); }
+                    const top = Math.max(a, b) * sc;
+                    const bot = Math.min(a, b) * sc;
+                    if (a >= b) {
+                        bullishCloud.push({time: t, value: top});
+                        bearishCloud.push({time: t, value: null});
+                    } else {
+                        bullishCloud.push({time: t, value: null});
+                        bearishCloud.push({time: t, value: top});
+                    }
+                    maskCloud.push({time: t, value: bot});
                 }
-                const sKumoG = c1.addAreaSeries({topColor:'rgba(0,255,106,0.28)',bottomColor:'rgba(0,255,106,0.08)',lineColor:'rgba(0,255,106,0.65)',lineWidth:1.5,title:'SpanA',visible:techChartVisibility.SpanA,priceLineVisible:false});
-                sKumoG.setData(gcD); techReportSeriesRegistry[mountId].SpanA = sKumoG;
-                const sKumoR = c1.addAreaSeries({topColor:'rgba(255,59,59,0.28)',bottomColor:'rgba(255,59,59,0.08)',lineColor:'rgba(255,59,59,0.65)',lineWidth:1.5,title:'SpanB',visible:techChartVisibility.SpanB,priceLineVisible:false});
-                sKumoR.setData(rcD); techReportSeriesRegistry[mountId].SpanB = sKumoR;
+                const sKumoG = c1.addAreaSeries({topColor:'rgba(0,255,106,0.22)',bottomColor:'rgba(0,255,106,0.01)',lineColor:'rgba(0,255,106,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
+                sKumoG.setData(bullishCloud); techReportSeriesRegistry[mountId].SpanA = sKumoG;
+                const sKumoR = c1.addAreaSeries({topColor:'rgba(255,59,59,0.22)',bottomColor:'rgba(255,59,59,0.01)',lineColor:'rgba(255,59,59,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
+                sKumoR.setData(bearishCloud); techReportSeriesRegistry[mountId].SpanB = sKumoR;
+                const sKumoM = c1.addAreaSeries({
+                    topColor: '#000000', bottomColor: '#000000',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
+                });
+                sKumoM.setData(maskCloud);
             } else {
                 if (data.SpanA) {
-                    const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:2,title:'SpanA',visible:techChartVisibility.SpanA,priceLineVisible:false});
+                    const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:2,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
                     sSpanA.setData(lineData(data,'SpanA')); techReportSeriesRegistry[mountId].SpanA = sSpanA;
                 }
                 if (data.SpanB) {
-                    const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:2,title:'SpanB',visible:techChartVisibility.SpanB,priceLineVisible:false});
+                    const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:2,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
                     sSpanB.setData(lineData(data,'SpanB')); techReportSeriesRegistry[mountId].SpanB = sSpanB;
                 }
             }
             
             // Bright neon colors for other indicator lines (with priceLineVisible disabled to declutter)
             if (data.Tenkan) {
-                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title:'Tenkan',visible:techChartVisibility.Tenkan,priceLineVisible:false});
+                const sTenkan = c1.addLineSeries({color:'#00d2ff',lineWidth:1.2,title: '',visible:techChartVisibility.Tenkan,priceLineVisible:false});
                 sTenkan.setData(lineData(data,'Tenkan'));
                 techReportSeriesRegistry[mountId].Tenkan = sTenkan;
             }
             if (data.Kijun) {
-                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title:'Kijun',visible:techChartVisibility.Kijun,priceLineVisible:false});
+                const sKijun = c1.addLineSeries({color:'#ff2a5f',lineWidth:1.2,title: '',visible:techChartVisibility.Kijun,priceLineVisible:false});
                 sKijun.setData(lineData(data,'Kijun'));
                 techReportSeriesRegistry[mountId].Kijun = sKijun;
             }
             if (data.Kijun65) {
-                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title:'Kijun65',visible:techChartVisibility.Kijun65,priceLineVisible:false});
+                const sKijun65 = c1.addLineSeries({color:'#ff9f00',lineWidth:1.5,lineStyle:2,title: '',visible:techChartVisibility.Kijun65,priceLineVisible:false});
                 sKijun65.setData(lineData(data,'Kijun65'));
                 techReportSeriesRegistry[mountId].Kijun65 = sKijun65;
             }
 
             if (data.MA10) {
-                const sMA10 = c1.addLineSeries({color:'#ffffff',lineWidth:1.5,title:'MA10',visible:techChartVisibility.MA10,priceLineVisible:false});
+                const sMA10 = c1.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',visible:techChartVisibility.MA10,priceLineVisible:false});
                 sMA10.setData(lineData(data,'MA10'));
                 techReportSeriesRegistry[mountId].MA10 = sMA10;
             }
             if (data.MA20) {
-                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title:'MA20',visible:techChartVisibility.MA20,priceLineVisible:false});
+                const sMA20 = c1.addLineSeries({color:'#00f589',lineWidth:2,title: '',visible:techChartVisibility.MA20,priceLineVisible:false});
                 sMA20.setData(lineData(data,'MA20'));
                 techReportSeriesRegistry[mountId].MA20 = sMA20;
             }
             if (data.MA50) {
-                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title:'MA50',visible:techChartVisibility.MA50,priceLineVisible:false});
+                const sMA50 = c1.addLineSeries({color:'#ffd700',lineWidth:2,title: '',visible:techChartVisibility.MA50,priceLineVisible:false});
                 sMA50.setData(lineData(data,'MA50'));
                 techReportSeriesRegistry[mountId].MA50 = sMA50;
             }
@@ -5227,7 +5349,7 @@
                 lineColor: '#34d399',
                 lineWidth: 1,
                 priceLineVisible: false,
-                title: 'Retailer'
+                title: ''
             }).setData(greenData);
 
             if (data.MCDX_HotMoney) {
@@ -5237,7 +5359,7 @@
                     lineColor: '#fbbf24',
                     lineWidth: 1,
                     priceLineVisible: false,
-                    title: 'Hot'
+                    title: ''
                 }).setData(lineData(data, 'MCDX_HotMoney', 1));
             }
 
@@ -5248,7 +5370,7 @@
                     lineColor: '#f43f5e',
                     lineWidth: 1,
                     priceLineVisible: false,
-                    title: 'Banker'
+                    title: ''
                 }).setData(lineData(data, 'MCDX_Banker', 1));
             }
 
@@ -5257,7 +5379,7 @@
                     color: '#ffffff',
                     lineWidth: 1.5,
                     priceLineVisible: false,
-                    title: 'BankMA'
+                    title: ''
                 }).setData(lineData(data, 'MCDX_Banker_MA', 1));
             }
 
@@ -5304,12 +5426,12 @@
                 }
                 c3.addLineSeries({
                     lineWidth: 2.5,
-                    title: 'ADX',
+                    title: '',
                     priceLineVisible: false
                 }).setData(adxData);
             }
-            if (data.DI_Plus) c3.addLineSeries({color:'#34d399',lineWidth:1.5,title:'+DI',priceLineVisible:false}).setData(lineData(data,'DI_Plus',1));
-            if (data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5,title:'-DI',priceLineVisible:false}).setData(lineData(data,'DI_Minus',1));
+            if (data.DI_Plus) c3.addLineSeries({color:'#34d399',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'DI_Plus',1));
+            if (data.DI_Minus)c3.addLineSeries({color:'#f87171',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'DI_Minus',1));
             if (data.dates.length > 0)
                 c3.addLineSeries({color:'rgba(255,255,255,0.18)',lineWidth:1,lineStyle:1,priceLineVisible:false})
                   .setData([{time:d2ts(data.dates[0]),value:25},{time:d2ts(data.dates[data.dates.length-1]),value:25}]);
@@ -5324,10 +5446,10 @@
                     return {time:d2ts(dt), value:v,
                         color: v>=0?'rgba(52,211,153,0.7)':'rgba(248,113,113,0.7)'};
                 }).filter(Boolean);
-                c4.addHistogramSeries({priceLineVisible:false,title:'Hist'}).setData(hArr);
+                c4.addHistogramSeries({priceLineVisible:false,title: ''}).setData(hArr);
             }
-            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title:'MACD',priceLineVisible:false}).setData(lineData(data,'MACD',1));
-            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title:'Sig',priceLineVisible:false}).setData(lineData(data,'MACD_Signal',1));
+            if (data.MACD)        c4.addLineSeries({color:'#60a5fa',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'MACD',1));
+            if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'MACD_Signal',1));
 
             syncCharts([c1, c2, c3, c4]);
             applyDefaultChartRange(c1, data.dates, 90);
