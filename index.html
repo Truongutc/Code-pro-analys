@@ -4894,43 +4894,43 @@
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
             }).setData(ohlcv(data));
 
-            // Pane 2: MCDX Stacked Area Chart (Layered Retailer, Hot Money, Banker)
+            // Pane 2: MCDX Stacked Histogram Chart (Layered Retailer, Hot Money, Banker)
             const {chart: c2, ro: ro2} = mkChart(d2, h2);
             instances.push({chart:c2,ro:ro2});
             
             // Retailer (Green) constant 20
             const greenData = data.dates.map(dt => ({ time: d2ts(dt), value: 20.0 }));
-            c2.addAreaSeries({
-                topColor: 'rgba(52, 211, 153, 0.4)',
-                bottomColor: 'rgba(52, 211, 153, 0.05)',
-                lineColor: '#34d399',
-                lineWidth: 1,
+            c2.addHistogramSeries({
+                color: '#34d399',
                 priceLineVisible: false,
                 title: ''
             }).setData(greenData);
 
             // Hot Money (Yellow)
-            if (data.MCDX_HotMoney) {
-                c2.addAreaSeries({
-                    topColor: 'rgba(251, 191, 36, 0.65)',
-                    bottomColor: 'rgba(251, 191, 36, 0.1)',
-                    lineColor: '#fbbf24',
-                    lineWidth: 1,
+            if (data.MCDX_HotMoney && data.MCDX_Banker) {
+                const yellowData = data.dates.map((dt, i) => {
+                    const bankerVal = data.MCDX_Banker[i] || 0.0;
+                    const hotVal = data.MCDX_HotMoney[i] || 0.0;
+                    return { time: d2ts(dt), value: bankerVal + hotVal };
+                });
+                c2.addHistogramSeries({
+                    color: '#fbbf24',
                     priceLineVisible: false,
                     title: ''
-                }).setData(lineData(data, 'MCDX_HotMoney', 1));
+                }).setData(yellowData);
             }
 
             // Banker (Red)
             if (data.MCDX_Banker) {
-                c2.addAreaSeries({
-                    topColor: 'rgba(244, 63, 94, 0.85)',
-                    bottomColor: 'rgba(244, 63, 94, 0.2)',
-                    lineColor: '#f43f5e',
-                    lineWidth: 1,
+                const redData = data.dates.map((dt, i) => {
+                    const bankerVal = data.MCDX_Banker[i] || 0.0;
+                    return { time: d2ts(dt), value: bankerVal };
+                });
+                c2.addHistogramSeries({
+                    color: '#f43f5e',
                     priceLineVisible: false,
                     title: ''
-                }).setData(lineData(data, 'MCDX_Banker', 1));
+                }).setData(redData);
             }
 
             // Banker MA (White/Gray)
@@ -5520,40 +5520,40 @@
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
             }).setData(ohlcv(data));
 
-            // Pane 2: MCDX Stacked Area Chart
+            // Pane 2: MCDX Stacked Histogram Chart
             const {chart: c2, ro: r2} = mkChart(d2, h2);
             instances.push({chart: c2, ro: r2});
             
             const greenData = data.dates.map(dt => ({ time: d2ts(dt), value: 20.0 }));
-            c2.addAreaSeries({
-                topColor: 'rgba(52, 211, 153, 0.4)',
-                bottomColor: 'rgba(52, 211, 153, 0.05)',
-                lineColor: '#34d399',
-                lineWidth: 1,
+            c2.addHistogramSeries({
+                color: '#34d399',
                 priceLineVisible: false,
                 title: ''
             }).setData(greenData);
 
-            if (data.MCDX_HotMoney) {
-                c2.addAreaSeries({
-                    topColor: 'rgba(251, 191, 36, 0.65)',
-                    bottomColor: 'rgba(251, 191, 36, 0.1)',
-                    lineColor: '#fbbf24',
-                    lineWidth: 1,
+            if (data.MCDX_HotMoney && data.MCDX_Banker) {
+                const yellowData = data.dates.map((dt, i) => {
+                    const bankerVal = data.MCDX_Banker[i] || 0.0;
+                    const hotVal = data.MCDX_HotMoney[i] || 0.0;
+                    return { time: d2ts(dt), value: bankerVal + hotVal };
+                });
+                c2.addHistogramSeries({
+                    color: '#fbbf24',
                     priceLineVisible: false,
                     title: ''
-                }).setData(lineData(data, 'MCDX_HotMoney', 1));
+                }).setData(yellowData);
             }
 
             if (data.MCDX_Banker) {
-                c2.addAreaSeries({
-                    topColor: 'rgba(244, 63, 94, 0.85)',
-                    bottomColor: 'rgba(244, 63, 94, 0.2)',
-                    lineColor: '#f43f5e',
-                    lineWidth: 1,
+                const redData = data.dates.map((dt, i) => {
+                    const bankerVal = data.MCDX_Banker[i] || 0.0;
+                    return { time: d2ts(dt), value: bankerVal };
+                });
+                c2.addHistogramSeries({
+                    color: '#f43f5e',
                     priceLineVisible: false,
                     title: ''
-                }).setData(lineData(data, 'MCDX_Banker', 1));
+                }).setData(redData);
             }
 
             if (data.MCDX_Banker_MA) {

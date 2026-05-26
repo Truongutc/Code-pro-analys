@@ -186,8 +186,9 @@ def run_sync_and_update():
                 idx_raw = client.fetch_index_day(ticker, tid, sid, d)
                 if idx_raw:
                     day_idx = client.format_to_df(idx_raw)
-                    storage.sync_prices(ticker, day_idx, source='API')
-                    affected_tickers.add(ticker)
+                    t_min = storage.sync_prices(ticker, day_idx, source='API')
+                    if t_min is not None:
+                        affected_tickers.add(ticker)
                     logger.info(f"   ---> Xong Index: {ticker} ({d})")
             except Exception as e:
                 logger.error(f"   ! Lỗi Index {ticker}: {e}")
@@ -488,10 +489,26 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         vietstock_status = existing_vietstock_status or "UNKNOWN"
 
     # 5. Determine which tickers need recalculation
+    current_reg = storage.get_active_registry() or []
+    active_set = set(current_reg)
+    
+    # Self-healing: identify tickers in active_registry but missing from analysis results or history files
+    missing_tickers = set()
+    history_dir = os.path.join(output_dir, "history")
+    os.makedirs(history_dir, exist_ok=True)
+    
+    for t in active_set:
+        in_analysis = (t in existing_tickers_analysis)
+        history_file_exists = os.path.exists(os.path.join(history_dir, f"{t}.json"))
+        if not in_analysis or not history_file_exists:
+            missing_tickers.add(t)
+            
+    if missing_tickers:
+        logger.info(f"🔍 Phát hiện {len(missing_tickers)} mã trong Registry bị thiếu kết quả phân tích hoặc file lịch sử. Thêm vào danh sách cập nhật...")
+        affected_tickers = set(affected_tickers) | missing_tickers
+        
     if not affected_tickers:
-        logger.info("ℹ️ Dữ liệu giá hiện tại đã khớp 100%. Đang tính toán cho toàn bộ mã trong Registry...")
-        current_reg = storage.get_active_registry() or []
-        affected_tickers = set(current_reg)
+        logger.info("ℹ️ Dữ liệu giá hiện tại đã khớp 100% và không có mã nào bị thiếu. Đang bỏ qua việc tính toán lại để tối ưu hiệu năng...")
         
     logger.info(f"--- ĐANG TÍNH TOÁN CHỈ BÁO VÀ PHÂN TÍCH CHO {len(affected_tickers)} MÃ ---")
     
@@ -1241,10 +1258,6 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
                         future_spans.append({'Date': future_dates[i-1], 'SpanA': val_a, 'SpanB': val_b})
                     
                     df_future_cloud = pd.DataFrame(future_spans)
-                    for col in df.columns:
-                        if col not in df_future_cloud.columns:
-                            df_future_cloud[col] = np.nan
-                    
                     df_extended = pd.concat([df, df_future_cloud], ignore_index=True)
                 except Exception as ex_future:
                     logger.warning(f"Could not project future Ichimoku spans for {t}: {ex_future}")
