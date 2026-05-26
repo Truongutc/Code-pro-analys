@@ -2991,6 +2991,10 @@
             loadMarketCharts();
         }
 
+        function loadMarketCharts() {
+            renderAll4Charts('market', activeMarketIndex);
+        }
+
         // Render detailed market index diagnostics
         function renderMarketIndexDetail() {
             const indexName = activeMarketIndex;
