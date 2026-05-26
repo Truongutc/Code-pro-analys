@@ -49,10 +49,13 @@ jobs:
 
       - name: Prepare Input Data
         run: |
-          if [ -d "gdrive_data" ] && [ "$(ls -A gdrive_data/*.csv 2>/dev/null)" ]; then
+          csv_files=$(find gdrive_data -name "*.csv" 2>/dev/null)
+          if [ -d "gdrive_data" ] && [ -n "$csv_files" ]; then
             echo "✅ Phát hiện file CSV trong thư mục Google Drive. Đang chép sang import_data/"
             mkdir -p import_data
-            cp gdrive_data/*.csv import_data/
+            find gdrive_data -name "*.csv" -exec cp {} import_data/ \;
+            echo "📂 Danh sách file CSV đã chép:"
+            ls -l import_data/
           else
             echo "ℹ️ Không có dữ liệu từ Google Drive (hoặc Drive trống). Sẽ sử dụng dữ liệu mặc định từ Git."
           fi
