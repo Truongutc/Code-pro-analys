@@ -3970,12 +3970,12 @@
                             }
                         } else if (filterKey === 'ACTION_YES_GREEN') {
                             const a = (t.Action || '').toUpperCase();
-                            if (!a.includes('CÓ THỂ CÂN NHẮC') && !a.includes('CO THE CAN NHAC')) {
+                            if (!a.includes('CÂN NHẮC') && !a.includes('CAN NHAC')) {
                                 return false;
                             }
                         } else if (filterKey === 'ACTION_YES_PURPLE') {
                             const a = (t.Action || '').toUpperCase();
-                            if (!a.includes('RẤT NÊN THAM GIA') && !a.includes('RAT NEN THAM GIA')) {
+                            if (!a.includes('RẤT NÊN') && !a.includes('ƯU TIÊN') && !a.includes('RAT NEN') && !a.includes('UU TIEN')) {
                                 return false;
                             }
                         } else {
