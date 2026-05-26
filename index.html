@@ -3094,8 +3094,8 @@
 
                 function diagClass(st, act) {
                     const s = (st + ' ' + act).toLowerCase();
-                    if (s.includes('bull') || s.includes('uptrend') || s.includes('buy') || s.includes('strong')) return 'bullish';
-                    if (s.includes('bear') || s.includes('downtrend') || s.includes('sell') || s.includes('weak')) return 'bearish';
+                    if (s.includes('bull') || s.includes('uptrend') || s.includes('buy') || s.includes('strong') || s.includes('tích cực') || s.includes('tăng')) return 'bullish';
+                    if (s.includes('bear') || s.includes('downtrend') || s.includes('sell') || s.includes('weak') || s.includes('tiêu cực') || s.includes('giảm')) return 'bearish';
                     return 'neutral';
                 }
 
@@ -3133,7 +3133,8 @@
                         <h4>🔍 Chẩn Đoán Kỹ Thuật</h4>
                         <div class="diag-row"><span>Hệ thống MA</span><strong class="${diagClass(diag.ma?.status, diag.ma?.action)}">${diag.ma?.status || 'N/A'}</strong></div>
                         <div class="diag-row"><span>Ichimoku Cloud</span><strong class="${diagClass(diag.ichimoku?.status, diag.ichimoku?.action)}">${diag.ichimoku?.status || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>RSI / MACD</span><strong class="${diagClass(diag.rsi?.status, diag.rsi?.action)}">${diag.rsi?.status || 'N/A'}</strong> / <strong class="${diagClass(diag.macd?.status, diag.macd?.action)}">${diag.macd?.status || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>RSI / MACD</span><strong class="${diagClass(diag.rsi?.status, '')}">RSI: ${diag.rsi?.status || 'N/A'}</strong> / <strong class="${diagClass(diag.macd?.status, '')}">MACD: ${diag.macd?.status || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>Xu hướng ADX</span><strong class="${diagClass(diag.adx?.status, '')}">${diag.adx?.status || 'N/A'}</strong></div>
                         <div class="diag-row"><span>Hỗ trợ S1 / S2</span><strong class="text-green">${formatPrice(sr.s1, true)} / ${formatPrice(sr.s2, true)}</strong></div>
                         <div class="diag-row"><span>Kháng cự R1 / R2</span><strong class="text-red">${formatPrice(sr.r1, true)} / ${formatPrice(sr.r2, true)}</strong></div>
                         <div class="diag-row"><span>Bản đồ nhiệt (Heatmap)</span><strong>${indexData.heatmap_eval || 'N/A'}</strong></div>
@@ -4228,17 +4229,29 @@
                          timeVisible: true, secondsVisible: false,
                          fixLeftEdge: false, fixRightEdge: false,
                          minBarSpacing: 5 },
-            rightPriceScale: { borderColor: 'rgba(255,255,255,0.08)' },
-            // Mouse wheel = zoom in/out at current position (not pan to past)
-            handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: false, price: true } },
-            handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false }
+            rightPriceScale: { 
+                borderColor: 'rgba(255,255,255,0.08)',
+                autoScale: true
+            },
+            // Cho phép co kéo bằng pinch-zoom và giữ kéo trục giá/trục thời gian
+            handleScale: { 
+                mouseWheel: true, 
+                pinch: true, 
+                axisPressedMouseMove: { time: true, price: true } 
+            },
+            handleScroll: { 
+                mouseWheel: true, 
+                pressedMouseMove: true, 
+                horzTouchDrag: true, 
+                vertTouchDrag: true 
+            }
         };
 
         // ── Utility: date string → Unix seconds ──
         function d2ts(s) { return Math.floor(new Date(s + 'T00:00:00Z').getTime() / 1000); }
 
         // Helper to set chart range default to 90 days from the latest date
-        function applyDefaultChartRange(chartObj, dates, days = 90) {
+        function applyDefaultChartRange(chartObj, dates, days = 30) {
             if (!dates || dates.length === 0) return;
             if (days >= dates.length) {
                 chartObj.timeScale().fitContent();
@@ -4336,7 +4349,7 @@
                     if (dates && !rangeSet) {
                         rangeSet = true;
                         requestAnimationFrame(() => {
-                            applyDefaultChartRange(chart, dates, 90);
+                            applyDefaultChartRange(chart, dates, 30);
                         });
                     }
                 }
@@ -4538,7 +4551,7 @@
             const {chart: c3, ro: ro3} = mkChart(d3, h3, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c3, ro: ro3});
             if (data.RS13) c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
-            if (data.RS52) c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS52',1));
+            if (data.RS52) c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title: '',priceLineVisible:true,lastValueVisible:true}).setData(lineData(data,'RS52',1));
             // 50 reference
             if (data.dates.length > 0) {
                 c3.addLineSeries({color:'rgba(239,68,68,0.4)',lineWidth:1,lineStyle:1,priceLineVisible:false,lastValueVisible:false})
@@ -4546,7 +4559,7 @@
             }
 
             syncCharts([c1,c2,c3]);
-            applyDefaultChartRange(c1, data.dates, 90);
+            applyDefaultChartRange(c1, data.dates, 30);
             return c1;
         }
 
@@ -4697,7 +4710,7 @@
             }
 
             syncCharts([c1,c2]);
-            applyDefaultChartRange(c1, data.dates, 90);
+            applyDefaultChartRange(c1, data.dates, 30);
             return c1;
         }
 
@@ -4762,7 +4775,7 @@
             }).setData(ohlcv(data));
 
             syncCharts([c1,c2]);
-            applyDefaultChartRange(c1, data.dates, 90);
+            applyDefaultChartRange(c1, data.dates, 30);
             return c1;
         }
 
@@ -4999,7 +5012,7 @@
             if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'MACD_Signal',1));
 
             syncCharts([c1,c2,c3,c4]);
-            applyDefaultChartRange(c1, data.dates, 90);
+            applyDefaultChartRange(c1, data.dates, 30);
             return c1;
         }
 
