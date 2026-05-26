@@ -72,6 +72,13 @@
             align-items: center;
         }
 
+        .logo-section {
+            transition: opacity 0.2s ease;
+        }
+        .logo-section:hover {
+            opacity: 0.85;
+        }
+
         .logo-section h1 {
             font-family: 'Outfit', sans-serif;
             font-size: 1.5rem;
@@ -2203,18 +2210,18 @@
 
     <header>
         <div class="header-container">
-            <div class="logo-section">
+            <div class="logo-section" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)')" style="cursor: pointer; user-select: none;">
                 <h1>AIC PRO Dashboard <span>beta</span></h1>
-            </div>
-            <div class="header-actions">
-                <button id="settingsBtn" class="header-action-btn gear-btn" title="Cài đặt hệ thống">⚙️</button>
             </div>
             <div class="update-badge">
                 <span class="update-dot" title="Trạng thái cập nhật dữ liệu"></span>
                 <span id="updateTimeText">Đang tải...</span>
                 <span style="margin-left: 10px; margin-right: 10px; opacity: 0.25;">|</span>
-                <span id="vietstockStatusDot" class="status-dot-indicator red" title="Trạng thái cURL Vietstock"></span>
-                <span id="vietstockStatusText">Vietstock: Đang kiểm tra...</span>
+                <span id="urlStatusDot" class="status-dot-indicator red" title="Trạng thái cURL Vietstock"></span>
+                <span id="urlStatusText">Bypass URL: Đang kiểm tra...</span>
+                <span style="margin-left: 10px; margin-right: 10px; opacity: 0.25;">|</span>
+                <span id="vietstockStatusDot" class="status-dot-indicator red" title="Số lượng mã cập nhật thành công"></span>
+                <span id="vietstockStatusText">Dữ liệu: Đang kiểm tra...</span>
             </div>
         </div>
     </header>
@@ -2843,13 +2850,33 @@
                 // Set Vietstock / data status: show stock count instead of BYPASSED
                 const vsStatus = rawData.vietstock_status || "UNKNOWN";
                 const stockCount = rawData.stocks_updated_count ?? null;
+                
+                // 1. Update Bypass URL Status
+                const urlDot = document.getElementById('urlStatusDot');
+                const urlText = document.getElementById('urlStatusText');
+                if (urlDot && urlText) {
+                    if (vsStatus === "VALID" || vsStatus === "LIMITED_BYPASSED") {
+                        urlDot.className = "status-dot-indicator green";
+                        urlText.style.color = "var(--accent-green)";
+                        urlText.innerText = "Bypass URL: OK";
+                    } else if (vsStatus === "LIMITED") {
+                        urlDot.className = "status-dot-indicator yellow";
+                        urlText.style.color = "var(--accent-orange)";
+                        urlText.innerText = "Bypass URL: Bị giới hạn";
+                    } else {
+                        urlDot.className = "status-dot-indicator red";
+                        urlText.style.color = "var(--accent-red)";
+                        urlText.innerText = `Bypass URL: Lỗi (${vsStatus})`;
+                    }
+                    urlDot.title = `Trạng thái Vietstock: ${vsStatus}`;
+                }
+
+                // 2. Update Stock Count
                 const vsDot = document.getElementById('vietstockStatusDot');
                 const vsText = document.getElementById('vietstockStatusText');
                 if (vsDot && vsText) {
                     if (stockCount !== null) {
-                        // Hiển thị số mã cổ phiếu có dữ liệu
-                        // Tổng 3 sàn HOSE+HNX+UPCOM ~1300-1500 mã
-                        if (stockCount > 1200) {
+                        if (stockCount >= 1300) {
                             vsDot.className = "status-dot-indicator green";
                             vsText.style.color = "var(--accent-green)";
                         } else if (stockCount > 0) {
@@ -2859,24 +2886,13 @@
                             vsDot.className = "status-dot-indicator red";
                             vsText.style.color = "var(--accent-red)";
                         }
-                        vsText.innerText = `📊 ${stockCount} mã`;
-                        vsText.title = `Trạng thái Vietstock: ${vsStatus}`;
+                        vsText.innerText = `Dữ liệu: ${stockCount} mã`;
                     } else {
-                        // JSON cũ chưa có stocks_updated_count — fallback về status chữ
-                        if (vsStatus === "VALID" || vsStatus === "LIMITED_BYPASSED") {
-                            vsDot.className = "status-dot-indicator green";
-                            vsText.innerText = `Kết nối: ${vsStatus === "VALID" ? "OK" : "BYPASSED"}`;
-                            vsText.style.color = "var(--accent-green)";
-                        } else if (vsStatus === "LIMITED") {
-                            vsDot.className = "status-dot-indicator red";
-                            vsText.innerText = "Kết nối: Bị giới hạn";
-                            vsText.style.color = "var(--accent-red)";
-                        } else {
-                            vsDot.className = "status-dot-indicator red";
-                            vsText.innerText = `Kết nối: Lỗi (${vsStatus})`;
-                            vsText.style.color = "var(--accent-red)";
-                        }
+                        vsDot.className = "status-dot-indicator red";
+                        vsText.style.color = "var(--accent-red)";
+                        vsText.innerText = "Dữ liệu: Không có";
                     }
+                    vsDot.title = `Số lượng mã cập nhật: ${stockCount ?? 'Không có'}`;
                 }
                 
                 // Render Market Indices Cards (VNINDEX / HNX)
@@ -2908,6 +2924,29 @@
             } catch (error) {
                 console.error("Error loading JSON:", error);
                 document.getElementById('updateTimeText').innerText = "Lỗi kết nối dữ liệu";
+                const updDot = document.querySelector('.update-dot');
+                if (updDot) {
+                    updDot.style.backgroundColor = 'var(--accent-red)';
+                    updDot.style.boxShadow = '0 0 8px var(--accent-red)';
+                }
+                const urlDot = document.getElementById('urlStatusDot');
+                if (urlDot) {
+                    urlDot.className = "status-dot-indicator red";
+                }
+                const urlText = document.getElementById('urlStatusText');
+                if (urlText) {
+                    urlText.innerText = "Bypass URL: Lỗi";
+                    urlText.style.color = "var(--accent-red)";
+                }
+                const vsDot = document.getElementById('vietstockStatusDot');
+                if (vsDot) {
+                    vsDot.className = "status-dot-indicator red";
+                }
+                const vsText = document.getElementById('vietstockStatusText');
+                if (vsText) {
+                    vsText.innerText = "Dữ liệu: Lỗi";
+                    vsText.style.color = "var(--accent-red)";
+                }
                 document.getElementById('tickersGrid').innerHTML = `
                     <div class="empty-state">
                         <p style="color: var(--accent-red); font-weight: 600;">Không thể tải dữ liệu phân tích</p>
@@ -4150,14 +4189,17 @@
         const ADMIN_PASS = '2307';
         let settingsUnlocked = false;
 
-        document.getElementById('settingsBtn').addEventListener('click', () => {
-            document.getElementById('settingsModal').classList.add('active');
-            document.getElementById('settingsPassword').value = '';
-            document.getElementById('settingsMsg').textContent = '';
-            settingsUnlocked = false;
-            document.getElementById('settingsContent').style.display = 'none';
-            document.getElementById('settingsLocked').style.display = 'block';
-        });
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                document.getElementById('settingsModal').classList.add('active');
+                document.getElementById('settingsPassword').value = '';
+                document.getElementById('settingsMsg').textContent = '';
+                settingsUnlocked = false;
+                document.getElementById('settingsContent').style.display = 'none';
+                document.getElementById('settingsLocked').style.display = 'block';
+            });
+        }
 
         function closeSettings() {
             document.getElementById('settingsModal').classList.remove('active');
@@ -4193,10 +4235,12 @@
         });
 
         // Load saved URL on settings open
-        document.getElementById('settingsBtn').addEventListener('click', () => {
-            const saved = localStorage.getItem('aic_vietstock_curl');
-            if (saved) document.getElementById('settingsUrl').value = saved;
-        });
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                const saved = localStorage.getItem('aic_vietstock_curl');
+                if (saved) document.getElementById('settingsUrl').value = saved;
+            });
+        }
 
 
         // ============================================================
