@@ -3049,7 +3049,23 @@
                             <span class="index-price">${formatPrice(indexData.price, true)}</span>
                             <span class="action-badge ${getActionClass(indexData.action)}">${indexData.action}</span>
                             <span class="index-date">📅 ${indexData.date}</span>
-                        // Diagnostics Grid
+                        </div>
+                        <div class="rating-bar-container">
+                            <div class="rating-bar-bg">
+                                <div class="rating-bar-fill" style="width:${techScore}%; background:${barColor}"></div>
+                            </div>
+                            <div class="rating-label">Đánh giá Kỹ thuật Tổng quát: <strong style="color:${barColor}">${techScore}/100</strong></div>
+                        </div>
+                        <div style="margin-top:10px;">
+                            <span class="${regimeClass}" style="font-weight:700; font-size:0.95rem;">Xu hướng: ${indexData.regime}</span>
+                            <span style="margin-left:12px; font-size:0.85rem;">Tỷ trọng: <strong class="text-purple">${indexData.alloc}</strong></span>
+                        </div>
+                        <p class="alloc-note-text" style="margin-top:8px;">${indexData.alloc_note}</p>
+                    </div>
+                `;
+            }
+
+            // Diagnostics Grid
             const gridEl = document.getElementById('vnindexDiagGrid');
             if (gridEl) {
                 const diag = indexData.diagnostics || {};
