@@ -35,6 +35,27 @@ jobs:
           restore-keys: |
             stock-data-
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install gdown
+
+      - name: Fetch Data from Google Drive
+        run: |
+          mkdir -p gdrive_data
+          if gdown --folder https://drive.google.com/drive/folders/1zxsHmgb1LAhD0I8hR9BJnsj5IVwDSbli -O gdrive_data/; then
+            echo "✅ Google Drive folder fetch completed."
+          else
+            echo "⚠️ Lỗi tải hoặc link folder bị khóa."
+          fi
+
       - name: Prepare Input Data
         env:
           CSV_TEXT: ${{ github.event.inputs.csv_content }}
@@ -47,18 +68,13 @@ jobs:
             echo "📥 Đang tải CSV từ link URL: $CSV_URL"
             curl -L -o import_data.csv "$CSV_URL"
             echo "✅ Đã tải file CSV từ URL vào import_data.csv"
+          elif [ -d "gdrive_data" ] && [ "$(ls -A gdrive_data/*.csv 2>/dev/null)" ]; then
+            echo "✅ Phát hiện file CSV trong thư mục Google Drive. Đang chép sang import_data/"
+            mkdir -p import_data
+            cp gdrive_data/*.csv import_data/
+          else
+            echo "ℹ️ Không có dữ liệu từ Google Drive (hoặc Drive trống). Sẽ sử dụng dữ liệu mặc định từ Git."
           fi
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-          cache: 'pip'
-
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
 
       - name: Run Import Script
         run: |
