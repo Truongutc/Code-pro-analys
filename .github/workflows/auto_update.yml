@@ -42,6 +42,43 @@ jobs:
           pip install -r requirements.txt
 
 
+      - name: Check Vietstock Session (Pre-flight)
+        env:
+          PYTHONPATH: .
+          VIETSTOCK_CURL: ${{ secrets.VIETSTOCK_CURL }}
+        run: |
+          python -c '
+          import os, sys
+          from tinvest.config_manager import ConfigManager
+          from tinvest.vietstock_client import VietstockClient
+
+          # 1. Nạp cURL từ secret vào config
+          curl_str = os.environ.get("VIETSTOCK_CURL", "").strip()
+          if curl_str and len(curl_str) > 10:
+              print(">> Đang nạp VIETSTOCK_CURL từ secret vào config...")
+              mgr = ConfigManager()
+              ok = mgr.parse_input(curl_str)
+              if not ok:
+                  print("::error::❌ Không thể parse VIETSTOCK_CURL secret. Vui lòng dán lại cURL mới.")
+                  sys.exit(1)
+              print("   Config đã cập nhật từ secret.")
+          else:
+              print(">> Không có secret mới, dùng config đã cache.")
+
+          # 2. Kiểm tra session
+          client = VietstockClient()
+          status = client.check_session_status()
+          print(f">> Trạng thái kết nối Vietstock: {status}")
+
+          ALLOWED = {"VALID", "LIMITED_BYPASSED"}
+          if status not in ALLOWED:
+              print(f"::error::❌ Kết nối Vietstock THẤT BẠI (status={status}).")
+              print("::error::   Vui lòng vào Actions → Update Vietstock Bypass URL → paste cURL mới.")
+              sys.exit(1)
+
+          print(f"✅ Kết nối OK ({status}). Tiếp tục cập nhật dữ liệu...")
+          '
+
       - name: Run Update Script
         env:
           PYTHONPATH: .

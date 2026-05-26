@@ -2840,27 +2840,41 @@
                 // Set update time
                 document.getElementById('updateTimeText').innerText = `Cập nhật: ${rawData.last_update}`;
                 
-                // Set Vietstock cURL token status
+                // Set Vietstock / data status: show stock count instead of BYPASSED
                 const vsStatus = rawData.vietstock_status || "UNKNOWN";
+                const stockCount = rawData.stocks_updated_count ?? null;
                 const vsDot = document.getElementById('vietstockStatusDot');
                 const vsText = document.getElementById('vietstockStatusText');
                 if (vsDot && vsText) {
-                    if (vsStatus === "VALID" || vsStatus === "LIMITED_BYPASSED") {
-                        vsDot.className = "status-dot-indicator green";
-                        vsText.innerText = `Kết nối: ${vsStatus === "VALID" ? "OK" : "BYPASSED"}`;
-                        vsText.style.color = "var(--accent-green)";
-                    } else if (vsStatus === "LIMITED") {
-                        vsDot.className = "status-dot-indicator red";
-                        vsText.innerText = "Kết nối: Bị giới hạn";
-                        vsText.style.color = "var(--accent-red)";
-                    } else if (vsStatus === "CSV_MODE") {
-                        vsDot.className = "status-dot-indicator yellow";
-                        vsText.innerText = "Kết nối: Nạp CSV";
-                        vsText.style.color = "var(--accent-orange)";
+                    if (stockCount !== null) {
+                        // Hiển thị số mã cổ phiếu có dữ liệu
+                        if (stockCount > 400) {
+                            vsDot.className = "status-dot-indicator green";
+                            vsText.style.color = "var(--accent-green)";
+                        } else if (stockCount > 0) {
+                            vsDot.className = "status-dot-indicator yellow";
+                            vsText.style.color = "var(--accent-orange)";
+                        } else {
+                            vsDot.className = "status-dot-indicator red";
+                            vsText.style.color = "var(--accent-red)";
+                        }
+                        vsText.innerText = `📊 ${stockCount} mã`;
+                        vsText.title = `Trạng thái Vietstock: ${vsStatus}`;
                     } else {
-                        vsDot.className = "status-dot-indicator red";
-                        vsText.innerText = `Kết nối: Lỗi (${vsStatus})`;
-                        vsText.style.color = "var(--accent-red)";
+                        // JSON cũ chưa có stocks_updated_count — fallback về status chữ
+                        if (vsStatus === "VALID" || vsStatus === "LIMITED_BYPASSED") {
+                            vsDot.className = "status-dot-indicator green";
+                            vsText.innerText = `Kết nối: ${vsStatus === "VALID" ? "OK" : "BYPASSED"}`;
+                            vsText.style.color = "var(--accent-green)";
+                        } else if (vsStatus === "LIMITED") {
+                            vsDot.className = "status-dot-indicator red";
+                            vsText.innerText = "Kết nối: Bị giới hạn";
+                            vsText.style.color = "var(--accent-red)";
+                        } else {
+                            vsDot.className = "status-dot-indicator red";
+                            vsText.innerText = `Kết nối: Lỗi (${vsStatus})`;
+                            vsText.style.color = "var(--accent-red)";
+                        }
                     }
                 }
                 

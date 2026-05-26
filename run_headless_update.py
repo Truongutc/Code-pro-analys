@@ -1077,10 +1077,17 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
     from datetime import timezone
     ict_time = datetime.now(timezone.utc) + timedelta(hours=7)
     last_update_str = ict_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Đếm số mã có dữ liệu thực (có giá close hợp lệ)
+    stocks_updated_count = sum(
+        1 for v in tickers_analysis.values()
+        if isinstance(v, dict) and v.get("close") not in (None, 0, "")
+    )
     
     final_output = {
         "last_update": last_update_str,
         "vietstock_status": vietstock_status,
+        "stocks_updated_count": stocks_updated_count,
         "market_breadth": market_breadth_data,
         "market_indices": market_indices,
         "categories_meta": categories_meta,
