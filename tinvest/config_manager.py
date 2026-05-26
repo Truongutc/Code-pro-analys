@@ -279,6 +279,11 @@ class ConfigManager:
 
     def refresh_token(self):
         """Force a fresh token acquisition using Selenium with error handling."""
+        import os
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            logger.error("❌ Selenium token refresh is disabled in GitHub Actions to prevent hanging. Please manually update the VIETSTOCK_CURL secret.")
+            return False
+            
         try:
             from tinvest.token_refresher import fetch_fresh_token
             result = fetch_fresh_token()

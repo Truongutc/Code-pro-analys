@@ -161,7 +161,7 @@ class VietstockClient:
         """Fetch __RequestVerificationToken from Vietstock landing page."""
         try:
             url = f"{self.base_url}/ket-qua-giao-dich?tab=thong-ke-gia"
-            response = self.session.get(url)
+            response = self.session.get(url, timeout=30)
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 token_input = soup.find('input', {'name': '__RequestVerificationToken'})
@@ -176,7 +176,7 @@ class VietstockClient:
         """Fetch full symbol mapping for a category (1:HOSE, 2:HNX, 3:UPCOM)."""
         params = {"catID": cat_id}
         try:
-            response = self.session.get(self.stocklist_api_url, params=params)
+            response = self.session.get(self.stocklist_api_url, params=params, timeout=30)
             if response.status_code == 200:
                 return response.json()
         except Exception as e:
@@ -412,7 +412,7 @@ class VietstockClient:
         }
         
         try:
-            response = self.session.post(self.index_api_url, data=payload)
+            response = self.session.post(self.index_api_url, data=payload, timeout=30)
             if response.status_code == 200:
                 # Handle possible BOM in index API response too
                 data = json.loads(response.content.decode('utf-8-sig'))
