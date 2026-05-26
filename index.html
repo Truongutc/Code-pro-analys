@@ -2848,7 +2848,8 @@
                 if (vsDot && vsText) {
                     if (stockCount !== null) {
                         // Hiển thị số mã cổ phiếu có dữ liệu
-                        if (stockCount > 400) {
+                        // Tổng 3 sàn HOSE+HNX+UPCOM ~1300-1500 mã
+                        if (stockCount > 1200) {
                             vsDot.className = "status-dot-indicator green";
                             vsText.style.color = "var(--accent-green)";
                         } else if (stockCount > 0) {
