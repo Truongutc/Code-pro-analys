@@ -907,7 +907,6 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
                 from tinvest.advanced_entry import classify_entry
                 from tinvest.valuation_engine import evaluate_stock_valuation
                 from tinvest.state_engine import evaluate_state_rules
-                from tinvest.analyzer import evaluate_heatmap
                 from tinvest.mcdx_engine import evaluate_mcdx_rules
                 
                 df_rich = enrich_dataframe(idx_df.copy())
@@ -1080,8 +1079,8 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
 
     # Đếm số mã có dữ liệu thực (có giá close hợp lệ)
     stocks_updated_count = sum(
-        1 for v in tickers_analysis.values()
-        if isinstance(v, dict) and v.get("close") not in (None, 0, "")
+        1 for v in tickers_analysis
+        if isinstance(v, dict) and v.get("Price") not in (None, 0, "")
     )
     
     final_output = {
