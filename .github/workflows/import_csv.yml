@@ -1,7 +1,16 @@
 name: Import New Data
 
 on:
-  workflow_dispatch: # Enable manual run button in GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      csv_content:
+        description: 'Dán nội dung text của file CSV vào đây'
+        required: false
+        type: string
+      csv_url:
+        description: 'Hoặc nhập link URL công khai tới file CSV để tải về'
+        required: false
+        type: string
 
 jobs:
   import:
@@ -26,6 +35,20 @@ jobs:
           restore-keys: |
             stock-data-
 
+      - name: Prepare Input Data
+        env:
+          CSV_TEXT: ${{ github.event.inputs.csv_content }}
+          CSV_URL: ${{ github.event.inputs.csv_url }}
+        run: |
+          if [ -n "$CSV_TEXT" ]; then
+            echo "$CSV_TEXT" > import_data.csv
+            echo "✅ Đã lưu nội dung CSV dán từ giao diện vào import_data.csv"
+          elif [ -n "$CSV_URL" ]; then
+            echo "📥 Đang tải CSV từ link URL: $CSV_URL"
+            curl -L -o import_data.csv "$CSV_URL"
+            echo "✅ Đã tải file CSV từ URL vào import_data.csv"
+          fi
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -39,12 +62,12 @@ jobs:
 
       - name: Run Import Script
         run: |
-          if [ -d "import_data" ] && [ "$(ls -A import_data/*.csv 2>/dev/null)" ]; then
-              echo "=== PHÁT HIỆN THƯ MỤC import_data/ CHỨA FILE CSV. BẮT ĐẦU NẠP DỮ LIỆU BAN ĐẦU ==="
-              python run_headless_update.py --import-csv import_data/
-          elif [ -f "import_data.csv" ]; then
+          if [ -f "import_data.csv" ]; then
               echo "=== PHÁT HIỆN FILE import_data.csv. BẮT ĐẦU NẠP DỮ LIỆU BAN ĐẦU ==="
               python run_headless_update.py --import-csv import_data.csv
+          elif [ -d "import_data" ] && [ "$(ls -A import_data/*.csv 2>/dev/null)" ]; then
+              echo "=== PHÁT HIỆN THƯ MỤC import_data/ CHỨA FILE CSV. BẮT ĐẦU NẠP DỮ LIỆU BAN ĐẦU ==="
+              python run_headless_update.py --import-csv import_data/
           else
               echo "❌ Không tìm thấy thư mục import_data/ hoặc file import_data.csv để nạp!"
               exit 1
