@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -3120,6 +3120,30 @@
                     if (s.includes('bull') || s.includes('uptrend') || s.includes('buy') || s.includes('strong') || s.includes('tích cực') || s.includes('tăng')) return 'bullish';
                     if (s.includes('bear') || s.includes('downtrend') || s.includes('sell') || s.includes('weak') || s.includes('tiêu cực') || s.includes('giảm')) return 'bearish';
                     return 'neutral';
+                }
+
+                function renderDiagTable(diag) {
+                    if (!diag) return '<div class="empty-state">Không có dữ liệu chẩn đoán</div>';
+                    const diagItems = [
+                        { label: 'Hệ thống MA Lines',  status: diag.ma?.status       || 'N/A', action: diag.ma?.action       || '', cls: diagClass(diag.ma?.status, diag.ma?.action) },
+                        { label: 'Ichimoku Cloud',      status: diag.ichimoku?.status  || 'N/A', action: diag.ichimoku?.action  || '', cls: diagClass(diag.ichimoku?.status, diag.ichimoku?.action) },
+                        { label: 'Sức mạnh RSI',        status: diag.rsi?.status       || 'N/A', action: diag.rsi?.action       || '', cls: diagClass(diag.rsi?.status, diag.rsi?.action) },
+                        { label: 'Động lượng MACD',     status: diag.macd?.status      || 'N/A', action: diag.macd?.action      || '', cls: diagClass(diag.macd?.status, diag.macd?.action) },
+                        { label: 'Sức mạnh ADX',        status: diag.adx?.status       || 'N/A', action: diag.adx?.action       || '', cls: diagClass(diag.adx?.status, diag.adx?.action) },
+                    ];
+
+                    let html = '<table class="diag-table" style="width:100%; border-collapse: collapse; font-size: 0.9rem;">';
+                    html += '<thead><tr style="border-bottom: 1px solid var(--border-color); text-align: left; color: var(--text-secondary);">';
+                    html += '<th style="padding: 8px 12px;">Chỉ báo</th><th style="padding: 8px 12px;">Trạng thái</th><th style="padding: 8px 12px;">Khuyến nghị</th></tr></thead>';
+                    html += '<tbody>';
+                    diagItems.forEach(function(d) {
+                        html += '<tr class="' + d.cls + '" style="border-bottom: 1px solid rgba(255,255,255,0.03);">';
+                        html += '<td style="padding: 8px 12px; color: var(--text-secondary);">' + d.label + '</td>';
+                        html += '<td style="padding: 8px 12px; font-weight: 600;">' + d.status + '</td>';
+                        html += '<td style="padding: 8px 12px; font-weight: 600;">' + d.action + '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    return html;
                 }
 
                 let regimeClass = indexData.regime.includes('UPTREND') ? 'bullish' : indexData.regime.includes('DOWNTREND') ? 'bearish' : 'neutral';
