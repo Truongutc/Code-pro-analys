@@ -1259,14 +1259,17 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
                 except Exception as ex_future:
                     pass
 
+            def clean_nan_list(series):
+                return [None if (pd.isna(x) or (isinstance(x, float) and np.isnan(x))) else x for x in series.tolist()]
+
             record = {
                 "ticker": t,
                 "dates": df_extended['Date'].dt.strftime("%Y-%m-%d").tolist(),
-                "opens":   df_extended['Open'].round(6).where(df_extended['Open'].notna(), None).tolist(),
-                "highs":   df_extended['High'].round(6).where(df_extended['High'].notna(), None).tolist(),
-                "lows":    df_extended['Low'].round(6).where(df_extended['Low'].notna(), None).tolist(),
-                "closes":  df_extended['Close'].round(6).where(df_extended['Close'].notna(), None).tolist(),
-                "volumes": df_extended['Volume'].round(6).where(df_extended['Volume'].notna(), None).tolist(),
+                "opens":   clean_nan_list(df_extended['Open'].round(6)),
+                "highs":   clean_nan_list(df_extended['High'].round(6)),
+                "lows":    clean_nan_list(df_extended['Low'].round(6)),
+                "closes":  clean_nan_list(df_extended['Close'].round(6)),
+                "volumes": clean_nan_list(df_extended['Volume'].round(6)),
             }
             
             for col in ALL_INDICATOR_COLS:
@@ -1275,10 +1278,10 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
                     if series.dtype == bool or col in ['HK_BuySignal', 'HK_BuyManh', 'HK_SellSignal', 'HK_SellManh']:
                         record[col] = [bool(v) if pd.notna(v) and v is not None else None for v in series]
                     elif series.dtype == object:
-                        record[col] = series.where(series.notna(), None).tolist()
+                        record[col] = [None if pd.isna(v) else v for v in series.tolist()]
                     else:
                         series_rounded = series.round(6)
-                        record[col] = series_rounded.where(series_rounded.notna(), None).tolist()
+                        record[col] = clean_nan_list(series_rounded)
             
             out_path = os.path.join(history_dir, f"{t}.json")
             with open(out_path, 'w', encoding='utf-8') as f:

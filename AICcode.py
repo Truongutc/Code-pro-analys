@@ -2903,7 +2903,7 @@ class TinvestApp:
                     
                     for d in mb.index:
                         if d in df_vn_aligned.index:
-                            vn_closes.append(float(df_vn_aligned.loc[d, 'Close']) * 1000)
+                            vn_closes.append(float(df_vn_aligned.loc[d, 'Close']))
                         else:
                             vn_closes.append(vn_closes[-1] if vn_closes else 0.0)
                 else:
