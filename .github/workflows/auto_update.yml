@@ -1,4 +1,4 @@
-name: Auto Update Stock Data
+﻿name: Auto Update Stock Data
 
 on:
   schedule:
@@ -53,9 +53,9 @@ jobs:
           from tinvest.config_manager import ConfigManager
           from tinvest.vietstock_client import VietstockClient
 
-          # 1. Nạp cURL từ secret vào config
-          curl_str = os.environ.get("VIETSTOCK_CURL", "").strip()
-          if curl_str and len(curl_str) > 10:
+          # 1. Bỏ qua nạp cURL từ secret để tránh ghi đè token đã nhập từ Action thủ công
+          curl_str = ""
+          if False:
               print(">> Đang nạp VIETSTOCK_CURL từ secret vào config...")
               mgr = ConfigManager()
               ok = mgr.parse_input(curl_str)
@@ -85,11 +85,11 @@ jobs:
           PYTHONPATH: .
           VIETSTOCK_CURL: ${{ secrets.VIETSTOCK_CURL }}
         run: |
-          # 1. Cấu hình cURL từ secrets
+          # 1. Cấu hình cURL từ secrets (Đã tắt để ưu tiên config.json)
           python -c '
           import os
           from tinvest.config_manager import ConfigManager
-          curl_str = os.environ.get("VIETSTOCK_CURL")
+          curl_str = ""
           if curl_str and len(curl_str.strip()) > 10:
               print("Found VIETSTOCK_CURL secret. Parsing and updating config...")
               mgr = ConfigManager()
