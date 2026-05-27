@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import os
@@ -95,7 +95,7 @@ def run_sync_and_update():
     if check_dates:
         logger.info(f"[*] Đang quét tính toàn vẹn 3 ngày gần nhất: {', '.join(check_dates)}...")
         ticker_counts = storage.get_ticker_counts_for_dates(check_dates)
-        bad_dates = [d for d, count in ticker_counts.items() if count > 0 and count < 1200]
+        bad_dates = [d for d, count in ticker_counts.items() if count > 0 and count < 1300]
         if bad_dates:
             logger.warning(f"⚠️ Phát hiện {len(bad_dates)} ngày bị thiếu mã (< 1200 mã): {', '.join(bad_dates)}")
             logger.info("[*] Đang xóa dữ liệu lỗi để tải lại...")
@@ -145,8 +145,8 @@ def run_sync_and_update():
             df_day = client.format_to_df(day_total)
             
             # Skip if total rows is too low
-            if total_raw < 1200:
-                logger.error(f"❌ HỦY BỎ ngày {d}: Chỉ có {total_raw} mã (Yêu cầu >= 1200).")
+            if total_raw < 1300:
+                logger.error(f"❌ HỦY BỎ ngày {d}: Chỉ có {total_raw} mã (Yêu cầu >= 1300).")
                 logger.error("Dữ liệu thô thiếu hụt nghiêm trọng, nghi ngờ phiên kết nối không hợp lệ.")
                 sys.exit(1)
                 
