@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -3192,20 +3192,20 @@
                 const hPct = mcdx.hot_pct      !== undefined ? parseFloat(mcdx.hot_pct).toFixed(1)      : '0.0';
                 const rPct = mcdx.retailer_pct !== undefined ? parseFloat(mcdx.retailer_pct).toFixed(1) : '0.0';
 
-                let dHtml = '<div class="card" style="padding:16px;">';
+                let dHtml = '';
+
+                // Block 1: Đồ thị Mini & MCDX
+                dHtml += '<div class="card" style="padding:16px; margin-bottom:16px;">';
                 dHtml += '<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">';
+                
+                // Mini Chart
+                dHtml += '<div style="flex:1;min-width:300px;">';
+                dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCC8 \u0110\u1ED3 th\u1ECB Xu h\u01B0\u1EDBng Gi\u00E1 & Kh\u1ED1i l\u01B0\u1EE3ng (30 ng\u00E0y)</div>';
+                dHtml += '<div id="vnindex_mini_chart" style="height:200px;background:rgba(0,0,0,0.22);border:1px solid rgba(255,255,255,0.05);border-radius:6px;"></div>';
+                dHtml += '</div>';
 
-                // --- Bảng chẩn đoán kỹ thuật ---
-                dHtml += '<div style="flex:1;min-width:280px;">';
-                dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDD0D Ch\u1EA9n \u0110o\u00E1n K\u1EF9 Thu\u1EADt</div>';
-                dHtml += '<table class="diag-table" style="width:100%;"><thead><tr><th>Ch\u1EC9 b\u00E1o</th><th>Tr\u1EA1ng th\u00E1i</th><th>Khuy\u1EBFn ngh\u1ECB</th></tr></thead><tbody>';
-                diagItems.forEach(function(d) {
-                    dHtml += '<tr class="' + d.cls + '"><td>' + d.label + '</td><td>' + d.status + '</td><td>' + d.action + '</td></tr>';
-                });
-                dHtml += '</tbody></table></div>';
-
-                // --- MCDX Bar ---
-                dHtml += '<div style="flex:1;min-width:220px;">';
+                // MCDX Bar
+                dHtml += '<div style="flex:1;min-width:300px;">';
                 dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCCA D\u00F2ng Ti\u1EC1n MCDX &amp; Xu h\u01B0\u1EDBng</div>';
                 dHtml += '<div class="mcdx-bar-labels" style="margin-bottom:4px;">';
                 dHtml += '<span class="text-red">T\u1EA1o l\u1EADp (Banker): ' + bPct + '%</span>';
@@ -3221,18 +3221,34 @@
                 dHtml += '<div><strong>Tr\u1EA1ng th\u00E1i:</strong> ' + (mcdx.status || 'N/A') + '</div>';
                 dHtml += '<div><strong>H\u00E0nh \u0111\u1ED9ng:</strong> ' + (mcdx.action || 'N/A') + '</div>';
                 if (mcdx.details) dHtml += '<div style="color:var(--text-secondary);font-size:0.75rem;margin-top:4px;">' + mcdx.details + '</div>';
-                dHtml += '</div></div>';
+                dHtml += '</div>';
+                dHtml += '</div>';
+                dHtml += '</div></div>'; // End Block 1
 
-                // --- Báo cáo AI (nếu có) ---
+                // Block 2: Bảng chẩn đoán kỹ thuật CHI TIẾT
+                dHtml += '<div class="card block-card" style="margin-bottom:16px;">';
+                dHtml += '<h3 class="card-title">\uD83D\uDD0D Ch\u1EA9n \u0111o\u00E1n K\u1EF9 thu\u1EADt (M15-Day)</h3>';
+                dHtml += renderDiagTable(diag);
+                dHtml += '</div>';
+
+                // Block 3: Báo cáo AI (Full width)
                 if (indexData.ReportText) {
-                    dHtml += '<div style="flex:2;min-width:300px;">';
-                    dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCDD B\u00E1o c\u00E1o Chi\u1EBFn l\u01B0\u1EE3c AI (T\u00F3m t\u1EAFt)</div>';
-                    dHtml += '<pre style="padding:12px;border-radius:8px;background:rgba(0,0,0,0.22);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;white-space:pre-wrap;font-size:0.78rem;line-height:1.5;color:var(--text-primary);border:1px solid var(--border-color);max-height:200px;overflow-y:auto;">' + indexData.ReportText + '</pre>';
+                    dHtml += '<div class="card" style="padding:16px;">';
+                    dHtml += '<div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCDD B\u00E1o c\u00E1o Chi\u1EBFn l\u01B0\u1EE3c AI</div>';
+                    dHtml += '<pre style="padding:16px;border-radius:8px;background:rgba(0,0,0,0.22);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;white-space:pre-wrap;font-size:0.9rem;line-height:1.6;color:var(--text-primary);border:1px solid var(--border-color);max-height:400px;overflow-y:auto;">' + indexData.ReportText + '</pre>';
                     dHtml += '</div>';
                 }
 
-                dHtml += '</div></div>';
                 diagRowEl.innerHTML = dHtml;
+                gridEl.appendChild(diagRowEl);
+                
+                // Mount Mini Chart
+                setTimeout(() => {
+                    const el = document.getElementById('vnindex_mini_chart');
+                    if (el && window.marketRawData && window.marketRawData[indexName]) {
+                        renderMiniChart(el.id, window.marketRawData[indexName], []);
+                    }
+                }, 100);
                 gridEl.appendChild(diagRowEl);
             }
         }
