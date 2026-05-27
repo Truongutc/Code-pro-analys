@@ -31446,51 +31446,65 @@
       "alloc_note": "Đang tích lũy/chuyển giao trong nhịp hồi có FTD -> ưu tiên nắm giữ cổ phiếu Leader",
       "diagnostics": {
         "ma": {
-          "status": "N/A",
-          "action": "N/A"
+          "status": "BẪY: Giá quá xa MA20 trong Strong Trend.",
+          "action": "90% dính Pullback. Không FOMO mua đuổi, chờ giá hãm phanh."
         },
         "ichimoku": {
-          "status": "N/A",
-          "action": "N/A"
+          "status": "STRONG UPTREND (Xu hướng MẠNH NHẤT): Giá trên mây, Tenkan > Kijun, Chikou trống đường.",
+          "action": "All-in mindset. Canh giá Pullback về Tenkan (nhanh) hoặc Kijun (an toàn) để BUY."
         },
         "rsi": {
-          "status": "51.99",
-          "action": "N/A"
+          "status": "Quá mua (RSI > 70) trong Uptrend: Trend đang rất khỏe.",
+          "action": "Giữ lệnh, không chốt non."
         },
         "macd": {
-          "status": "21.15",
-          "action": "N/A"
+          "status": "MACD > 0 (Trend tăng trung hạn).",
+          "action": ""
         },
         "adx": {
-          "status": "N/A",
-          "action": "N/A"
+          "status": "ADX 38.6 (25–40) DỐC LÊN + MA20>MA50: TREND TĂNG SIÊU KHỎE (màu WHITE). | 📈 ADX tăng từ 25.9 → 38.6: Trend ĐANG MẠNH DẦN. Cứ HOLD, đừng chốt sớm.",
+          "action": "HOLD chặt hoặc ADD POSITION. Dùng RSI 40–50 để xác nhận điểm mua pullback (KHÔNG dùng RSI 30 nữa). RSI 60–70 → cẩn trọng, tránh FOMO. | 🔥 ENTRY LONG MẠNH: DI+ (97.7) ≥ 35 + ADX tăng — Trend tăng cực mạnh."
         }
       },
-      "heatmap_eval": "ĐANG ĐÀ GIẢM (Nến Đỏ liên tiếp)",
+      "heatmap_eval": "Trạng thái: Vàng (Lưỡng lự)",
       "mcdx_eval": {
-        "status": "TIỀN LỚN SUY YẾU",
-        "action": "CANH CHỐT LỜI BỚT - NGƯNG MUA",
-        "details": "Banker (Đỏ) cắt xuống MA đen hoặc giảm liên tục 3 phiên.",
-        "banker_pct": 7.109521836537727,
+        "status": "RỦI RO PHÂN PHỐI / FOMO",
+        "action": "HẠN CHẾ MUA ĐUỔI, CANH CHỐT LỜI DẦN",
+        "details": "Vàng tăng nhưng Đỏ giảm, Stoch RSI overbought hoặc Volume nổ quá lớn.",
+        "banker_pct": 0.0,
         "hot_pct": 0.0,
-        "retailer_pct": 20.0
+        "retailer_pct": 0.0
       },
       "state_rules": {
-        "primary": "NEUTRAL",
-        "secondary": "EXHAUSTION",
-        "signal": "NONE",
         "regime": "TREND",
-        "confidence": 0,
-        "avoid_entry": false,
-        "adx": 22.202849577562365,
-        "macd_hist": -9.708176287135736,
-        "trend_bias": 0.0,
-        "vol_spike": false,
-        "vol_dry": false,
-        "strong_trend": false,
-        "breakout_up": false,
-        "dist_ma20": -0.010573455985633763,
-        "rsi": 51.989628011484236
+        "primary": "UPTREND",
+        "secondary": "NORMAL",
+        "signal": "TAKE_PROFIT",
+        "confidence": 3,
+        "avoid_entry": true,
+        "metrics": {
+          "adx": 38.560278917304146,
+          "macd": 353.21346218917574,
+          "hist": 220.71351829336834,
+          "atr": 137.80686,
+          "range_width": 1889.4212,
+          "vol_spike": false,
+          "vol_dry": false,
+          "ma_flat": false,
+          "chop": false,
+          "structure_bias": 0,
+          "trend_bias": 1.0,
+          "strong_trend": true,
+          "strong_candle": false,
+          "breakout_up": false,
+          "breakout_down": false,
+          "base_valid": false,
+          "retest": false,
+          "continuation": false,
+          "anti_trap_block": true,
+          "dist_ma20": 5.603727708693349,
+          "rsi": 99.29449496362706
+        }
       }
     },
     "HNX-INDEX": {
