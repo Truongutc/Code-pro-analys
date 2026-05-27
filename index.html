@@ -2747,6 +2747,10 @@
                         series.applyOptions({ visible: techChartVisibility[key] });
                     }
                 }
+                // Custom toggle for cloud areas
+                const isKumoVisible = techChartVisibility.SpanA || techChartVisibility.SpanB;
+                if (registry.KumoCloud) registry.KumoCloud.applyOptions({ visible: isKumoVisible });
+                if (registry.KumoMask) registry.KumoMask.applyOptions({ visible: isKumoVisible });
             }
         }
 
@@ -4280,7 +4284,11 @@
                          minBarSpacing: 5 },
             rightPriceScale: { 
                 borderColor: 'rgba(255,255,255,0.08)',
-                autoScale: true
+                autoScale: true,
+                scaleMargins: {
+                    top: 0.15,
+                    bottom: 0.15
+                }
             },
             // Cho phép co kéo bằng pinch-zoom và giữ kéo trục giá/trục thời gian
             handleScale: { 
@@ -4641,42 +4649,37 @@
             const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart:c1,ro:ro1});
 
-            // TC Cloud: fill between TC_Trend and TC_StopLine (like TrendColor PineScript cloud)
+            // TC Cloud: fill between TC_Trend and TC_StopLine
             if (data.TC_Trend && data.TC_StopLine) {
                 const sc = priceScale(data);
-                const tcCloudBull = [], tcCloudBear = [], tcMask = [];
+                const tcCloud = [], tcMask = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const tr = data.TC_Trend[i], sl = data.TC_StopLine[i];
                     if (tr === null || sl === null || tr === undefined || sl === undefined) continue;
                     const t = d2ts(data.dates[i]);
-                    // T=1 means bullish (stopline below trend), T=-1 means bearish
-                    const tcT = data.TC_T ? data.TC_T[i] : (tr > sl ? 1 : -1);
                     const top = Math.max(tr, sl) * sc;
                     const bot = Math.min(tr, sl) * sc;
-                    if (tcT >= 0) {
-                        tcCloudBull.push({time: t, value: top});
-                        tcCloudBear.push({time: t, value: null});
-                    } else {
-                        tcCloudBull.push({time: t, value: null});
-                        tcCloudBear.push({time: t, value: top});
-                    }
+                    tcCloud.push({time: t, value: top});
                     tcMask.push({time: t, value: bot});
                 }
+                
+                // Continuous gradient AreaSeries
                 c1.addAreaSeries({
-                    topColor: 'rgba(39,194,46,0.22)', bottomColor: 'rgba(39,194,46,0.01)',
-                    lineColor: 'rgba(39,194,46,0.6)', lineWidth: 1.5,
+                    topColor: 'rgba(39,194,46,0.08)', bottomColor: 'rgba(255,0,0,0.08)',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0, lineVisible: false,
                     priceLineVisible: false, title: ''
-                }).setData(tcCloudBull);
-                c1.addAreaSeries({
-                    topColor: 'rgba(255,0,0,0.18)', bottomColor: 'rgba(255,0,0,0.01)',
-                    lineColor: 'rgba(255,0,0,0.5)', lineWidth: 1.5,
-                    priceLineVisible: false, title: ''
-                }).setData(tcCloudBear);
+                }).setData(tcCloud);
+                
+                // Continuous mask AreaSeries
                 c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0, lineVisible: false,
                     priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(tcMask);
+                
+                // Draw Trend and StopLine as lines
+                c1.addLineSeries({color:'rgba(39,194,46,0.65)',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'TC_Trend'));
+                c1.addLineSeries({color:'rgba(255,0,0,0.5)',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'TC_StopLine'));
             } else if (data.TC_Trend) {
                 c1.addLineSeries({color:'#f59e0b',lineWidth:2,title: ''}).setData(lineData(data,'TC_Trend'));
             }
@@ -4810,7 +4813,6 @@
                     wickUpColor:'#ffffff',wickDownColor:'#ff3b3b'
                 });
                 const fArr = [];
-                const fSc = priceScale(data);
                 for (let i = 0; i < data.dates.length; i++) {
                     const fo=data.HM_Flower_Open[i],fc=data.HM_Flower_Close[i],
                           fh=data.HM_Flower_High[i],fl=data.HM_Flower_Low[i];
@@ -4819,7 +4821,7 @@
                     const up = fc>=fo;
                     const clr = (up&&mf===1)?'#ffffff':(!up&&mf===-1)?'#ff3b3b':'#fbbf24';
                     fArr.push({time:d2ts(data.dates[i]),
-                        open:fo*fSc,high:fh*fSc,low:fl*fSc,close:fc*fSc,
+                        open:fo,high:fh,low:fl,close:fc,
                         color:clr,borderColor:clr,wickColor:clr});
                 }
                 fcs.setData(fArr);
@@ -4862,24 +4864,16 @@
             // Initialize registry for this mount to manage line visibility toggles
             techReportSeriesRegistry[mountId] = {};
 
-            // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB (green when SpanA>SpanB, red otherwise)
-            // Uses two area series (green cloud top, red cloud top) rendering cloud background
+            // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB
             if (data.SpanA && data.SpanB) {
-                const sc = priceScale(data);
-                const bullishCloud = [], bearishCloud = [], maskCloud = [];
+                const cloudTop = [], maskCloud = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const a = data.SpanA[i], b = data.SpanB[i];
                     if (a === null || b === null || a === undefined || b === undefined) continue;
                     const t = d2ts(data.dates[i]);
-                    const top = Math.max(a, b) * sc;
-                    const bot = Math.min(a, b) * sc;
-                    if (a >= b) {
-                        bullishCloud.push({time: t, value: top});
-                        bearishCloud.push({time: t, value: null});
-                    } else {
-                        bullishCloud.push({time: t, value: null});
-                        bearishCloud.push({time: t, value: top});
-                    }
+                    const top = Math.max(a, b);
+                    const bot = Math.min(a, b);
+                    cloudTop.push({time: t, value: top});
                     maskCloud.push({time: t, value: bot});
                 }
                 const sKumoGreen = c1.addAreaSeries({
@@ -4954,12 +4948,17 @@
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
             }).setData(ohlcv(data));
 
-            // Pane 2: MCDX Stacked Histogram Chart (Layered Retailer, Hot Money, Banker)
-            const {chart: c2, ro: ro2} = mkChart(d2, h2);
-            instances.push({chart:c2,ro:ro2});
+            // Stacked Histogram calculation logic (tallest drawn first):
+            // 1. Retailer (Green): value = banker + hot + 20
+            // 2. Hot Money (Yellow): value = banker + hot
+            // 3. Banker (Red): value = banker
             
-            // Retailer (Green) constant 20
-            const greenData = data.dates.map(dt => ({ time: d2ts(dt), value: 20.0 }));
+            // Retailer (Green)
+            const greenData = data.dates.map((dt, i) => {
+                const bankerVal = data.MCDX_Banker ? (data.MCDX_Banker[i] || 0.0) : 0.0;
+                const hotVal = data.MCDX_HotMoney ? (data.MCDX_HotMoney[i] || 0.0) : 0.0;
+                return { time: d2ts(dt), value: bankerVal + hotVal + 20.0 };
+            });
             c2.addHistogramSeries({
                 color: '#34d399',
                 priceLineVisible: false,
@@ -5523,40 +5522,53 @@
             // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB
             if (data.SpanA && data.SpanB) {
                 const sc = priceScale(data);
-                const bullishCloud = [], bearishCloud = [], maskCloud = [];
+                const cloudTop = [], maskCloud = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const a = data.SpanA[i], b = data.SpanB[i];
                     if (a === null || b === null || a === undefined || b === undefined) continue;
                     const t = d2ts(data.dates[i]);
                     const top = Math.max(a, b) * sc;
                     const bot = Math.min(a, b) * sc;
-                    if (a >= b) {
-                        bullishCloud.push({time: t, value: top});
-                        bearishCloud.push({time: t, value: null});
-                    } else {
-                        bullishCloud.push({time: t, value: null});
-                        bearishCloud.push({time: t, value: top});
-                    }
+                    cloudTop.push({time: t, value: top});
                     maskCloud.push({time: t, value: bot});
                 }
-                const sKumoG = c1.addAreaSeries({topColor:'rgba(0,255,106,0.22)',bottomColor:'rgba(0,255,106,0.01)',lineColor:'rgba(0,255,106,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
-                sKumoG.setData(bullishCloud); techReportSeriesRegistry[mountId].SpanA = sKumoG;
-                const sKumoR = c1.addAreaSeries({topColor:'rgba(255,59,59,0.22)',bottomColor:'rgba(255,59,59,0.01)',lineColor:'rgba(255,59,59,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
-                sKumoR.setData(bearishCloud); techReportSeriesRegistry[mountId].SpanB = sKumoR;
-                const sKumoM = c1.addAreaSeries({
-                    topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                
+                // Continuous gradient cloud area
+                const sKumoCloud = c1.addAreaSeries({
+                    topColor: 'rgba(0, 255, 106, 0.08)', bottomColor: 'rgba(255, 59, 59, 0.08)',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0, lineVisible: false,
                     title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
                 });
-                sKumoM.setData(maskCloud);
+                sKumoCloud.setData(cloudTop);
+                techReportSeriesRegistry[mountId].KumoCloud = sKumoCloud;
+                
+                // Continuous cloud bottom mask
+                const sKumoMask = c1.addAreaSeries({
+                    topColor: '#000000', bottomColor: '#000000',
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0, lineVisible: false,
+                    title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
+                });
+                sKumoMask.setData(maskCloud);
+                techReportSeriesRegistry[mountId].KumoMask = sKumoMask;
+                
+                // Boundaries SpanA and SpanB as separate lines
+                const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
+                sSpanA.setData(lineData(data,'SpanA'));
+                techReportSeriesRegistry[mountId].SpanA = sSpanA;
+                
+                const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
+                sSpanB.setData(lineData(data,'SpanB'));
+                techReportSeriesRegistry[mountId].SpanB = sSpanB;
             } else {
                 if (data.SpanA) {
-                    const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:2,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
-                    sSpanA.setData(lineData(data,'SpanA')); techReportSeriesRegistry[mountId].SpanA = sSpanA;
+                    const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
+                    sSpanA.setData(lineData(data,'SpanA'));
+                    techReportSeriesRegistry[mountId].SpanA = sSpanA;
                 }
                 if (data.SpanB) {
-                    const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:2,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
-                    sSpanB.setData(lineData(data,'SpanB')); techReportSeriesRegistry[mountId].SpanB = sSpanB;
+                    const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
+                    sSpanB.setData(lineData(data,'SpanB'));
+                    techReportSeriesRegistry[mountId].SpanB = sSpanB;
                 }
             }
             
