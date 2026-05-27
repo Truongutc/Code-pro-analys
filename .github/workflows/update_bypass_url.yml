@@ -109,8 +109,23 @@ jobs:
           git add Output/
           
           if ! git diff --cached --quiet; then
+            echo "📂 Đang sao lưu thư mục Output..."
+            mv Output Output_backup
+            
+            echo "🔄 Đang cập nhật nhánh main mới nhất từ GitHub..."
+            git reset --hard HEAD
+            git pull origin main
+            
+            echo "📂 Đang phục hồi thư mục Output..."
+            rm -rf Output
+            mv Output_backup Output
+            
+            echo "💾 Đang commit dữ liệu mới..."
+            git add Output/
             git commit -m "chore: update vietstock connection status on web dashboard"
-            git push
+            
+            echo "🚀 Đẩy dữ liệu lên GitHub..."
+            git push origin main
           else
             echo "No status change to push."
           fi

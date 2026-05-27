@@ -2215,7 +2215,6 @@
                 <h1>AIC PRO Dashboard <span>beta</span></h1>
             </div>
             <div class="update-badge">
-                <span class="update-dot" title="Trạng thái cập nhật dữ liệu"></span>
                 <span id="updateTimeText">Đang tải...</span>
                 <span style="margin-left: 10px; margin-right: 10px; opacity: 0.25;">|</span>
                 <span id="urlStatusDot" class="status-dot-indicator red" title="Trạng thái cURL Vietstock"></span>
@@ -2925,11 +2924,6 @@
             } catch (error) {
                 console.error("Error loading JSON:", error);
                 document.getElementById('updateTimeText').innerText = "Lỗi kết nối dữ liệu";
-                const updDot = document.querySelector('.update-dot');
-                if (updDot) {
-                    updDot.style.backgroundColor = 'var(--accent-red)';
-                    updDot.style.boxShadow = '0 0 8px var(--accent-red)';
-                }
                 const urlDot = document.getElementById('urlStatusDot');
                 if (urlDot) {
                     urlDot.className = "status-dot-indicator red";
