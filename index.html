@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -3197,48 +3197,43 @@
 
                 let dHtml = '';
 
-                // Block 1: Đồ thị Mini & MCDX
-                dHtml += '<div class="card" style="padding:16px; margin-bottom:16px;">';
-                dHtml += '<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">';
-                
-                // Mini Chart
-                dHtml += '<div style="flex:1;min-width:300px;">';
-                dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCC8 \u0110\u1ED3 th\u1ECB Xu h\u01B0\u1EDBng Gi\u00E1 & Kh\u1ED1i l\u01B0\u1EE3ng (30 ng\u00E0y)</div>';
-                dHtml += '<div id="vnindex_mini_chart" style="height:200px;background:rgba(0,0,0,0.22);border:1px solid rgba(255,255,255,0.05);border-radius:6px;"></div>';
-                dHtml += '</div>';
-
-                // MCDX Bar
-                dHtml += '<div style="flex:1;min-width:300px;">';
-                dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCCA D\u00F2ng Ti\u1EC1n MCDX &amp; Xu h\u01B0\u1EDBng</div>';
-                dHtml += '<div class="mcdx-bar-labels" style="margin-bottom:4px;">';
-                dHtml += '<span class="text-red">T\u1EA1o l\u1EADp (Banker): ' + bPct + '%</span>';
-                dHtml += '<span class="text-yellow" style="margin-left:10px;">Ti\u1EC1n n\u00F3ng: ' + hPct + '%</span>';
-                dHtml += '<span class="text-green" style="margin-left:10px;">Nh\u1ECF l\u1EBB: ' + rPct + '%</span>';
-                dHtml += '</div>';
-                dHtml += '<div class="mcdx-bar-container" style="margin-bottom:10px;">';
-                dHtml += '<div class="mcdx-segment banker" style="width:' + bPct + '%"></div>';
-                dHtml += '<div class="mcdx-segment hot"    style="width:' + hPct + '%"></div>';
-                dHtml += '<div class="mcdx-segment retailer" style="width:' + rPct + '%"></div>';
-                dHtml += '</div>';
-                dHtml += '<div style="font-size:0.82rem;line-height:1.6;">';
-                dHtml += '<div><strong>Tr\u1EA1ng th\u00E1i:</strong> ' + (mcdx.status || 'N/A') + '</div>';
-                dHtml += '<div><strong>H\u00E0nh \u0111\u1ED9ng:</strong> ' + (mcdx.action || 'N/A') + '</div>';
-                if (mcdx.details) dHtml += '<div style="color:var(--text-secondary);font-size:0.75rem;margin-top:4px;">' + mcdx.details + '</div>';
-                dHtml += '</div>';
-                dHtml += '</div>';
-                dHtml += '</div></div>'; // End Block 1
-
-                // Block 2: Bảng chẩn đoán kỹ thuật CHI TIẾT
+                // Block 1: Bảng chẩn đoán kỹ thuật CHI TIẾT
                 dHtml += '<div class="card block-card" style="margin-bottom:16px;">';
                 dHtml += '<h3 class="card-title">\uD83D\uDD0D Ch\u1EA9n \u0111o\u00E1n K\u1EF9 thu\u1EADt (M15-Day)</h3>';
                 dHtml += renderDiagTable(diag);
                 dHtml += '</div>';
 
-                // Block 3: Báo cáo AI (Full width)
+                // Block 2: MCDX & Mini Chart (Dòng tiền MCDX & Đồ thị Lịch sử)
+                dHtml += '<div class="card block-card" style="margin-bottom:16px;">';
+                dHtml += '<h3 class="card-title">\uD83D\uDCCA D\u00F2ng ti\u1EC1n MCDX &amp; \u0110\u1ED3 th\u1ECB L\u1ECBch s\u1EED</h3>';
+                dHtml += '<div class="divider-h" style="margin: 12px 0;"></div>';
+                dHtml += '<div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; font-weight: 500;">';
+                dHtml += '<span class="text-red">T\u1EA1o l\u1EADp (Bankers): ' + bPct + '%</span>';
+                dHtml += '<span style="color:var(--text-primary);">D\u00F2ng ti\u1EC1n n\u00F3ng: ' + hPct + '%</span>';
+                dHtml += '<span class="text-green">Nh\u1ECF l\u1EBB: ' + rPct + '%</span>';
+                dHtml += '</div>';
+                dHtml += '<div class="mcdx-bar-container">';
+                dHtml += '<div class="mcdx-segment banker" style="width: ' + bWidth + '%"></div>';
+                dHtml += '<div class="mcdx-segment hot" style="width: ' + hWidth + '%"></div>';
+                dHtml += '<div class="mcdx-segment retailer" style="width: ' + rWidth + '%"></div>';
+                dHtml += '</div>';
+                dHtml += '<div class="mcdx-eval-text" style="margin-top:12px;">';
+                dHtml += '<div><strong>Tr\u1EA1ng th\u00E1i d\u00F2ng ti\u1EC1n:</strong> ' + (mcdx.status || 'N/A') + '</div>';
+                dHtml += '<div><strong>Khuy\u1EBFn ngh\u1ECB MCDX:</strong> ' + (mcdx.action || 'N/A') + '</div>';
+                if (mcdx.details) dHtml += '<div class="text-secondary" style="font-size: 0.75rem; margin-top: 4px;">' + mcdx.details + '</div>';
+                dHtml += '</div>';
+                
+                dHtml += '<div class="divider-h" style="margin: 16px 0;"></div>';
+                dHtml += '<h4 style="margin: 0 0 12px 0; font-size: 1rem;">\u0110\u1ED3 th\u1ECB Xu h\u01B0\u1EDBng Gi\u00E1 &amp; Kh\u1ED1i l\u01B0\u1EE3ng (30 ng\u00E0y g\u1EA7n nh\u1EA5t)</h4>';
+                dHtml += '<div id="vnindex_mini_chart" style="height: 250px; background: rgba(0,0,0,0.1); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);"></div>';
+                dHtml += '</div>';
+
+                // Block 3: Báo cáo Phân tích Chi tiết từ AI
                 if (indexData.ReportText) {
-                    dHtml += '<div class="card" style="padding:16px;">';
-                    dHtml += '<div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCDD B\u00E1o c\u00E1o Chi\u1EBFn l\u01B0\u1EE3c AI</div>';
-                    dHtml += '<pre style="padding:16px;border-radius:8px;background:rgba(0,0,0,0.22);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;white-space:pre-wrap;font-size:0.9rem;line-height:1.6;color:var(--text-primary);border:1px solid var(--border-color);max-height:400px;overflow-y:auto;">' + indexData.ReportText + '</pre>';
+                    dHtml += '<div class="card block-card" style="margin-bottom:16px;">';
+                    dHtml += '<h3 class="card-title">\uD83D\uDCDD B\u00E1o c\u00E1o Ph\u00E2n t\u00EDch Chi ti\u1EBFt t\u1EEB AI</h3>';
+                    dHtml += '<div class="divider-h" style="margin: 12px 0;"></div>';
+                    dHtml += '<pre style="padding: 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.22); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); border: 1px solid var(--border-color); max-height: 500px; overflow-y: auto;">' + indexData.ReportText + '</pre>';
                     dHtml += '</div>';
                 }
 
