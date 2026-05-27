@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -3191,8 +3191,67 @@
                         </div>
                     </div>
                 `;
+                
+                // Thêm hàng ngang chẩn đoán kỹ thuật (full-width dưới 4 card)
+                const diagRowEl = document.createElement('div');
+                diagRowEl.style.cssText = 'grid-column: 1 / -1; margin-top: 12px;';
+                
+                const diagItems = [
+                    { label: 'Hệ thống MA Lines',  status: diag.ma?.status       || 'N/A', action: diag.ma?.action       || '', cls: diagClass(diag.ma?.status, diag.ma?.action) },
+                    { label: 'Ichimoku Cloud',      status: diag.ichimoku?.status  || 'N/A', action: diag.ichimoku?.action  || '', cls: diagClass(diag.ichimoku?.status, diag.ichimoku?.action) },
+                    { label: 'Sức mạnh RSI',        status: diag.rsi?.status       || 'N/A', action: diag.rsi?.action       || '', cls: diagClass(diag.rsi?.status, diag.rsi?.action) },
+                    { label: 'Động lượng MACD',     status: diag.macd?.status      || 'N/A', action: diag.macd?.action      || '', cls: diagClass(diag.macd?.status, diag.macd?.action) },
+                    { label: 'Sức mạnh ADX',        status: diag.adx?.status       || 'N/A', action: diag.adx?.action       || '', cls: diagClass(diag.adx?.status, diag.adx?.action) },
+                ];
+                const bPct = mcdx.banker_pct   !== undefined ? parseFloat(mcdx.banker_pct).toFixed(1)   : '0.0';
+                const hPct = mcdx.hot_pct      !== undefined ? parseFloat(mcdx.hot_pct).toFixed(1)      : '0.0';
+                const rPct = mcdx.retailer_pct !== undefined ? parseFloat(mcdx.retailer_pct).toFixed(1) : '0.0';
+
+                let dHtml = '<div class="card" style="padding:16px;">';
+                dHtml += '<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">';
+
+                // --- Bảng chẩn đoán kỹ thuật ---
+                dHtml += '<div style="flex:1;min-width:280px;">';
+                dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDD0D Ch\u1EA9n \u0110o\u00E1n K\u1EF9 Thu\u1EADt</div>';
+                dHtml += '<table class="diag-table" style="width:100%;"><thead><tr><th>Ch\u1EC9 b\u00E1o</th><th>Tr\u1EA1ng th\u00E1i</th><th>Khuy\u1EBFn ngh\u1ECB</th></tr></thead><tbody>';
+                diagItems.forEach(function(d) {
+                    dHtml += '<tr class="' + d.cls + '"><td>' + d.label + '</td><td>' + d.status + '</td><td>' + d.action + '</td></tr>';
+                });
+                dHtml += '</tbody></table></div>';
+
+                // --- MCDX Bar ---
+                dHtml += '<div style="flex:1;min-width:220px;">';
+                dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCCA D\u00F2ng Ti\u1EC1n MCDX &amp; Xu h\u01B0\u1EDBng</div>';
+                dHtml += '<div class="mcdx-bar-labels" style="margin-bottom:4px;">';
+                dHtml += '<span class="text-red">T\u1EA1o l\u1EADp (Banker): ' + bPct + '%</span>';
+                dHtml += '<span class="text-yellow" style="margin-left:10px;">Ti\u1EC1n n\u00F3ng: ' + hPct + '%</span>';
+                dHtml += '<span class="text-green" style="margin-left:10px;">Nh\u1ECF l\u1EBB: ' + rPct + '%</span>';
+                dHtml += '</div>';
+                dHtml += '<div class="mcdx-bar-container" style="margin-bottom:10px;">';
+                dHtml += '<div class="mcdx-segment banker" style="width:' + bPct + '%"></div>';
+                dHtml += '<div class="mcdx-segment hot"    style="width:' + hPct + '%"></div>';
+                dHtml += '<div class="mcdx-segment retailer" style="width:' + rPct + '%"></div>';
+                dHtml += '</div>';
+                dHtml += '<div style="font-size:0.82rem;line-height:1.6;">';
+                dHtml += '<div><strong>Tr\u1EA1ng th\u00E1i:</strong> ' + (mcdx.status || 'N/A') + '</div>';
+                dHtml += '<div><strong>H\u00E0nh \u0111\u1ED9ng:</strong> ' + (mcdx.action || 'N/A') + '</div>';
+                if (mcdx.details) dHtml += '<div style="color:var(--text-secondary);font-size:0.75rem;margin-top:4px;">' + mcdx.details + '</div>';
+                dHtml += '</div></div>';
+
+                // --- Báo cáo AI (nếu có) ---
+                if (indexData.ReportText) {
+                    dHtml += '<div style="flex:2;min-width:300px;">';
+                    dHtml += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">\uD83D\uDCDD B\u00E1o c\u00E1o Chi\u1EBFn l\u01B0\u1EE3c AI (T\u00F3m t\u1EAFt)</div>';
+                    dHtml += '<pre style="padding:12px;border-radius:8px;background:rgba(0,0,0,0.22);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;white-space:pre-wrap;font-size:0.78rem;line-height:1.5;color:var(--text-primary);border:1px solid var(--border-color);max-height:200px;overflow-y:auto;">' + indexData.ReportText + '</pre>';
+                    dHtml += '</div>';
+                }
+
+                dHtml += '</div></div>';
+                diagRowEl.innerHTML = dHtml;
+                gridEl.appendChild(diagRowEl);
             }
         }
+
 
 
         let breadthChartLwc = null;
@@ -4416,7 +4475,7 @@
                     if (dates && !rangeSet) {
                         rangeSet = true;
                         requestAnimationFrame(() => {
-                            applyDefaultChartRange(chart, dates, 30);
+                            applyDefaultChartRange(chart, dates, 90);
                         });
                     }
                 }
@@ -4626,7 +4685,7 @@
             }
 
             syncCharts([c1,c2,c3]);
-            applyDefaultChartRange(c1, data.dates, 30);
+            applyDefaultChartRange(c1, data.dates, 90);
             return c1;
         }
 
@@ -4773,7 +4832,7 @@
             }
 
             syncCharts([c1,c2]);
-            applyDefaultChartRange(c1, data.dates, 30);
+            applyDefaultChartRange(c1, data.dates, 90);
             return c1;
         }
 
@@ -4837,7 +4896,7 @@
             }).setData(ohlcv(data));
 
             syncCharts([c1,c2]);
-            applyDefaultChartRange(c1, data.dates, 30);
+            applyDefaultChartRange(c1, data.dates, 90);
             return c1;
         }
 
@@ -4881,19 +4940,19 @@
                     lineColor: 'rgba(0,255,106,0.65)', lineWidth: 1.5,
                     title: '', visible: techChartVisibility.SpanA, priceLineVisible: false
                 });
-                sKumoGreen.setData(bullishCloud);
+                sKumoGreen.setData(cloudTop);
                 techReportSeriesRegistry[mountId].SpanA = sKumoGreen;
                 const sKumoRed = c1.addAreaSeries({
                     topColor: 'rgba(255,59,59,0.22)', bottomColor: 'rgba(255,59,59,0.01)',
                     lineColor: 'rgba(255,59,59,0.65)', lineWidth: 1.5,
                     title: '', visible: techChartVisibility.SpanB, priceLineVisible: false
                 });
-                sKumoRed.setData(bearishCloud);
+                sKumoRed.setData(cloudTop);
                 techReportSeriesRegistry[mountId].SpanB = sKumoRed;
                 const sKumoMask = c1.addAreaSeries({
-                    topColor: '#000000', bottomColor: '#000000',
+                    topColor: '#080b13', bottomColor: '#080b13',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
-                    title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
+                    title: '', visible: true, priceLineVisible: false, lastValueVisible: false
                 });
                 sKumoMask.setData(maskCloud);
             } else {
@@ -4945,8 +5004,13 @@
             c1.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
-                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
+                priceLineVisible: false
             }).setData(ohlcv(data));
+
+            // Pane 2: MCDX Stacked Histogram
+            const {chart: c2, ro: ro2} = mkChart(d2, h2);
+            instances.push({chart:c2,ro:ro2});
 
             // Stacked Histogram calculation logic (tallest drawn first):
             // 1. Retailer (Green): value = banker + hot + 20
@@ -5071,7 +5135,7 @@
             if (data.MACD_Signal) c4.addLineSeries({color:'#fb923c',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'MACD_Signal',1));
 
             syncCharts([c1,c2,c3,c4]);
-            applyDefaultChartRange(c1, data.dates, 30);
+            applyDefaultChartRange(c1, data.dates, 90);
             return c1;
         }
 
