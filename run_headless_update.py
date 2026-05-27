@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import os
@@ -1070,16 +1070,16 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
                     "alloc": str(alloc),
                     "alloc_note": str(alloc_note),
                     "diagnostics": {
-                        "ma": {"status": str(res_dict.get("ma", {}).get("status", "N/A")), 
-                               "action": str(res_dict.get("ma", {}).get("action", "N/A"))},
-                        "ichimoku": {"status": str(res_dict.get("ichi", {}).get("status", "N/A")), 
-                                     "action": str(res_dict.get("ichi", {}).get("action", "N/A"))},
-                        "rsi": {"status": str(res_dict.get("momentum", {}).get("rsi_val", "N/A")), 
-                                "action": "N/A"},
-                        "macd": {"status": str(res_dict.get("momentum", {}).get("macd_val", "N/A")), 
-                                 "action": "N/A"},
-                        "adx": {"status": str(res_dict.get("momentum", {}).get("rsi_bias", "N/A")), 
-                                "action": "N/A"}
+                        "ma": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("ma", {}).get("status", "N/A")), 
+                               "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("ma", {}).get("action", "N/A"))},
+                        "ichimoku": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("ichimoku", {}).get("status", "N/A")), 
+                                     "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("ichimoku", {}).get("action", "N/A"))},
+                        "rsi": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("rsi", {}).get("status", "N/A")), 
+                                "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("rsi", {}).get("action", "N/A"))},
+                        "macd": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("macd", {}).get("status", "N/A")), 
+                                 "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("macd", {}).get("action", "N/A"))},
+                        "adx": {"status": str(val.get("tech_health", {}).get("diagnostics", {}).get("adx", {}).get("status", "N/A")), 
+                                "action": str(val.get("tech_health", {}).get("diagnostics", {}).get("adx", {}).get("action", "N/A"))}
                     },
                     "heatmap_eval": str(heatmap_eval),
                     "mcdx_eval": {

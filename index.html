@@ -3249,7 +3249,9 @@
                 
                 dHtml += '<div class="divider-h" style="margin: 16px 0;"></div>';
                 dHtml += '<h4 style="margin: 0 0 12px 0; font-size: 1rem;">\u0110\u1ED3 th\u1ECB Xu h\u01B0\u1EDBng Gi\u00E1 &amp; Kh\u1ED1i l\u01B0\u1EE3ng (30 ng\u00E0y g\u1EA7n nh\u1EA5t)</h4>';
-                dHtml += '<div id="vnindex_mini_chart" style="height: 250px; background: rgba(0,0,0,0.1); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);"></div>';
+                dHtml += '<div id="vnindex_mini_chart" style="height: 250px; background: rgba(0,0,0,0.1); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); padding: 10px; position: relative;">';
+                dHtml += '<canvas id="vnindex_mini_chart_canvas" style="width: 100%; height: 100%;"></canvas>';
+                dHtml += '</div>';
                 dHtml += '</div>';
 
                 // Block 3: Báo cáo Phân tích Chi tiết từ AI
@@ -3266,10 +3268,14 @@
                 
                 // Mount Mini Chart
                 setTimeout(() => {
-                    const el = document.getElementById('vnindex_mini_chart');
-                    if (el && window.marketRawData && window.marketRawData[indexName]) {
-                        renderMiniChart(el.id, window.marketRawData[indexName], []);
-                    }
+                    fetchHistory(indexName).then(hist => {
+                        if (hist) {
+                            const t = { Ticker: indexName, History: hist };
+                            renderMiniTrendChart(t, 'vnindex_mini_chart_canvas');
+                        }
+                    }).catch(err => {
+                        console.error("Failed to load history for index: ", err);
+                    });
                 }, 100);
             }
         }
@@ -4551,7 +4557,7 @@
             return histData;
         }
 
-        function addColoredLineSegments(chart, dates, values, colors, scaleFactor = 1) {
+        function addColoredLineSegments(chart, dates, values, colors, scaleFactor = 1, lineWidth = 2) {
             let currentSegment = [];
             let currentColor = null;
             
@@ -4559,7 +4565,7 @@
                 const v = values[i];
                 if (v === null || v === undefined) {
                     if (currentSegment.length > 0) {
-                        chart.addLineSeries({ color: currentColor, lineWidth: 3, priceLineVisible: false, lastValueVisible: false, title: '' })
+                        chart.addLineSeries({ color: currentColor, lineWidth: lineWidth, priceLineVisible: false, lastValueVisible: false, title: '' })
                              .setData(currentSegment);
                         currentSegment = [];
                     }
@@ -4577,7 +4583,7 @@
                 } else if (col !== currentColor) {
                     // End previous segment, overlap by 1 point to make the line continuous
                     currentSegment.push({ time: t, value: val });
-                    chart.addLineSeries({ color: currentColor, lineWidth: 3, priceLineVisible: false, lastValueVisible: false, title: '' })
+                    chart.addLineSeries({ color: currentColor, lineWidth: lineWidth, priceLineVisible: false, lastValueVisible: false, title: '' })
                          .setData(currentSegment);
                     
                     currentColor = col;
@@ -4588,7 +4594,7 @@
             }
             
             if (currentSegment.length > 0) {
-                chart.addLineSeries({ color: currentColor, lineWidth: 3, priceLineVisible: false, lastValueVisible: false, title: '' })
+                chart.addLineSeries({ color: currentColor, lineWidth: lineWidth, priceLineVisible: false, lastValueVisible: false, title: '' })
                      .setData(currentSegment);
             }
         }
@@ -4615,17 +4621,18 @@
             const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c1, ro: ro1});
 
-            // GP Cloud: colored fill between xFast (green) and xSlow (red) with #080b13 layout background mask
-            if (data.GP_xFast && data.GP_xSlow) {
+            // GP Cloud: colored fill between GP_E14 and GP_E21 with #000000 layout background mask
+            if (data.GP_E14 && data.GP_E21) {
                 const sc = priceScale(data);
                 const gpBullish = [], gpBearish = [], gpMask = [];
                 for (let i = 0; i < data.dates.length; i++) {
-                    const f = data.GP_xFast[i], s = data.GP_xSlow[i];
-                    if (f === null || s === null || f === undefined || s === undefined) continue;
+                    const e14 = data.GP_E14[i], e21 = data.GP_E21[i], close = data.Close[i];
+                    if (e14 === null || e21 === null || e14 === undefined || e21 === undefined) continue;
                     const t = d2ts(data.dates[i]);
-                    const top = Math.max(f, s) * sc;
-                    const bot = Math.min(f, s) * sc;
-                    if (f >= s) {
+                    const top = Math.max(e14, e21) * sc;
+                    const bot = Math.min(e14, e21) * sc;
+                    const isBull = close > e14 && close > e21;
+                    if (isBull) {
                         gpBullish.push({time: t, value: top});
                         gpBearish.push({time: t, value: null});
                     } else {
@@ -4635,19 +4642,22 @@
                     gpMask.push({time: t, value: bot});
                 }
                 c1.addAreaSeries({
-                    topColor: 'rgba(0, 255, 0, 0.25)', bottomColor: 'rgba(0, 255, 0, 0.01)',
+                    topColor: 'rgba(39, 194, 46, 0.28)', bottomColor: 'rgba(39, 194, 46, 0.01)',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(gpBullish);
                 c1.addAreaSeries({
-                    topColor: 'rgba(255, 105, 180, 0.25)', bottomColor: 'rgba(255, 105, 180, 0.01)',
+                    topColor: 'rgba(255, 0, 128, 0.28)', bottomColor: 'rgba(255, 0, 128, 0.01)',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(gpBearish);
                 c1.addAreaSeries({
-                    topColor: '#080b13', bottomColor: '#080b13',
+                    topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(gpMask);
             }
             
@@ -4677,12 +4687,14 @@
                 c2.addAreaSeries({
                     topColor: 'rgba(173, 216, 230, 0.15)', bottomColor: 'rgba(173, 216, 230, 0.01)',
                     lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(octBBTopData);
                 c2.addAreaSeries({
-                    topColor: '#080b13', bottomColor: '#080b13',
+                    topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(octBBBotData);
             }
             
@@ -4730,37 +4742,47 @@
             const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart:c1,ro:ro1});
 
-            // TC Cloud: fill between TC_Trend and TC_StopLine
+            // TC Cloud: fill between TC_Trend and TC_StopLine (separate bullish/bearish clouds)
             if (data.TC_Trend && data.TC_StopLine) {
                 const sc = priceScale(data);
-                const tcCloud = [], tcMask = [];
+                const tcCloudBull = [], tcCloudBear = [], tcMask = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const tr = data.TC_Trend[i], sl = data.TC_StopLine[i];
                     if (tr === null || sl === null || tr === undefined || sl === undefined) continue;
                     const t = d2ts(data.dates[i]);
+                    const tcT = data.TC_T ? data.TC_T[i] : (tr > sl ? 1 : -1);
                     const top = Math.max(tr, sl) * sc;
                     const bot = Math.min(tr, sl) * sc;
-                    tcCloud.push({time: t, value: top});
+                    if (tcT >= 0) {
+                        tcCloudBull.push({time: t, value: top});
+                        tcCloudBear.push({time: t, value: null});
+                    } else {
+                        tcCloudBull.push({time: t, value: null});
+                        tcCloudBear.push({time: t, value: top});
+                    }
                     tcMask.push({time: t, value: bot});
                 }
                 
-                // Continuous gradient AreaSeries
                 c1.addAreaSeries({
-                    topColor: 'rgba(39,194,46,0.08)', bottomColor: 'rgba(255,0,0,0.08)',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0, lineVisible: false,
-                    priceLineVisible: false, title: ''
-                }).setData(tcCloud);
+                    topColor: 'rgba(39, 194, 46, 0.28)', bottomColor: 'rgba(39, 194, 46, 0.01)',
+                    lineColor: 'rgba(39, 194, 46, 0.65)', lineWidth: 1.5,
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
+                }).setData(tcCloudBull);
                 
-                // Continuous mask AreaSeries
+                c1.addAreaSeries({
+                    topColor: 'rgba(255, 59, 59, 0.28)', bottomColor: 'rgba(255, 59, 59, 0.01)',
+                    lineColor: 'rgba(255, 59, 59, 0.65)', lineWidth: 1.5,
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
+                }).setData(tcCloudBear);
+                
                 c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0, lineVisible: false,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(tcMask);
-                
-                // Draw Trend and StopLine as lines
-                c1.addLineSeries({color:'rgba(39,194,46,0.65)',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'TC_Trend'));
-                c1.addLineSeries({color:'rgba(255,0,0,0.5)',lineWidth:1.5,title: '',priceLineVisible:false}).setData(lineData(data,'TC_StopLine'));
             } else if (data.TC_Trend) {
                 c1.addLineSeries({color:'#f59e0b',lineWidth:2,title: ''}).setData(lineData(data,'TC_Trend'));
             }
@@ -4914,8 +4936,17 @@
             c2.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
-                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
+                priceLineVisible: false
             }).setData(ohlcv(data));
+
+            // Overlay L&L Trend System (TrendColor)
+            if (data.TC_Trend) {
+                addColoredLineSegments(c2, data.dates, data.TC_Trend, data.TC_TrendColor || [], 1, 2);
+            }
+            if (data.TC_StopLine) {
+                addColoredLineSegments(c2, data.dates, data.TC_StopLine, data.TC_StopColor || [], 1, 2);
+            }
 
             syncCharts([c1,c2]);
             applyDefaultChartRange(c1, data.dates, 90);
@@ -4948,35 +4979,41 @@
 
             // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB
             if (data.SpanA && data.SpanB) {
+                const sc = priceScale(data);
                 const bullishCloud = [], bearishCloud = [], maskCloud = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const a = data.SpanA[i], b = data.SpanB[i];
                     if (a === null || b === null || a === undefined || b === undefined) continue;
                     const t = d2ts(data.dates[i]);
-                    const top = Math.max(a, b);
-                    const bot = Math.min(a, b);
+                    const top = Math.max(a, b) * sc;
+                    const bot = Math.min(a, b) * sc;
                     if (a >= b) { bullishCloud.push({time: t, value: top}); bearishCloud.push({time: t, value: null}); }
                     else { bullishCloud.push({time: t, value: null}); bearishCloud.push({time: t, value: top}); }
                     maskCloud.push({time: t, value: bot});
                 }
                 const sKumoGreen = c1.addAreaSeries({
-                    topColor: 'rgba(0,255,106,0.22)', bottomColor: 'rgba(0,255,106,0.01)',
-                    lineColor: 'rgba(0,255,106,0.65)', lineWidth: 1.5,
-                    title: '', visible: techChartVisibility.SpanA, priceLineVisible: false
+                    topColor: 'rgba(39, 194, 46, 0.28)', bottomColor: 'rgba(39, 194, 46, 0.01)',
+                    lineColor: 'rgba(39, 194, 46, 0.65)', lineWidth: 1.5,
+                    title: '', visible: techChartVisibility.SpanA, priceLineVisible: false, lastValueVisible: false,
+                    autoscaleInfoProvider: () => null
                 });
                 sKumoGreen.setData(bullishCloud);
                 techReportSeriesRegistry[mountId].SpanA = sKumoGreen;
+                
                 const sKumoRed = c1.addAreaSeries({
-                    topColor: 'rgba(255,59,59,0.22)', bottomColor: 'rgba(255,59,59,0.01)',
-                    lineColor: 'rgba(255,59,59,0.65)', lineWidth: 1.5,
-                    title: '', visible: techChartVisibility.SpanB, priceLineVisible: false
+                    topColor: 'rgba(255, 59, 59, 0.28)', bottomColor: 'rgba(255, 59, 59, 0.01)',
+                    lineColor: 'rgba(255, 59, 59, 0.65)', lineWidth: 1.5,
+                    title: '', visible: techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false,
+                    autoscaleInfoProvider: () => null
                 });
                 sKumoRed.setData(bearishCloud);
                 techReportSeriesRegistry[mountId].SpanB = sKumoRed;
+                
                 const sKumoMask = c1.addAreaSeries({
-                    topColor: '#080b13', bottomColor: '#080b13',
+                    topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
-                    title: '', visible: true, priceLineVisible: false, lastValueVisible: false
+                    title: '', visible: true, priceLineVisible: false, lastValueVisible: false,
+                    autoscaleInfoProvider: () => null
                 });
                 sKumoMask.setData(maskCloud);
             } else {
@@ -5201,8 +5238,8 @@
                 if (primary) primaryCharts.push(primary);
             });
 
-            // Cross-chart time-scale sync (all 4 primary panes scroll together)
-            syncCharts(primaryCharts);
+            // Cross-chart time-scale sync disabled to keep charts independent
+            // syncCharts(primaryCharts);
 
             // Update evaluations for each chart cell
             updateChartEvaluations(mountPrefix, ticker);
@@ -5419,16 +5456,17 @@
             const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c1,ro:r1});
             
             // GP cloud fill
-            if (data.GP_xFast && data.GP_xSlow) {
+            if (data.GP_E14 && data.GP_E21) {
                 const sc = priceScale(data);
                 const gpBullish = [], gpBearish = [], gpMask = [];
                 for (let i = 0; i < data.dates.length; i++) {
-                    const f = data.GP_xFast[i], s = data.GP_xSlow[i];
-                    if (f === null || s === null || f === undefined || s === undefined) continue;
+                    const e14 = data.GP_E14[i], e21 = data.GP_E21[i], close = data.Close[i];
+                    if (e14 === null || e21 === null || e14 === undefined || e21 === undefined) continue;
                     const t = d2ts(data.dates[i]);
-                    const top = Math.max(f, s) * sc;
-                    const bot = Math.min(f, s) * sc;
-                    if (f >= s) {
+                    const top = Math.max(e14, e21) * sc;
+                    const bot = Math.min(e14, e21) * sc;
+                    const isBull = close > e14 && close > e21;
+                    if (isBull) {
                         gpBullish.push({time: t, value: top});
                         gpBearish.push({time: t, value: null});
                     } else {
@@ -5438,19 +5476,22 @@
                     gpMask.push({time: t, value: bot});
                 }
                 c1.addAreaSeries({
-                    topColor: 'rgba(0, 255, 0, 0.25)', bottomColor: 'rgba(0, 255, 0, 0.01)',
+                    topColor: 'rgba(39, 194, 46, 0.28)', bottomColor: 'rgba(39, 194, 46, 0.01)',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(gpBullish);
                 c1.addAreaSeries({
-                    topColor: 'rgba(255, 105, 180, 0.25)', bottomColor: 'rgba(255, 105, 180, 0.01)',
+                    topColor: 'rgba(255, 0, 128, 0.28)', bottomColor: 'rgba(255, 0, 128, 0.01)',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(gpBearish);
                 c1.addAreaSeries({
-                    topColor: '#080b13', bottomColor: '#080b13',
+                    topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(gpMask);
             }
             
@@ -5474,12 +5515,14 @@
                 c2.addAreaSeries({
                     topColor: 'rgba(173, 216, 230, 0.15)', bottomColor: 'rgba(173, 216, 230, 0.01)',
                     lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(octBBTopData);
                 c2.addAreaSeries({
-                    topColor: '#080b13', bottomColor: '#080b13',
+                    topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(octBBBotData);
             }
             
@@ -5525,12 +5568,25 @@
                     }
                     tcMask.push({time:t,value:bot});
                 }
-                c1.addAreaSeries({topColor:'rgba(39,194,46,0.22)',bottomColor:'rgba(39,194,46,0.01)',lineColor:'rgba(39,194,46,0.6)',lineWidth:1.5,priceLineVisible:false}).setData(tcCloudBull);
-                c1.addAreaSeries({topColor:'rgba(255,0,0,0.18)',bottomColor:'rgba(255,0,0,0.01)',lineColor:'rgba(255,0,0,0.5)',lineWidth:1.5,priceLineVisible:false}).setData(tcCloudBear);
+                c1.addAreaSeries({
+                    topColor: 'rgba(39, 194, 46, 0.28)', bottomColor: 'rgba(39, 194, 46, 0.01)',
+                    lineColor: 'rgba(39, 194, 46, 0.65)', lineWidth: 1.5,
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
+                }).setData(tcCloudBull);
+                
+                c1.addAreaSeries({
+                    topColor: 'rgba(255, 59, 59, 0.28)', bottomColor: 'rgba(255, 59, 59, 0.01)',
+                    lineColor: 'rgba(255, 59, 59, 0.65)', lineWidth: 1.5,
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
+                }).setData(tcCloudBear);
+                
                 c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: ''
+                    priceLineVisible: false, lastValueVisible: false, title: '',
+                    autoscaleInfoProvider: () => null
                 }).setData(tcMask);
             }
             else if(data.TC_Trend)c1.addLineSeries({color:'#f59e0b',lineWidth:2.5}).setData(lineData(data,'TC_Trend'));
@@ -5583,7 +5639,21 @@
                 fcs.setData(arr);
             }
             const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
-            c2.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'}).setData(ohlcv(data));
+            c2.addCandlestickSeries({
+                upColor:'#00ff6a',downColor:'#ff3b3b',
+                borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
+                priceLineVisible: false
+            }).setData(ohlcv(data));
+
+            // Overlay L&L Trend System (TrendColor)
+            if (data.TC_Trend) {
+                addColoredLineSegments(c2, data.dates, data.TC_Trend, data.TC_TrendColor || [], 1, 2);
+            }
+            if (data.TC_StopLine) {
+                addColoredLineSegments(c2, data.dates, data.TC_StopLine, data.TC_StopColor || [], 1, 2);
+            }
+
             syncCharts([c1,c2]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
@@ -5608,43 +5678,42 @@
             // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB
             if (data.SpanA && data.SpanB) {
                 const sc = priceScale(data);
-                const cloudTop = [], maskCloud = [];
+                const bullishCloud = [], bearishCloud = [], maskCloud = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const a = data.SpanA[i], b = data.SpanB[i];
                     if (a === null || b === null || a === undefined || b === undefined) continue;
                     const t = d2ts(data.dates[i]);
                     const top = Math.max(a, b) * sc;
                     const bot = Math.min(a, b) * sc;
-                    cloudTop.push({time: t, value: top});
+                    if (a >= b) { bullishCloud.push({time: t, value: top}); bearishCloud.push({time: t, value: null}); }
+                    else { bullishCloud.push({time: t, value: null}); bearishCloud.push({time: t, value: top}); }
                     maskCloud.push({time: t, value: bot});
                 }
-                
-                // Continuous gradient cloud area
-                const sKumoCloud = c1.addAreaSeries({
-                    topColor: 'rgba(0, 255, 106, 0.08)', bottomColor: 'rgba(255, 59, 59, 0.08)',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0, lineVisible: false,
-                    title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
+                const sKumoGreen = c1.addAreaSeries({
+                    topColor: 'rgba(39, 194, 46, 0.28)', bottomColor: 'rgba(39, 194, 46, 0.01)',
+                    lineColor: 'rgba(39, 194, 46, 0.65)', lineWidth: 1.5,
+                    title: '', visible: techChartVisibility.SpanA, priceLineVisible: false, lastValueVisible: false,
+                    autoscaleInfoProvider: () => null
                 });
-                sKumoCloud.setData(cloudTop);
-                techReportSeriesRegistry[mountId].KumoCloud = sKumoCloud;
+                sKumoGreen.setData(bullishCloud);
+                techReportSeriesRegistry[mountId].SpanA = sKumoGreen;
                 
-                // Continuous cloud bottom mask
+                const sKumoRed = c1.addAreaSeries({
+                    topColor: 'rgba(255, 59, 59, 0.28)', bottomColor: 'rgba(255, 59, 59, 0.01)',
+                    lineColor: 'rgba(255, 59, 59, 0.65)', lineWidth: 1.5,
+                    title: '', visible: techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false,
+                    autoscaleInfoProvider: () => null
+                });
+                sKumoRed.setData(bearishCloud);
+                techReportSeriesRegistry[mountId].SpanB = sKumoRed;
+                
                 const sKumoMask = c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0, lineVisible: false,
-                    title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
+                    title: '', visible: true, priceLineVisible: false, lastValueVisible: false,
+                    autoscaleInfoProvider: () => null
                 });
                 sKumoMask.setData(maskCloud);
-                techReportSeriesRegistry[mountId].KumoMask = sKumoMask;
-                
-                // Boundaries SpanA and SpanB as separate lines
-                const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
-                sSpanA.setData(lineData(data,'SpanA'));
-                techReportSeriesRegistry[mountId].SpanA = sSpanA;
-                
-                const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
-                sSpanB.setData(lineData(data,'SpanB'));
-                techReportSeriesRegistry[mountId].SpanB = sSpanB;
             } else {
                 if (data.SpanA) {
                     const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
