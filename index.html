@@ -92,15 +92,15 @@
         }
 
         .logo-section h1 span {
-            font-size: 0.75rem;
-            padding: 2px 6px;
+            font-size: 0.6rem;
+            padding: 1px 4px;
             border-radius: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-primary);
-            -webkit-text-fill-color: var(--text-primary);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            -webkit-text-fill-color: var(--text-secondary);
+            border: 1px solid rgba(255, 255, 255, 0.06);
             font-family: 'Inter', sans-serif;
-            font-weight: 500;
+            font-weight: 400;
         }
 
         .update-badge {
@@ -2210,9 +2210,9 @@
 
     <header>
         <div class="header-container">
-            <div class="logo-section" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)')" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;">
+            <div class="logo-section" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)'); window.scrollTo({top: 0, behavior: 'smooth'});" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;">
                 <img src="app_icon.png" alt="AIC PRO Logo" style="height: 36px; width: 36px; object-fit: contain; border-radius: 6px;">
-                <h1>AIC PRO Dashboard <span>beta</span></h1>
+                <h1>AIC PRO Dashboard <span>AIC = AI + cơm!</span></h1>
             </div>
             <div class="update-badge">
                 <span id="updateTimeText">Đang tải...</span>
