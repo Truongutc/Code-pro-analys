@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -3188,9 +3188,12 @@
                     { label: 'Động lượng MACD',     status: diag.macd?.status      || 'N/A', action: diag.macd?.action      || '', cls: diagClass(diag.macd?.status, diag.macd?.action) },
                     { label: 'Sức mạnh ADX',        status: diag.adx?.status       || 'N/A', action: diag.adx?.action       || '', cls: diagClass(diag.adx?.status, diag.adx?.action) },
                 ];
-                const bPct = mcdx.banker_pct   !== undefined ? parseFloat(mcdx.banker_pct).toFixed(1)   : '0.0';
-                const hPct = mcdx.hot_pct      !== undefined ? parseFloat(mcdx.hot_pct).toFixed(1)      : '0.0';
-                const rPct = mcdx.retailer_pct !== undefined ? parseFloat(mcdx.retailer_pct).toFixed(1) : '0.0';
+                let rawBanker = mcdx.banker_pct !== undefined ? parseFloat(mcdx.banker_pct) : 0;
+                let rawHot = mcdx.hot_pct !== undefined ? parseFloat(mcdx.hot_pct) : 0;
+                let bWidth = Math.min(100, (rawBanker / 20.0) * 100);
+                let hWidth = Math.min(100 - bWidth, (rawHot / 20.0) * 100);
+                let rWidth = Math.max(0, 100 - bWidth - hWidth);
+                const bPct = bWidth.toFixed(1); const hPct = hWidth.toFixed(1); const rPct = rWidth.toFixed(1);
 
                 let dHtml = '';
 
@@ -5035,7 +5038,7 @@
                 const yellowData = data.dates.map((dt, i) => {
                     const bankerVal = data.MCDX_Banker[i] || 0.0;
                     const hotVal = data.MCDX_HotMoney[i] || 0.0;
-                    return { time: d2ts(dt), value: bankerVal + hotVal };
+                    return { time: d2ts(dt), value: Math.min(20.0, bankerVal + hotVal) };
                 });
                 c2.addHistogramSeries({
                     color: '#fbbf24',
@@ -5048,7 +5051,7 @@
             if (data.MCDX_Banker) {
                 const redData = data.dates.map((dt, i) => {
                     const bankerVal = data.MCDX_Banker[i] || 0.0;
-                    return { time: d2ts(dt), value: bankerVal };
+                    return { time: d2ts(dt), value: Math.min(20.0, bankerVal) };
                 });
                 c2.addHistogramSeries({
                     color: '#f43f5e',
@@ -5691,7 +5694,7 @@
                 const yellowData = data.dates.map((dt, i) => {
                     const bankerVal = data.MCDX_Banker[i] || 0.0;
                     const hotVal = data.MCDX_HotMoney[i] || 0.0;
-                    return { time: d2ts(dt), value: bankerVal + hotVal };
+                    return { time: d2ts(dt), value: Math.min(20.0, bankerVal + hotVal) };
                 });
                 c2.addHistogramSeries({
                     color: '#fbbf24',
@@ -5703,7 +5706,7 @@
             if (data.MCDX_Banker) {
                 const redData = data.dates.map((dt, i) => {
                     const bankerVal = data.MCDX_Banker[i] || 0.0;
-                    return { time: d2ts(dt), value: bankerVal };
+                    return { time: d2ts(dt), value: Math.min(20.0, bankerVal) };
                 });
                 c2.addHistogramSeries({
                     color: '#f43f5e',
