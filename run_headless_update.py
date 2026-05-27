@@ -1002,9 +1002,11 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
                         
                 st_avoid = state_rules.get('avoid_entry', False)
                 if st_avoid:
-                    if st_pri_raw in ['UPTREND', 'UPTREND_START'] and ftd_on:
+                    if st_pri_raw in ['UPTREND', 'UPTREND_START', 'WEAK_UPTREND', 'RECOVERY'] and ftd_on:
                         if alloc == "80-100%": alloc = "60-80%"
                         elif alloc == "60-80%": alloc = "40-60%"
+                        elif alloc == "50-70%": alloc = "30-50%"
+                        elif alloc == "50-75%": alloc = "40-60%"
                         alloc_note = "⚠️ CẢNH BÁO: Thị trường quá nhiệt / MCDX phân phối -> Ưu tiên nắm giữ, hạn chế mua đuổi"
                     elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START', 'MARKET_WEAKENING']:
                         alloc = "0-10%"
@@ -1078,8 +1080,29 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
                     "mcdx_eval": {
                         "status": str(mcdx_eval.get("status", "N/A")),
                         "action": str(mcdx_eval.get("action", "N/A")),
-                        "details": str(mcdx_eval.get("details", "N/A"))
-                    }
+                        "details": str(mcdx_eval.get("details", "N/A")),
+                        "banker_pct": float(df_rich['MCDX_Banker'].iloc[-1]) if 'MCDX_Banker' in df_rich.columns else 0.0,
+                        "hot_pct": float(df_rich['MCDX_Hot'].iloc[-1]) if 'MCDX_Hot' in df_rich.columns else 0.0,
+                        "retailer_pct": float(df_rich['MCDX_Retailer'].iloc[-1]) if 'MCDX_Retailer' in df_rich.columns else 0.0
+                    },
+                    "state_rules": {
+                        "primary": str(state_rules.get('primary', 'N/A')),
+                        "secondary": str(state_rules.get('secondary', 'N/A')),
+                        "signal": str(state_rules.get('signal', 'N/A')),
+                        "regime": str(state_rules.get('regime', 'N/A')),
+                        "confidence": int(state_rules.get('confidence', 0)),
+                        "avoid_entry": bool(state_rules.get('avoid_entry', False)),
+                        "adx": float(state_rules.get('metrics', {}).get('adx', 0.0)),
+                        "macd_hist": float(state_rules.get('metrics', {}).get('hist', 0.0)),
+                        "trend_bias": float(state_rules.get('metrics', {}).get('trend_bias', 0.0)),
+                        "vol_spike": bool(state_rules.get('metrics', {}).get('vol_spike', False)),
+                        "vol_dry": bool(state_rules.get('metrics', {}).get('vol_dry', False)),
+                        "strong_trend": bool(state_rules.get('metrics', {}).get('strong_trend', False)),
+                        "breakout_up": bool(state_rules.get('metrics', {}).get('breakout_up', False)),
+                        "dist_ma20": float(state_rules.get('metrics', {}).get('dist_ma20', 0.0)),
+                        "rsi": float(state_rules.get('metrics', {}).get('rsi', 50.0))
+                    },
+                    "alloc_note": str(alloc_note)
                 }
             except Exception as e_idx:
                 logger.error(f"⚠️ Lỗi phân tích Index {index_ticker}: {e_idx}")

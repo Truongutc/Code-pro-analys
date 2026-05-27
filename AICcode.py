@@ -3010,9 +3010,11 @@ class TinvestApp:
                                 
                         st_avoid = state_rules.get('avoid_entry', False)
                         if st_avoid:
-                            if st_pri_raw in ['UPTREND', 'UPTREND_START'] and ftd_on:
+                            if st_pri_raw in ['UPTREND', 'UPTREND_START', 'WEAK_UPTREND', 'RECOVERY'] and ftd_on:
                                 if alloc == "80-100%": alloc = "60-80%"
                                 elif alloc == "60-80%": alloc = "40-60%"
+                                elif alloc == "50-70%": alloc = "30-50%"
+                                elif alloc == "50-75%": alloc = "40-60%"
                                 alloc_note = "⚠️ CẢNH BÁO: Thị trường quá nhiệt / MCDX phân phối -> Ưu tiên nắm giữ, hạn chế mua đuổi"
                             elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START', 'MARKET_WEAKENING']:
                                 alloc = "0-10%"
@@ -4736,10 +4738,12 @@ class TinvestApp:
                         
                         # Override boi avoid - CHI AP DUNG KHI THI TRUONG YEU HOAC DOWNTREND
                         if st_avoid:
-                            if st_pri_raw in ['UPTREND', 'UPTREND_START'] and ftd_on:
+                            if st_pri_raw in ['UPTREND', 'UPTREND_START', 'WEAK_UPTREND', 'RECOVERY'] and ftd_on:
                                 # Neu dang vao trend manh, chi ha ty trong xuong muc than trong, khong ve 0-10%
                                 if alloc == "80-100%": alloc = "60-80%"
                                 elif alloc == "60-80%": alloc = "40-60%"
+                                elif alloc == "50-70%": alloc = "30-50%"
+                                elif alloc == "50-75%": alloc = "40-60%"
                                 alloc_note = "⚠️ CẢNH BÁO: Thị trường quá nhiệt / MCDX phân phối -> Ưu tiên nắm giữ, hạn chế mua đuổi"
                             elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START', 'MARKET_WEAKENING']:
                                 alloc = "0-10%"
