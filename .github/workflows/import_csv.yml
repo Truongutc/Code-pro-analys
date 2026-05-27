@@ -78,12 +78,27 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Stage only the Output/ directory (data_storage/ and config.json are handled by GitHub cache)
+          # Stage only the Output/ directory
           git add Output/
           
           if ! git diff --cached --quiet; then
+            echo "📂 Đang sao lưu thư mục Output..."
+            mv Output Output_backup
+            
+            echo "🔄 Đang cập nhật nhánh main mới nhất từ GitHub..."
+            git reset --hard HEAD
+            git pull origin main
+            
+            echo "📂 Đang phục hồi thư mục Output..."
+            rm -rf Output
+            mv Output_backup Output
+            
+            echo "💾 Đang commit dữ liệu mới..."
+            git add Output/
             git commit -m "Import stock data from CSV: $(date +'%Y-%m-%d %H:%M:%S')"
-            git push
+            
+            echo "🚀 Đẩy dữ liệu lên GitHub..."
+            git push origin main
           else
             echo "No changes in stock data. Skipping push."
           fi
