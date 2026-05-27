@@ -3308,7 +3308,12 @@
                     wickUpColor: '#00ff6a',
                     wickDownColor: '#ff3b3b',
                     title: '',
-                    visible: breadthVNINDEXVisible
+                    visible: breadthVNINDEXVisible,
+                    priceFormat: {
+                        type: 'price',
+                        precision: 0,
+                        minMove: 1,
+                    },
                 });
                 vnSeries.setData(ohlcv(vnHistory));
             } else if (data.VNINDEX_Closes && data.VNINDEX_Closes.length > 0) {
@@ -3318,7 +3323,12 @@
                     color: '#ef4444',
                     lineWidth: 2.5,
                     title: '',
-                    visible: breadthVNINDEXVisible
+                    visible: breadthVNINDEXVisible,
+                    priceFormat: {
+                        type: 'price',
+                        precision: 0,
+                        minMove: 1,
+                    },
                 });
                 const vnData = [];
                 for (let i = 0; i < data.dates.length; i++) {
@@ -4374,11 +4384,21 @@
             if (el) el.innerHTML = '';
         }
 
-        // ── Create a LWC chart inside a cell-body div ──
         function mkChart(hostEl, h, dates = null, extraOpts = {}) {
             hostEl.style.height = h + 'px';
+            
+            const formatOpts = window.isCurrentIndex ? {
+                localization: {
+                    priceFormatter: p => Math.round(p).toString()
+                }
+            } : {};
+            
             const chart = LightweightCharts.createChart(hostEl, {
-                ...LWC_THEME, width: hostEl.clientWidth || 100, height: h, ...extraOpts
+                ...LWC_THEME, 
+                width: hostEl.clientWidth || 100, 
+                height: h, 
+                ...formatOpts,
+                ...extraOpts
             });
             let rangeSet = false;
             const ro = new ResizeObserver(() => {
@@ -5067,6 +5087,9 @@
                 gp: renderGPChart, heikin: renderHeikinChart,
                 heatmap: renderHeatmapChart, techreport: renderTechReportChart
             };
+
+            // Set global index flag for mkChart formatting
+            window.isCurrentIndex = ticker && (ticker === 'VNINDEX' || ticker === 'HNX-INDEX' || ticker.includes('INDEX') || ticker.includes('index'));
 
             // Show loading in all cells
             ids.forEach(type => {
