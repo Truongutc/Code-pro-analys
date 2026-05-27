@@ -792,12 +792,17 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         realtime_sig = rt_sig_map.get(data.get("state_rules", {}).get("signal", ""), "")
         state_signal = (realtime_sig if realtime_sig else holding_sig).upper()
 
+        # Safely handle NaN values for integers
+        safe_int = lambda x: int(x) if (x is not None and not pd.isna(x)) else 0
+        
+        avg_vol_raw = df['AvgVolume10'].iloc[-1] if 'AvgVolume10' in df.columns else (df['Volume'].rolling(10).mean().iloc[-1] if len(df) >= 10 else current_vol)
+
         # Create ticker record
         ticker_record = {
             "Ticker": ticker,
-            "Price": int(current_p),
-            "Volume": int(current_vol),
-            "AvgVolume10": int(df['AvgVolume10'].iloc[-1]) if 'AvgVolume10' in df.columns else int(df['Volume'].rolling(10).mean().iloc[-1]) if len(df) >= 10 else int(current_vol),
+            "Price": safe_int(current_p),
+            "Volume": safe_int(current_vol),
+            "AvgVolume10": safe_int(avg_vol_raw),
             "Entry": int(ep * 1000) if ep > 0 else None,
             "Target": int(tp * 1000) if tp > 0 else None,
             "Target2": int(tp2 * 1000) if tp2 > 0 else None,

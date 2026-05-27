@@ -2290,11 +2290,7 @@
                 </div>
 
                 <!-- AI Detailed Strategy Report Card -->
-                <section class="card" id="marketAIReportCard" style="margin-top: 16px; display: none;">
-                    <div class="card-title">📝 Báo cáo Chiến lược AI Chi tiết</div>
-                    <div class="divider-h" style="margin: 12px 0;"></div>
-                    <pre id="marketAIReportContent" style="padding: 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.22); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); border: 1px solid var(--border-color); max-height: 500px; overflow-y: auto;"></pre>
-                </section>
+                
 
                 <!-- 4-Panel Interactive Chart Grid -->
                 <section class="card interactive-chart-section">
@@ -3068,17 +3064,6 @@
             detailSection.style.display = 'block';
 
             // Populate AI Detailed Report Card
-            const aiCard = document.getElementById('marketAIReportCard');
-            const aiContent = document.getElementById('marketAIReportContent');
-            if (aiCard && aiContent) {
-                if (indexData.ReportText) {
-                    aiContent.textContent = indexData.ReportText;
-                    aiCard.style.display = 'block';
-                } else {
-                    aiCard.style.display = 'none';
-                }
-            }
-
             // Summary Header
             const headerEl = document.getElementById('vnindexSummaryHeader');
             if (headerEl) {
@@ -4488,11 +4473,11 @@
         function syncCharts(charts) {
             let busy = false;
             charts.forEach((c, i) => {
-                c.timeScale().subscribeVisibleLogicalRangeChange(r => {
+                c.timeScale().subscribeVisibleTimeRangeChange(r => {
                     if (busy || !r) return;
                     busy = true;
                     charts.forEach((o, j) => {
-                        if (j !== i) try { o.timeScale().setVisibleLogicalRange(r); } catch(e){}
+                        if (j !== i) try { o.timeScale().setVisibleRange({ from: r.from, to: r.to }); } catch(e){}
                     });
                     busy = false;
                 });
@@ -4903,10 +4888,11 @@
         // ================================================================
         //  renderTechReportChart  — Candlestick+Ichimoku+MCDX+ADX+MACD
         // ================================================================
-        function renderTechReportChart(mountId, data, instances) {
+        function renderTechReportChart(mountId, rawDataInput, instances) {
             const root = document.getElementById(mountId);
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
+            const data = getHistoricalDataOnly(rawDataInput); // strip projected SpanA/SpanB future dates
 
             const h1 = 300, h2 = 100, h3 = 100, h4 = 100;
             const mk = (h, border=true) => {
@@ -4925,14 +4911,15 @@
 
             // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB
             if (data.SpanA && data.SpanB) {
-                const cloudTop = [], maskCloud = [];
+                const bullishCloud = [], bearishCloud = [], maskCloud = [];
                 for (let i = 0; i < data.dates.length; i++) {
                     const a = data.SpanA[i], b = data.SpanB[i];
                     if (a === null || b === null || a === undefined || b === undefined) continue;
                     const t = d2ts(data.dates[i]);
                     const top = Math.max(a, b);
                     const bot = Math.min(a, b);
-                    cloudTop.push({time: t, value: top});
+                    if (a >= b) { bullishCloud.push({time: t, value: top}); bearishCloud.push({time: t, value: null}); }
+                    else { bullishCloud.push({time: t, value: null}); bearishCloud.push({time: t, value: top}); }
                     maskCloud.push({time: t, value: bot});
                 }
                 const sKumoGreen = c1.addAreaSeries({
@@ -4940,14 +4927,14 @@
                     lineColor: 'rgba(0,255,106,0.65)', lineWidth: 1.5,
                     title: '', visible: techChartVisibility.SpanA, priceLineVisible: false
                 });
-                sKumoGreen.setData(cloudTop);
+                sKumoGreen.setData(bullishCloud);
                 techReportSeriesRegistry[mountId].SpanA = sKumoGreen;
                 const sKumoRed = c1.addAreaSeries({
                     topColor: 'rgba(255,59,59,0.22)', bottomColor: 'rgba(255,59,59,0.01)',
                     lineColor: 'rgba(255,59,59,0.65)', lineWidth: 1.5,
                     title: '', visible: techChartVisibility.SpanB, priceLineVisible: false
                 });
-                sKumoRed.setData(cloudTop);
+                sKumoRed.setData(bearishCloud);
                 techReportSeriesRegistry[mountId].SpanB = sKumoRed;
                 const sKumoMask = c1.addAreaSeries({
                     topColor: '#080b13', bottomColor: '#080b13',
@@ -5019,9 +5006,7 @@
             
             // Retailer (Green)
             const greenData = data.dates.map((dt, i) => {
-                const bankerVal = data.MCDX_Banker ? (data.MCDX_Banker[i] || 0.0) : 0.0;
-                const hotVal = data.MCDX_HotMoney ? (data.MCDX_HotMoney[i] || 0.0) : 0.0;
-                return { time: d2ts(dt), value: bankerVal + hotVal + 20.0 };
+                return { time: d2ts(dt), value: 20.0 }; // Fixed base height
             });
             c2.addHistogramSeries({
                 color: '#34d399',
