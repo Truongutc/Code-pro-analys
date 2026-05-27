@@ -4368,7 +4368,7 @@
             timeScale: { borderColor: 'rgba(255,255,255,0.08)',
                          timeVisible: true, secondsVisible: false,
                          fixLeftEdge: false, fixRightEdge: false,
-                         minBarSpacing: 8 },
+                         minBarSpacing: 2 },
             rightPriceScale: { 
                 borderColor: 'rgba(255,255,255,0.08)',
                 autoScale: true,
@@ -4987,8 +4987,15 @@
                     const t = d2ts(data.dates[i]);
                     const top = Math.max(a, b) * sc;
                     const bot = Math.min(a, b) * sc;
-                    if (a >= b) { bullishCloud.push({time: t, value: top}); bearishCloud.push({time: t, value: bot}); }
-                    else { bullishCloud.push({time: t, value: bot}); bearishCloud.push({time: t, value: top}); }
+                    if (a >= b) {
+                        // Bullish: SpanA >= SpanB → green cloud fills top→bot
+                        bullishCloud.push({time: t, value: top});
+                        bearishCloud.push({time: t, value: bot});
+                    } else {
+                        // Bearish: SpanB > SpanA → red cloud fills top→bot
+                        bullishCloud.push({time: t, value: bot});
+                        bearishCloud.push({time: t, value: top});
+                    }
                     maskCloud.push({time: t, value: bot});
                 }
                 const sKumoGreen = c1.addAreaSeries({
@@ -5685,8 +5692,15 @@
                     const t = d2ts(data.dates[i]);
                     const top = Math.max(a, b) * sc;
                     const bot = Math.min(a, b) * sc;
-                    if (a >= b) { bullishCloud.push({time: t, value: top}); bearishCloud.push({time: t, value: bot}); }
-                    else { bullishCloud.push({time: t, value: bot}); bearishCloud.push({time: t, value: top}); }
+                    if (a >= b) {
+                        // Bullish: SpanA >= SpanB → green cloud fills top→bot
+                        bullishCloud.push({time: t, value: top});
+                        bearishCloud.push({time: t, value: bot});
+                    } else {
+                        // Bearish: SpanB > SpanA → red cloud fills top→bot
+                        bullishCloud.push({time: t, value: bot});
+                        bearishCloud.push({time: t, value: top});
+                    }
                     maskCloud.push({time: t, value: bot});
                 }
                 const sKumoGreen = c1.addAreaSeries({
