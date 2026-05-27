@@ -1239,25 +1239,6 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
                 df['RS52'] = 50.0
             
             df_extended = df.copy()
-            if len(df) > 0:
-                try:
-                    last_date = df['Date'].iloc[-1]
-                    future_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=26)
-                    
-                    raw_a = (df['Tenkan'] + df['Kijun']) / 2 if 'Tenkan' in df.columns and 'Kijun' in df.columns else np.nan
-                    raw_b = (df['High'].rolling(52).max() + df['Low'].rolling(52).min()) / 2 if 'High' in df.columns and 'Low' in df.columns else np.nan
-                    
-                    future_spans = []
-                    for i in range(1, 27):
-                        source_idx = -26 + i
-                        val_a = raw_a.iloc[source_idx] if abs(source_idx) <= len(df) else np.nan
-                        val_b = raw_b.iloc[source_idx] if abs(source_idx) <= len(df) else np.nan
-                        future_spans.append({'Date': future_dates[i-1], 'SpanA': val_a, 'SpanB': val_b})
-                    
-                    df_future_cloud = pd.DataFrame(future_spans)
-                    df_extended = pd.concat([df, df_future_cloud], ignore_index=True)
-                except Exception as ex_future:
-                    pass
 
             def clean_nan_list(series):
                 return [None if (pd.isna(x) or (isinstance(x, float) and np.isnan(x))) else x for x in series.tolist()]
