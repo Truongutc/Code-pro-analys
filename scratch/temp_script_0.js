@@ -1,2703 +1,4 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AIC = AI + cơm! - Hệ thống Phân tích Chứng khoán</title>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Chart.js for breadth chart -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Lightweight Charts (TradingView) for interactive OHLCV charts -->
-    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 
-    <style>
-        :root {
-            --bg-color: #080b13;
-            --panel-bg: rgba(13, 19, 33, 0.75);
-            --border-color: rgba(255, 255, 255, 0.08);
-            --text-primary: #f3f4f6;
-            --text-secondary: #9ca3af;
-            --accent-purple: #8b5cf6;
-            --accent-teal: #14b8a6;
-            --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-orange: #f59e0b;
-            --accent-blue: #3b82f6;
-            --glass-blur: blur(16px);
-            --glow-purple: rgba(139, 92, 246, 0.12);
-            --glow-teal: rgba(20, 184, 166, 0.12);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding-bottom: 40px;
-            background-image: 
-                radial-gradient(circle at 5% 15%, var(--glow-purple) 0%, transparent 45%),
-                radial-gradient(circle at 95% 85%, var(--glow-teal) 0%, transparent 45%);
-            background-attachment: fixed;
-        }
-
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: rgba(8, 11, 19, 0.85);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border-bottom: 1px solid var(--border-color);
-            padding: 16px 20px;
-        }
-
-        .header-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo-section {
-            transition: opacity 0.2s ease;
-        }
-        .logo-section:hover {
-            opacity: 0.85;
-        }
-
-        .logo-section h1 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #a78bfa 0%, #2dd4bf 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .logo-section h1 span {
-            font-size: 0.6rem;
-            padding: 1px 4px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-secondary);
-            -webkit-text-fill-color: var(--text-secondary);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            font-family: 'Inter', sans-serif;
-            font-weight: 400;
-        }
-
-        .update-badge {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .update-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--accent-green);
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 8px var(--accent-green);
-        }
-
-        /* Sticky Navigation Tab Bar */
-        .tab-navigation {
-            position: sticky;
-            top: 65px; /* height of header */
-            z-index: 99;
-            background: rgba(8, 11, 19, 0.95);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border-bottom: 1px solid var(--border-color);
-            padding: 8px 16px;
-            display: flex;
-            justify-content: center;
-        }
-
-        /* Menu Dropdown Style */
-        .menu-dropdown {
-            position: relative;
-            display: inline-block;
-            max-width: 1200px;
-            width: 100%;
-            text-align: center;
-        }
-        .menu-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            color: var(--text-primary);
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            font-family: 'Outfit', sans-serif;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: all 0.2s ease;
-            min-width: 260px;
-        }
-        .menu-btn:hover {
-            background: rgba(139, 92, 246, 0.15);
-            border-color: var(--accent-purple);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
-        }
-        .menu-content {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(8, 11, 19, 0.98);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            min-width: 260px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-            z-index: 150;
-            margin-top: 6px;
-            overflow: hidden;
-        }
-        .menu-content.show {
-            display: block;
-        }
-        .menu-item {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            padding: 12px 16px;
-            text-align: left;
-            font-size: 0.9rem;
-            font-weight: 600;
-            font-family: 'Outfit', sans-serif;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.15s;
-        }
-        .menu-item:hover {
-            background: rgba(139, 92, 246, 0.12);
-            color: white;
-        }
-        .menu-item.active {
-            background: linear-gradient(135deg, var(--accent-purple) 0%, #6366f1 100%);
-            color: white;
-            font-weight: 700;
-        }
-
-        /* Status indicators */
-        .status-dot-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
-        .status-dot-indicator.green {
-            background-color: var(--accent-green);
-            box-shadow: 0 0 8px var(--accent-green);
-        }
-        .status-dot-indicator.red {
-            background-color: var(--accent-red);
-            box-shadow: 0 0 8px var(--accent-red);
-        }
-        .status-dot-indicator.yellow {
-            background-color: var(--accent-orange);
-            box-shadow: 0 0 8px var(--accent-orange);
-        }
-
-        main {
-            max-width: 1200px;
-            margin: 24px auto;
-            padding: 0 16px;
-        }
-
-        /* Tab Content Control */
-        .tab-content {
-            display: none;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .tab-content.active {
-            display: flex;
-        }
-
-        .card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 20px;
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-            transition: transform 0.2s ease, border-color 0.2s ease;
-        }
-
-        .card-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* Chart Controls */
-        .chart-controls {
-            display: flex;
-            gap: 6px;
-        }
-
-        .btn-sm {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-sm.active, .btn-sm:hover {
-            background: var(--accent-purple);
-            color: white;
-            border-color: var(--accent-purple);
-        }
-
-        /* Interactive controls for Breadth Chart */
-        .ma-toggles {
-            display: flex;
-            gap: 6px;
-        }
-
-        .ma-toggles button {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 0.7rem;
-            padding: 4px 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-
-        .ma-toggles button.inactive {
-            opacity: 0.3;
-            background: transparent !important;
-            border-color: rgba(255, 255, 255, 0.08) !important;
-            color: var(--text-secondary) !important;
-        }
-
-        #toggle-normal-ma10.active, #toggle-fs-ma10.active {
-            border-color: #ffffff;
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        #toggle-normal-ma20.active, #toggle-fs-ma20.active {
-            border-color: #00f0ff;
-            color: #00f0ff;
-            background: rgba(0, 240, 255, 0.1);
-        }
-
-        #toggle-normal-ma50.active, #toggle-fs-ma50.active {
-            border-color: #ff007f;
-            color: #ff007f;
-            background: rgba(255, 0, 127, 0.1);
-        }
-
-        #toggle-normal-vnindex.active, #toggle-fs-vnindex.active {
-            border-color: #00ff6a;
-            color: #00ff6a;
-            background: rgba(0, 255, 106, 0.1);
-        }
-
-        .chart-fs-controls {
-            display: none;
-            margin-left: auto;
-            margin-right: 16px;
-            align-items: center;
-            gap: 12px;
-        }
-
-
-        .breadth-chart-container {
-            position: relative;
-            height: 400px;
-            width: 100%;
-            background: #000000;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
-
-        /* Market Cards */
-        .market-cards-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-            margin-bottom: 4px;
-        }
-
-        @media (min-width: 768px) {
-            .market-cards-container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        .market-summary-card {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .market-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .market-index-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: white;
-        }
-
-        .market-price-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-        }
-
-        .market-price-val {
-            font-size: 1.6rem;
-            font-weight: 750;
-            font-family: 'Outfit', sans-serif;
-        }
-
-        .market-date-val {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .market-metrics-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 12px;
-        }
-
-        .market-metric-box {
-            background: rgba(255, 255, 255, 0.015);
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .m-label {
-            font-size: 0.65rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-
-        .m-value {
-            font-size: 0.95rem;
-            font-weight: 700;
-        }
-
-        .alloc-note-text {
-            font-size: 0.8rem;
-            color: var(--accent-teal);
-            line-height: 1.4;
-            background: rgba(20, 184, 166, 0.04);
-            padding: 8px 12px;
-            border-radius: 8px;
-            border-left: 3px solid var(--accent-teal);
-        }
-
-        .market-extra-details {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .market-extra-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .market-extra-row strong {
-            color: var(--text-primary);
-        }
-
-        /* Search Layout */
-        .search-filter-section {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .search-bar {
-            position: relative;
-            width: 100%;
-        }
-
-        .search-input {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.035);
-            border: 1px solid var(--border-color);
-            padding: 12px 16px 12px 40px;
-            border-radius: 12px;
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .search-input:focus {
-            border-color: var(--accent-teal);
-            box-shadow: 0 0 10px rgba(20, 184, 166, 0.15);
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-            pointer-events: none;
-            font-size: 1.1rem;
-        }
-
-        /* Suggestions Dropdown */
-        .suggestions-dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: rgba(13, 19, 33, 0.96);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            margin-top: 6px;
-            max-height: 280px;
-            overflow-y: auto;
-            z-index: 100;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-            display: none;
-        }
-        
-        .suggestion-item {
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            transition: background 0.15s;
-        }
-        
-        .suggestion-item:hover {
-            background: rgba(139, 92, 246, 0.12);
-        }
-        
-        .suggestion-item:last-child {
-            border-bottom: none;
-        }
-        
-        .suggestion-item.no-match {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            justify-content: center;
-            cursor: default;
-        }
-        
-        .s-ticker {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 700;
-            color: white;
-        }
-        
-        .s-price {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        
-        .s-action {
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-        }
-        
-        .s-action.buy { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-        .s-action.wait { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-        .s-action.sell { background: rgba(239, 68, 68, 0.15); color: #f87171; }
-
-        /* Filter Tab Badges */
-        .filter-tabs-wrapper {
-            overflow-x: auto;
-            white-space: nowrap;
-            padding-bottom: 8px;
-            margin: 0 -4px;
-            scrollbar-width: none;
-        }
-        .filter-tabs-wrapper::-webkit-scrollbar {
-            display: none;
-        }
-
-        .filter-tabs {
-            display: inline-flex;
-            gap: 8px;
-            padding: 0 4px;
-        }
-
-        .tab-btn {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .tab-btn.active {
-            background: linear-gradient(135deg, var(--accent-purple) 0%, #6366f1 100%);
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
-        }
-
-        .badge-count {
-            background: rgba(255, 255, 255, 0.15);
-            font-size: 0.7rem;
-            padding: 1px 5px;
-            border-radius: 10px;
-            color: white;
-        }
-
-        /* Grid results layout */
-        .grid-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-
-        @media (min-width: 768px) {
-            .grid-container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .grid-container {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        .ticker-card {
-            background: rgba(255, 255, 255, 0.015);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            transition: transform 0.2s, border-color 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .ticker-card:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.15);
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        .ticker-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .ticker-symbol {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: white;
-        }
-
-        .action-badge {
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .action-badge.buy {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .action-badge.strongly-buy {
-            background: rgba(139, 92, 246, 0.15);
-            color: #c084fc;
-            border: 1px solid rgba(139, 92, 246, 0.3);
-        }
-
-        .action-badge.no-trade { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); } .action-badge.wait {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-
-        .action-badge.sell {
-            background: rgba(239, 68, 68, 0.15);
-            color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .price-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-        }
-
-        .price-val {
-            font-size: 1.4rem;
-            font-weight: 700;
-            font-family: 'Outfit', sans-serif;
-        }
-
-        .vol-val {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .metric-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.01);
-            padding: 8px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            text-align: center;
-        }
-
-        .metric-item {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .metric-label {
-            font-size: 0.65rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-
-        .metric-value {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .metric-value.target {
-            color: var(--accent-green);
-        }
-
-        .metric-value.stop {
-            color: var(--accent-red);
-        }
-
-        .extra-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .risk-rating {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .risk-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .risk-dot.green { background-color: var(--accent-green); }
-        .risk-dot.orange { background-color: var(--accent-orange); }
-        .risk-dot.red { background-color: var(--accent-red); }
-
-        .tags-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-top: 4px;
-        }
-
-        .tag {
-            font-size: 0.65rem;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-        }
-
-        .tag.alert-tag {
-            background: rgba(139, 92, 246, 0.08);
-            color: #c084fc;
-            border-color: rgba(139, 92, 246, 0.2);
-        }
-
-        /* Detailed Stock Dashboard Layout */
-        .stock-dashboard {
-            margin-top: 8px;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        @media (min-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        .block-card {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        
-        .block-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-        
-        .block-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .stock-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: white;
-        }
-        
-        .stock-price-box {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
-        
-        .stock-price {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: white;
-        }
-        
-        .stock-vol {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-        
-        .detail-metric-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .detail-metric-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            padding-bottom: 8px;
-        }
-        
-        .detail-metric-row:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-        
-        .detail-metric-row strong {
-            color: var(--text-primary);
-        }
-
-        .detail-metric-row span {
-            text-align: left;
-        }
-
-        .risk-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .divider-h {
-            height: 1px;
-            background: var(--border-color);
-            margin: 4px 0;
-        }
-
-        /* Indicators table */
-        .diag-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8rem;
-        }
-        .diag-table th, .diag-table td {
-            padding: 8px 6px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .diag-table th {
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
-        .diag-table td:nth-child(2), .diag-table td:nth-child(3) {
-            font-weight: 500;
-        }
-        
-        .diag-table tr.bullish {
-            background-color: rgba(16, 185, 129, 0.04);
-        }
-        .diag-table tr.bearish {
-            background-color: rgba(239, 68, 68, 0.04);
-        }
-
-        .bullish { color: var(--accent-green) !important; }
-        .bearish { color: var(--accent-red) !important; }
-        .neutral { color: var(--text-primary) !important; }
-        
-        .text-green { color: var(--accent-green) !important; }
-        .text-red { color: var(--accent-red) !important; }
-        .text-orange { color: var(--accent-orange) !important; }
-        .text-purple { color: var(--accent-purple) !important; }
-        .text-secondary { color: var(--text-secondary) !important; }
-
-        .badge-text {
-            background: rgba(255,255,255,0.06);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            color: white !important;
-        }
-
-        /* Valuation dial */
-        .eval-metrics {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .eval-score-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 10px 0;
-        }
-        .eval-score-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .eval-score-value {
-            font-family: 'Outfit', sans-serif;
-            font-size: 2.8rem;
-            font-weight: 800;
-            color: var(--accent-purple);
-            line-height: 1;
-            margin: 6px 0;
-        }
-        .eval-score-value span {
-            font-size: 1.1rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-        .eval-score-desc {
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-align: center;
-            color: var(--text-primary);
-        }
-
-        .eval-row-detail {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .accum-notes-box {
-            background: rgba(255, 255, 255, 0.01);
-            border: 1px solid rgba(255, 255, 255, 0.03);
-            border-radius: 10px;
-            padding: 12px;
-            font-size: 0.8rem;
-            line-height: 1.4;
-        }
-
-        .accum-notes-box ul {
-            margin-left: 16px;
-            margin-top: 6px;
-            color: var(--text-secondary);
-        }
-
-        /* MCDX Section */
-        .mcdx-section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .mcdx-bar-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .mcdx-bar-container {
-            display: flex;
-            height: 16px;
-            border-radius: 8px;
-            overflow: hidden;
-            background: rgba(255,255,255,0.05);
-            margin: 4px 0;
-        }
-        .mcdx-segment {
-            height: 100%;
-            transition: width 0.3s ease;
-        }
-        .mcdx-segment.banker { background-color: #f43f5e; }
-        .mcdx-segment.hot { background-color: #eab308; }
-        .mcdx-segment.retailer { background-color: #22c55e; }
-
-        .mcdx-eval-text {
-            font-size: 0.8rem;
-            line-height: 1.4;
-        }
-
-        .mini-chart-section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .mini-chart-container {
-            position: relative;
-            height: 140px;
-            width: 100%;
-        }
-
-        /* Popup Modal */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 1000; 
-            left: 0;
-            top: 0;
-            width: 100%; 
-            height: 100%; 
-            overflow: auto; 
-            background-color: rgba(6, 9, 15, 0.85); 
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-
-        .modal-content {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            margin: 4% auto; 
-            padding: 24px;
-            width: 92%; 
-            max-width: 1100px; 
-            border-radius: 20px;
-            position: relative;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            animation: modalFadeIn 0.25s ease;
-        }
-
-        @keyframes modalFadeIn {
-            from { transform: translateY(15px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .modal-close {
-            color: var(--text-secondary);
-            float: right;
-            font-size: 1.8rem;
-            font-weight: 700;
-            cursor: pointer;
-            position: absolute;
-            top: 10px;
-            right: 18px;
-            transition: color 0.2s;
-            z-index: 10;
-        }
-
-        .modal-close:hover {
-            color: var(--accent-red);
-        }
-
-        /* Header Action Buttons */
-        .header-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        .header-action-btn {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 6px 12px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: var(--text-secondary);
-            transition: all 0.25s ease;
-            line-height: 1;
-        }
-        .header-action-btn:hover {
-            background: rgba(139, 92, 246, 0.15);
-            border-color: var(--accent-purple);
-            color: white;
-        }
-        .gear-btn:hover {
-            transform: rotate(45deg);
-        }
-        .update-btn:hover {
-            animation: spinOnce 0.5s ease;
-        }
-        .update-btn.loading {
-            animation: spin 1s linear infinite;
-            pointer-events: none;
-            opacity: 0.6;
-        }
-        @keyframes spinOnce {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        /* Settings Modal Enhancements */
-        .settings-section-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--accent-teal);
-            margin: 4px 0 12px 0;
-        }
-        .settings-divider {
-            height: 1px;
-            background: var(--border-color);
-            margin: 16px 0;
-        }
-        .settings-info {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            background: rgba(139, 92, 246, 0.06);
-            border: 1px solid rgba(139, 92, 246, 0.12);
-            border-radius: 10px;
-            padding: 10px 14px;
-            margin-bottom: 14px;
-        }
-        .settings-info strong {
-            color: var(--accent-purple);
-        }
-
-        /* Data Actions Grid */
-        .data-actions-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-        }
-        @media (max-width: 520px) {
-            .data-actions-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        .data-action-btn {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 14px 10px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            text-align: center;
-            transition: all 0.2s ease;
-            color: var(--text-primary);
-        }
-        .data-action-btn:hover {
-            background: rgba(139, 92, 246, 0.1);
-            border-color: var(--accent-purple);
-            transform: translateY(-2px);
-        }
-        .data-action-btn.danger:hover {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: var(--accent-red);
-        }
-        .data-action-btn.csv:hover {
-            background: rgba(20, 184, 166, 0.1);
-            border-color: var(--accent-teal);
-        }
-        .data-action-icon {
-            font-size: 1.6rem;
-        }
-        .data-action-label {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 700;
-            font-size: 0.85rem;
-        }
-        .data-action-desc {
-            font-size: 0.65rem;
-            color: var(--text-secondary);
-            line-height: 1.3;
-        }
-
-        /* Settings Modal */
-        .settings-modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            background: rgba(6, 9, 15, 0.88);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        .settings-modal.active { display: flex; justify-content: center; align-items: center; }
-        .settings-panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 28px;
-            width: 92%;
-            max-width: 480px;
-            box-shadow: 0 12px 48px rgba(0,0,0,0.6);
-            animation: modalFadeIn 0.25s ease;
-        }
-        .settings-panel h2 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #a78bfa, #2dd4bf);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .settings-field { margin-bottom: 16px; }
-        .settings-field label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-        .settings-field input,
-        .settings-field textarea {
-            width: 100%;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 10px 14px;
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            font-family: 'Inter', sans-serif;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .settings-field input:focus,
-        .settings-field textarea:focus {
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 10px rgba(139, 92, 246, 0.15);
-        }
-        .settings-field textarea { min-height: 80px; resize: vertical; }
-        .settings-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .btn-primary {
-            flex: 1;
-            background: linear-gradient(135deg, var(--accent-purple), #6366f1);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 10px 16px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: opacity 0.2s, transform 0.15s;
-        }
-        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-secondary {
-            flex: 1;
-            background: rgba(255,255,255,0.06);
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 10px 16px;
-            font-weight: 500;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
-        .settings-msg {
-            margin-top: 12px;
-            font-size: 0.8rem;
-            text-align: center;
-            min-height: 20px;
-        }
-
-        /* VNINDEX Detailed Analysis */
-        .vnindex-detail-section {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-top: 20px;
-        }
-        .vnindex-summary-header {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-        .vnindex-summary-header .index-name {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: white;
-        }
-        .vnindex-summary-header .index-price {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--accent-teal);
-        }
-        .vnindex-summary-header .index-date {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-        .rating-bar-container {
-            width: 100%;
-            max-width: 300px;
-            margin: 4px 0;
-        }
-        .rating-bar-bg {
-            height: 10px;
-            border-radius: 5px;
-            background: rgba(255,255,255,0.08);
-            overflow: hidden;
-        }
-        .rating-bar-fill {
-            height: 100%;
-            border-radius: 5px;
-            transition: width 0.6s ease;
-        }
-        .rating-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        .vnindex-analysis-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        @media (max-width: 768px) {
-            .vnindex-analysis-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .analysis-card {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 16px;
-        }
-        .analysis-card h4 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: var(--accent-teal);
-        }
-        .analysis-card .diag-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.82rem;
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            color: var(--text-secondary);
-        }
-        .analysis-card .diag-row:last-child { border-bottom: none; }
-        .analysis-card .diag-row strong {
-            color: var(--text-primary);
-            text-align: right;
-            max-width: 60%;
-        }
-
-        /* Chart Images Section */
-        .charts-section {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-        .chart-image-container {
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            overflow: hidden;
-            position: relative;
-        }
-        .chart-image-container img {
-            width: 100%;
-            height: auto;
-            display: block;
-            object-fit: contain;
-        }
-        .chart-image-container .chart-label {
-            position: absolute;
-            top: 8px;
-            left: 12px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            padding: 3px 8px;
-            background: rgba(0,0,0,0.6);
-            border-radius: 6px;
-            color: #fbbf24;
-            backdrop-filter: blur(4px);
-        }
-        .chart-error {
-            padding: 40px 20px;
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.85rem;
-        }
-
-        /* Misc */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        .load-more-btn {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 12px;
-            border-radius: 12px;
-            width: 100%;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 8px;
-        }
-
-        .load-more-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--bg-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            transition: opacity 0.3s ease;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border-top-color: var(--accent-purple);
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Custom Filter Grid and Elements */
-        .filter-header-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: #ffd700; /* Gold */
-            text-align: center;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .filter-columns {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        @media (min-width: 768px) {
-            .filter-columns {
-                grid-template-columns: 1.1fr 1.3fr;
-            }
-        }
-        
-        .filter-column {
-            background: rgba(255, 255, 255, 0.01);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .filter-column-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 700;
-            color: #fbbf24;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-            padding-bottom: 8px;
-            text-transform: uppercase;
-        }
-        
-        .checkbox-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 380px;
-            overflow-y: auto;
-            padding-right: 6px;
-        }
-        
-        /* Styled Scrollbar for checkbox lists */
-        .checkbox-list::-webkit-scrollbar {
-            width: 5px;
-        }
-        .checkbox-list::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.1);
-            border-radius: 4px;
-        }
-        .checkbox-list::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.1);
-            border-radius: 4px;
-        }
-        .checkbox-list::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.25);
-        }
-        
-        .filter-checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 6px 8px;
-            border-radius: 6px;
-            transition: all 0.15s ease;
-            user-select: none;
-            background: rgba(255,255,255,0.01);
-            border: 1px solid transparent;
-        }
-        
-        .filter-checkbox-row:hover {
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text-primary);
-            border-color: rgba(255,255,255,0.05);
-        }
-        
-        .filter-checkbox-row input[type="checkbox"] {
-            appearance: none;
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            border: 1.5px solid var(--border-color);
-            border-radius: 4px;
-            background: rgba(0,0,0,0.2);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s ease;
-            flex-shrink: 0;
-        }
-        
-        .filter-checkbox-row input[type="checkbox"]:checked {
-            background: var(--accent-teal);
-            border-color: var(--accent-teal);
-            box-shadow: 0 0 8px rgba(20, 184, 166, 0.4);
-        }
-        
-        .filter-checkbox-row input[type="checkbox"]:checked::after {
-            content: "✓";
-            color: white;
-            font-size: 0.7rem;
-            font-weight: bold;
-        }
-        
-        .filter-checkbox-row.checked-row {
-            color: var(--text-primary);
-            background: rgba(20, 184, 166, 0.05);
-            border-color: rgba(20, 184, 166, 0.2);
-        }
-        
-        .filter-action-bar {
-            display: flex;
-            justify-content: center;
-            margin-top: 10px;
-        }
-        
-        .filter-submit-btn {
-            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
-            border: none;
-            color: white;
-            padding: 12px 32px;
-            border-radius: 12px;
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(20, 184, 166, 0.25);
-            transition: all 0.2s ease;
-            width: 100%;
-            max-width: 320px;
-            text-align: center;
-        }
-        
-        .filter-submit-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(20, 184, 166, 0.4);
-            filter: brightness(1.1);
-        }
-        
-        .filter-submit-btn:active {
-            transform: translateY(1px);
-        }
-        
-        .filter-results-summary {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin: 10px 0;
-            text-align: center;
-            font-weight: 500;
-        }
-
-        /* Active Index Card Selection */
-        .market-summary-card {
-            cursor: pointer;
-            border: 1px solid var(--border-color);
-            transition: all 0.2s ease;
-        }
-        .market-summary-card:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-        }
-        .market-summary-card.active-index-card {
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
-            background: rgba(139, 92, 246, 0.05);
-        }
-        /* =====================================================
-           INTERACTIVE CHART SYSTEM (4-panel grid + fullscreen)
-           ===================================================== */
-
-        /* Chart container wrapper */
-        .interactive-chart-section { margin-top: 20px; }
-        .chart-panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 14px;
-        }
-        .chart-panel-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-        .chart-hint {
-            font-size: 0.72rem;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .chart-hint span { opacity: 0.7; }
-
-        /* Vertical list for the 4 charts */
-        .chart-grid-4 {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 32px;
-        }
-
-        /* Single chart cell */
-        .chart-cell {
-            background: #000000;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 14px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        }
-        .chart-cell:hover {
-            border-color: rgba(139, 92, 246, 0.4);
-            box-shadow: 0 6px 24px rgba(139, 92, 246, 0.15);
-        }
-
-        .chart-cell-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: rgba(255,255,255,0.025);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            flex-shrink: 0;
-        }
-        .chart-cell-label {
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.76rem;
-            font-weight: 600;
-            color: #c4c8d8;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .chart-expand-btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: var(--text-secondary);
-            padding: 3px 9px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.68rem;
-            font-weight: 600;
-            transition: all 0.15s;
-            white-space: nowrap;
-        }
-        .chart-expand-btn:hover {
-            background: rgba(124,58,237,0.25);
-            border-color: #7c3aed;
-            color: white;
-        }
-        .chart-cell-body {
-            flex: 1;
-            position: relative;
-            min-height: 600px;
-        }
-        .chart-cell-evaluation {
-            background: rgba(139, 92, 246, 0.03);
-            border-top: 1px dashed rgba(255, 255, 255, 0.06);
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
-            padding: 10px 14px;
-            font-size: 0.78rem;
-            color: #d1d5db;
-            line-height: 1.45;
-        }
-        .chart-cell-evaluation .eval-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #fbbf24;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .chart-cell-evaluation .eval-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-        }
-        .chart-cell-evaluation .eval-row:last-child {
-            margin-bottom: 0;
-        }
-        .chart-cell-evaluation .eval-row span {
-            color: #9ca3af;
-        }
-        .chart-cell-evaluation .eval-row strong {
-            color: #ffffff;
-            display: flex;
-            align-items: center;
-        }
-        .eval-badge-inline {
-            display: inline-block;
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-size: 0.68rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-left: 6px;
-            line-height: 1.3;
-        }
-        .eval-badge-inline.bullish {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-        .eval-badge-inline.bearish {
-            background: rgba(239, 68, 68, 0.15);
-            color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-        .eval-badge-inline.neutral {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-        .chart-cell-footer {
-            background: rgba(255, 255, 255, 0.015);
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
-            padding: 10px 14px;
-            font-size: 0.72rem;
-            color: var(--text-secondary);
-            line-height: 1.4;
-            font-family: 'Outfit', sans-serif;
-        }
-
-        /* LightweightCharts host divs */
-        .lwc-host { width: 100%; }
-        .lwc-host.main { height: 220px; }
-        .lwc-host.sub  { height: 95px;  border-top: 1px solid rgba(255,255,255,0.04); }
-
-        /* Pane stack inside a cell */
-        .chart-pane-stack {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            height: 100%;
-        }
-        .chart-pane-stack .lwc-host {
-            border-radius: 0;
-            border: none;
-            border-top: 1px solid rgba(255,255,255,0.04);
-        }
-        .chart-pane-stack .lwc-host:first-child { border-top: none; }
-
-        /* Loading spinner inside a cell */
-        .lwc-spinner {
-            width: 26px; height: 26px;
-            border: 3px solid rgba(255,255,255,0.08);
-            border-top-color: #14b8a6;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: auto;
-        }
-        .lwc-loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            height: 100%;
-            color: var(--text-secondary);
-            font-size: 0.78rem;
-        }
-
-        /* ---- FULLSCREEN MODAL ---- */
-        .chart-fs-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9000;
-            background: rgba(4,8,16,0.96);
-            backdrop-filter: blur(8px);
-            flex-direction: column;
-            padding: 16px 20px 20px;
-        }
-        .chart-fs-modal.open { display: flex; }
-        .chart-fs-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            flex-shrink: 0;
-        }
-        .chart-fs-title {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .chart-fs-close {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.12);
-            color: white;
-            padding: 7px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-            transition: background 0.15s;
-        }
-        .chart-fs-close:hover { background: rgba(239,68,68,0.25); border-color: #ef4444; }
-        .chart-fs-body {
-            flex: 1;
-            background: #000000;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-            border: 1px solid rgba(255,255,255,0.07);
-        }
-        #chartFsMount {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        #chartFsMount .lwc-host.main { flex: 3; height: auto; }
-        #chartFsMount .lwc-host.sub  { flex: 1; height: auto; border-top: 1px solid rgba(255,255,255,0.04); }
-
-        /* ----------------------------------------------------
-           PORTFOLIO EVALUATION TAB STYLES
-           ---------------------------------------------------- */
-        .portfolio-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
-        }
-        @media (min-width: 992px) {
-            .portfolio-grid {
-                grid-template-columns: 420px 1fr;
-            }
-        }
-        
-        /* Left input panel */
-        .portfolio-inputs-card {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .portfolio-params-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-        .port-input-field {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .port-input-field label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-        .port-input-field input {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            padding: 8px 12px;
-            font-size: 0.85rem;
-            font-family: inherit;
-            transition: all 0.2s;
-        }
-        .port-input-field input:focus {
-            outline: none;
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
-            background: rgba(255, 255, 255, 0.06);
-        }
-        
-        /* Stocks list inputs */
-        .portfolio-stocks-header {
-            display: grid;
-            grid-template-columns: 90px 100px 1fr;
-            gap: 8px;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--border-color);
-            margin-top: 8px;
-        }
-        .portfolio-stocks-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 380px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-        .portfolio-stock-row {
-            display: grid;
-            grid-template-columns: 90px 100px 1fr;
-            gap: 8px;
-            align-items: center;
-            position: relative;
-        }
-        .portfolio-stock-row input {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            padding: 6px 10px;
-            font-size: 0.8rem;
-            width: 100%;
-            transition: all 0.15s;
-        }
-        .portfolio-stock-row input:focus {
-            outline: none;
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 6px rgba(139, 92, 246, 0.2);
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .portfolio-stock-row input.ticker-input {
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        
-        .portfolio-actions {
-            margin-top: 12px;
-        }
-        .portfolio-submit-btn {
-            background: linear-gradient(135deg, var(--accent-purple) 0%, #6366f1 100%);
-            border: none;
-            border-radius: 10px;
-            color: white;
-            padding: 12px;
-            width: 100%;
-            font-family: 'Outfit', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-        }
-        .portfolio-submit-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
-        }
-        .portfolio-submit-btn:active {
-            transform: translateY(1px);
-        }
-        
-        /* Auto-complete dropdown for ticker inputs */
-        .ticker-autocomplete-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #0d1220;
-            border: 1px solid var(--accent-purple);
-            border-radius: 6px;
-            max-height: 150px;
-            overflow-y: auto;
-            z-index: 100;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
-            display: none;
-        }
-        .ticker-autocomplete-item {
-            padding: 6px 10px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            color: var(--text-primary);
-            transition: background 0.15s;
-        }
-        .ticker-autocomplete-item:hover {
-            background: rgba(139, 92, 246, 0.2);
-        }
-        
-        /* Right result panel */
-        .portfolio-results-card {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            min-height: 500px;
-        }
-        .portfolio-summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
-        }
-        .portfolio-summary-cards .summary-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .portfolio-summary-cards .summary-card-lbl {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-        .portfolio-summary-cards .summary-card-val {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.05rem;
-            font-weight: 700;
-        }
-        
-        /* Portfolio Alerts */
-        .portfolio-alerts {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .port-alert {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            line-height: 1.4;
-            font-weight: 500;
-        }
-        .port-alert.warning {
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            color: #f59e0b;
-        }
-        .port-alert.danger {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #f87171;
-        }
-        .port-alert.success {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            color: #34d399;
-        }
-        .port-alert.info {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
-        }
-        
-        /* Portfolio Table */
-        .portfolio-table-container {
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-        .portfolio-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8rem;
-            text-align: left;
-        }
-        .portfolio-table th {
-            background: rgba(255, 255, 255, 0.03);
-            font-weight: 600;
-            color: var(--text-secondary);
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .portfolio-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border-color);
-            vertical-align: middle;
-            line-height: 1.4;
-        }
-        .portfolio-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-        .portfolio-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.01);
-        }
-        
-        /* Plaintext Report Pre */
-        .portfolio-report-pre {
-            padding: 16px;
-            border-radius: 8px;
-            background: rgba(0, 0, 0, 0.22);
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            white-space: pre-wrap;
-            font-size: 0.8rem;
-            line-height: 1.5;
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            max-height: 400px;
-            overflow-y: auto;
-        }
-    </style>
-
-</head>
-<body>
-
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="spinner"></div>
-    </div>
-
-    <header>
-        <div class="header-container">
-            <div class="logo-section" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)'); window.scrollTo({top: 0, behavior: 'smooth'});" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;">
-                <img src="app_icon.png" alt="AIC PRO Logo" style="height: 36px; width: 36px; object-fit: contain; border-radius: 6px;">
-                <h1>AIC = AI + cơm!</h1>
-            </div>
-            <div class="update-badge">
-                <span id="updateTimeText">Đang tải...</span>
-                <span style="margin-left: 10px; margin-right: 10px; opacity: 0.25;">|</span>
-                <span id="urlStatusDot" class="status-dot-indicator red" title="Trạng thái cURL Vietstock"></span>
-                <span id="urlStatusText">Bypass URL: Đang kiểm tra...</span>
-                <span style="margin-left: 10px; margin-right: 10px; opacity: 0.25;">|</span>
-                <span id="vietstockStatusDot" class="status-dot-indicator red" title="Số lượng mã cập nhật thành công"></span>
-                <span id="vietstockStatusText">Dữ liệu: Đang kiểm tra...</span>
-            </div>
-        </div>
-    </header>
-
-    <!-- Navigation Tabs -->
-    <nav class="tab-navigation">
-        <div class="menu-dropdown">
-            <button id="menuBtn" class="menu-btn" onclick="toggleMenuDropdown(event)">
-                <span id="currentTabIcon">📊</span> <span id="currentTabLabel">Thị trường (VNINDEX)</span> <span style="font-size: 0.75rem; margin-left: 4px; opacity: 0.7;">▼</span>
-            </button>
-            <div id="menuContent" class="menu-content">
-                <button class="menu-item active" data-tab="market-tab" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)')">📊 Thị trường (VNINDEX)</button>
-                <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')">🔍 Tra cứu Cổ phiếu</button>
-                <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Lọc Cổ phiếu')">🎯 Lọc Cổ phiếu</button>
-                <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Đánh giá Danh mục')">💼 Đánh giá Danh mục</button>
-            </div>
-        </div>
-    </nav>
-
-    <main>
-        <!-- Tab 1: Đánh giá thị trường -->
-        <div class="tab-content active" id="market-tab">
-            <div class="market-cards-container">
-                <div class="card market-summary-card" id="vnindex-summary-card" onclick="selectMarketIndex('VNINDEX')">
-                    <!-- VNINDEX evaluation loaded dynamically -->
-                </div>
-                <div class="card market-summary-card" id="hnxindex-summary-card" onclick="selectMarketIndex('HNX-INDEX')">
-                    <!-- HNX-INDEX evaluation loaded dynamically -->
-                </div>
-            </div>
-            
-            <section class="card">
-                <div class="card-title">
-                    <span>Độ Rộng Thị Trường (MA Lines vs VNINDEX)</span>
-                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <div class="ma-toggles">
-                            <button id="toggle-normal-vnindex" class="btn-sm active" onclick="toggleBreadthVNINDEX()">VNINDEX</button>
-                            <button id="toggle-normal-ma10" class="btn-sm active" onclick="toggleBreadthMA('MA10')">MA10</button>
-                            <button id="toggle-normal-ma20" class="btn-sm active" onclick="toggleBreadthMA('MA20')">MA20</button>
-                            <button id="toggle-normal-ma50" class="btn-sm active" onclick="toggleBreadthMA('MA50')">MA50</button>
-                        </div>
-                        <div class="chart-controls">
-                            <button class="btn-sm" onclick="setBreadthChartRange(30)">30N</button>
-                            <button class="btn-sm active" onclick="setBreadthChartRange(90)">90N</button>
-                            <button class="btn-sm" onclick="setBreadthChartRange(180)">180N</button>
-                            <button class="btn-sm" onclick="setBreadthChartRange(9999)">Tất cả</button>
-                        </div>
-                        <button class="btn-sm" onclick="expandBreadthChart()">⛶ Mở rộng</button>
-                    </div>
-                </div>
-                <div class="breadth-chart-container" id="breadthChartContainer"></div>
-            </section>
-
-            <!-- VNINDEX Detailed Analysis Section -->
-            <div class="vnindex-detail-section" id="vnindexDetailSection">
-                <!-- Summary Header -->
-                <section class="card">
-                    <div class="vnindex-summary-header" id="vnindexSummaryHeader">
-                        <!-- Loaded dynamically -->
-                    </div>
-                </section>
-
-                <!-- Diagnostics Grid -->
-                <div class="vnindex-analysis-grid" id="vnindexDiagGrid">
-                    <!-- Loaded dynamically -->
-                </div>
-
-                <!-- AI Detailed Strategy Report Card -->
-                
-
-                <!-- 4-Panel Interactive Chart Grid -->
-                <section class="card interactive-chart-section">
-                    <div class="chart-panel-header">
-                        <span class="chart-panel-title" id="marketChartTitle">📈 Biểu đồ Phân tích VNINDEX</span>
-                        <span class="chart-hint"><span>🖱️ Cuộn để zoom · Kéo để pan · Nhấn ⛶ để toàn màn hình</span></span>
-                    </div>
-                    <div class="chart-grid-4" id="marketChartGrid">
-                        <div class="chart-cell">
-                            <div class="chart-cell-header">
-                                <span class="chart-cell-label">🌿 GreenPink + Octopus</span>
-                                <button class="chart-expand-btn" onclick="expandChart('market','gp')">⛶ Mở rộng</button>
-                            </div>
-                            <div class="chart-cell-body" id="market-mount-gp"></div>
-                            <div class="chart-cell-evaluation" id="market-eval-gp"></div>
-                            <div class="chart-cell-footer">
-                                💡 <strong>Ý nghĩa:</strong> Hệ thống GreenPink kết hợp với Octopus giúp xác định động lượng dòng tiền lớn (Banker/Hot Money) và các điểm đảo chiều sớm của xu hướng giá thông qua hai đường xFast/xSlow.
-                            </div>
-                        </div>
-                        <div class="chart-cell">
-                            <div class="chart-cell-header">
-                                <span class="chart-cell-label">🕯️ Heikin-Ashi + 2Trend</span>
-                                <button class="chart-expand-btn" onclick="expandChart('market','heikin')">⛶ Mở rộng</button>
-                            </div>
-                            <div class="chart-cell-body" id="market-mount-heikin"></div>
-                            <div class="chart-cell-evaluation" id="market-eval-heikin"></div>
-                            <div class="chart-cell-footer">
-                                💡 <strong>Ý nghĩa:</strong> Sử dụng nến Heikin-Ashi để làm mịn xu hướng giá kết hợp dải Hull MA và chỉ báo NW Stop, giúp loại bỏ nhiễu ngắn hạn và xác định điểm mua/bán (Buy/Sell) mạnh mẽ.
-                            </div>
-                        </div>
-                        <div class="chart-cell">
-                            <div class="chart-cell-header">
-                                <span class="chart-cell-label">🔥 Bản đồ nhiệt</span>
-                                <button class="chart-expand-btn" onclick="expandChart('market','heatmap')">⛶ Mở rộng</button>
-                            </div>
-                            <div class="chart-cell-body" id="market-mount-heatmap"></div>
-                            <div class="chart-cell-evaluation" id="market-eval-heatmap"></div>
-                            <div class="chart-cell-footer">
-                                💡 <strong>Ý nghĩa:</strong> Bản đồ nhiệt (Heatmap Bands) theo dõi các vùng cung cầu và phân phối giá của cổ phiếu, kết hợp Money Flow giúp phát hiện dòng tiền âm thầm gom hàng hoặc rút lui.
-                            </div>
-                        </div>
-                        <div class="chart-cell">
-                            <div class="chart-cell-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span class="chart-cell-label">📊 Báo cáo Kỹ thuật</span>
-                                    <div class="chart-toggles-container" style="display:inline-flex; gap:6px; font-size:0.7rem; align-items:center; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08);">
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kumo" checked onchange="toggleTechLine('Kumo', this.checked)"> Kumo</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Tenkan" checked onchange="toggleTechLine('Tenkan', this.checked)"> Tenkan</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun" checked onchange="toggleTechLine('Kijun', this.checked)"> Kijun</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun65" checked onchange="toggleTechLine('Kijun65', this.checked)"> Kijun65</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA10" checked onchange="toggleTechLine('MA10', this.checked)"> MA10</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA20" checked onchange="toggleTechLine('MA20', this.checked)"> MA20</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA50" checked onchange="toggleTechLine('MA50', this.checked)"> MA50</label>
-                                    </div>
-                                </div>
-                                <button class="chart-expand-btn" onclick="expandChart('market','techreport')">⛶ Mở rộng</button>
-                            </div>
-                            <div class="chart-cell-body" id="market-mount-techreport"></div>
-                            <div class="chart-cell-evaluation" id="market-eval-techreport"></div>
-                            <div class="chart-cell-footer">
-                                💡 <strong>Ý nghĩa:</strong> Tổng hợp các chỉ báo xu hướng và động lượng kinh điển bao gồm Ichimoku Cloud, hệ thống MA Lines (MA10/20/50), dòng tiền MCDX, sức mạnh xu hướng ADX và chỉ báo MACD.
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-
-
-        <!-- Tab 2: Tra cứu Cổ phiếu đơn lẻ -->
-        <div class="tab-content" id="lookup-tab">
-            <section class="search-filter-section" style="margin-bottom: 8px;">
-                <div class="search-bar">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="lookupSearchInput" class="search-input" placeholder="Tìm kiếm mã cổ phiếu cần tra cứu (VD: FPT, HPG, SSI...)" oninput="handleLookupSearch()">
-                    <div class="suggestions-dropdown" id="lookupSuggestions"></div>
-                </div>
-            </section>
-            
-            <div id="stockDetailsDashboard" class="stock-dashboard" style="display: none;">
-                <!-- Selected stock analysis cards loaded dynamically -->
-            </div>
-        </div>
-
-        <!-- Tab 3: Lọc cổ phiếu (Grid) -->
-        <div class="tab-content" id="filter-tab">
-            <section class="card">
-                <div class="filter-header-title">CHỌN CÁC TIÊU CHÍ LỌC (LOGICAL AND)</div>
-                <div class="filter-columns">
-                    <!-- Column 1: Tín hiệu chính -->
-                    <div class="filter-column">
-                        <div class="filter-column-title">1. Tín hiệu Giao dịch chính</div>
-                        <div class="checkbox-list">
-                            <label class="filter-checkbox-row" id="row-EARLY">
-                                <input type="checkbox" value="EARLY" onchange="toggleFilterCheckbox('EARLY')">
-                                <span>Mua Sớm (EARLY)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-ADD_1">
-                                <input type="checkbox" value="ADD_1" onchange="toggleFilterCheckbox('ADD_1')">
-                                <span>Gia Tăng 1 (ADD_1)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-ADD_2">
-                                <input type="checkbox" value="ADD_2" onchange="toggleFilterCheckbox('ADD_2')">
-                                <span>Gia Tăng 2 (ADD_2)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-STRONG">
-                                <input type="checkbox" value="STRONG" onchange="toggleFilterCheckbox('STRONG')">
-                                <span>Mua Mạnh (STRONG)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-ACCUMULATION">
-                                <input type="checkbox" value="ACCUMULATION" onchange="toggleFilterCheckbox('ACCUMULATION')">
-                                <span>Tích Lũy (ACCUMULATION)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-PERFECT_MA">
-                                <input type="checkbox" value="PERFECT_MA" onchange="toggleFilterCheckbox('PERFECT_MA')">
-                                <span>Perfect MA (PERFECT_MA)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-HEIKIN_BUY">
-                                <input type="checkbox" value="HEIKIN_BUY" onchange="toggleFilterCheckbox('HEIKIN_BUY')">
-                                <span>Heikin (HEIKIN_BUY)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-UPCLOUD">
-                                <input type="checkbox" value="UPCLOUD" onchange="toggleFilterCheckbox('UPCLOUD')">
-                                <span>UPCLOUD</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-WHITE_ADX">
-                                <input type="checkbox" value="WHITE_ADX" onchange="toggleFilterCheckbox('WHITE_ADX')">
-                                <span>Trend ADX (WHITE_ADX)</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <!-- Column 2: Tiêu chí kỹ thuật bổ trợ -->
-                    <div class="filter-column">
-                        <div class="filter-column-title">2. Tiêu chí Kỹ thuật bổ trợ</div>
-                        <div class="checkbox-list">
-                            <label class="filter-checkbox-row" id="row-RSI_BULLISH_DIVERGENCE">
-                                <input type="checkbox" value="RSI_BULLISH_DIVERGENCE" onchange="toggleFilterCheckbox('RSI_BULLISH_DIVERGENCE')">
-                                <span>RSI Phân kỳ tăng giá (Bullish Divergence)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-MACD_BULLISH_DIVERGENCE">
-                                <input type="checkbox" value="MACD_BULLISH_DIVERGENCE" onchange="toggleFilterCheckbox('MACD_BULLISH_DIVERGENCE')">
-                                <span>MACD Phân kỳ tăng giá (Bullish Divergence)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-MACD_HIST_BULLISH_DIVERGENCE">
-                                <input type="checkbox" value="MACD_HIST_BULLISH_DIVERGENCE" onchange="toggleFilterCheckbox('MACD_HIST_BULLISH_DIVERGENCE')">
-                                <span>MACD Histogram Phân kỳ tăng giá (Bullish Divergence)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-RS13_GT_50">
-                                <input type="checkbox" value="RS13_GT_50" onchange="toggleFilterCheckbox('RS13_GT_50')">
-                                <span>RS 13 Tuần > 50</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-RS52_GT_50">
-                                <input type="checkbox" value="RS52_GT_50" onchange="toggleFilterCheckbox('RS52_GT_50')">
-                                <span>RS 52 Tuần > 50</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-PRICE_CROSS_MA20">
-                                <input type="checkbox" value="PRICE_CROSS_MA20" onchange="toggleFilterCheckbox('PRICE_CROSS_MA20')">
-                                <span>Giá cắt lên MA20 (Hôm qua < MA20, nay > MA20)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-PRICE_CROSS_MA50">
-                                <input type="checkbox" value="PRICE_CROSS_MA50" onchange="toggleFilterCheckbox('PRICE_CROSS_MA50')">
-                                <span>Giá cắt lên MA50 (Hôm qua < MA50, nay > MA50)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-RSI_EXIT_OVERSOLD">
-                                <input type="checkbox" value="RSI_EXIT_OVERSOLD" onchange="toggleFilterCheckbox('RSI_EXIT_OVERSOLD')">
-                                <span>RSI14 thoát quá bán (Cắt lên 30)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-RSI_CROSS_70">
-                                <input type="checkbox" value="RSI_CROSS_70" onchange="toggleFilterCheckbox('RSI_CROSS_70')">
-                                <span>RSI14 cắt lên trên 70</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-RSI_GT_50">
-                                <input type="checkbox" value="RSI_GT_50" onchange="toggleFilterCheckbox('RSI_GT_50')">
-                                <span>RSI14 > 50</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-PRICE_ABOVE_MA20">
-                                <input type="checkbox" value="PRICE_ABOVE_MA20" onchange="toggleFilterCheckbox('PRICE_ABOVE_MA20')">
-                                <span>Giá nằm trên MA20</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-PRICE_ABOVE_MA50">
-                                <input type="checkbox" value="PRICE_ABOVE_MA50" onchange="toggleFilterCheckbox('PRICE_ABOVE_MA50')">
-                                <span>Giá nằm trên MA50</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-MA20_GT_MA50">
-                                <input type="checkbox" value="MA20_GT_MA50" onchange="toggleFilterCheckbox('MA20_GT_MA50')">
-                                <span>MA20 > MA50</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-MCDX_RED">
-                                <input type="checkbox" value="MCDX_RED" onchange="toggleFilterCheckbox('MCDX_RED')">
-                                <span>MCDX có màu đỏ (Banker > 0)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-PRICE_ABOVE_KIJUN">
-                                <input type="checkbox" value="PRICE_ABOVE_KIJUN" onchange="toggleFilterCheckbox('PRICE_ABOVE_KIJUN')">
-                                <span>Giá nằm trên Kijun</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-PRICE_ABOVE_TENKAN">
-                                <input type="checkbox" value="PRICE_ABOVE_TENKAN" onchange="toggleFilterCheckbox('PRICE_ABOVE_TENKAN')">
-                                <span>Giá nằm trên Tenkan</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-MACD_CROSS_SIGNAL">
-                                <input type="checkbox" value="MACD_CROSS_SIGNAL" onchange="toggleFilterCheckbox('MACD_CROSS_SIGNAL')">
-                                <span>MACD cắt lên đường Tín hiệu (Signal)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-VOL_AVG10_GT_100K">
-                                <input type="checkbox" value="VOL_AVG10_GT_100K" onchange="toggleFilterCheckbox('VOL_AVG10_GT_100K')">
-                                <span>KLGD trung bình 10 phiên > 100,000 CP</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-ACTION_YES_GREEN">
-                                <input type="checkbox" value="ACTION_YES_GREEN" onchange="toggleFilterCheckbox('ACTION_YES_GREEN')">
-                                <span style="color: #10b981;">🟢 Tag Xanh: YES (Có thể cân nhắc)</span>
-                            </label>
-                            <label class="filter-checkbox-row" id="row-ACTION_YES_PURPLE">
-                                <input type="checkbox" value="ACTION_YES_PURPLE" onchange="toggleFilterCheckbox('ACTION_YES_PURPLE')">
-                                <span style="color: #c084fc;">🟣 Tag Tím: YES (Rất nên tham gia)</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="filter-results-summary" id="filterResultsCount">
-                    Chọn tiêu chí ở trên, kết quả sẽ tự động cập nhật.
-                </div>
-            </section>
-
-            <!-- Grid Results -->
-            <section>
-                <div class="grid-container" id="tickersGrid">
-                    <!-- Ticker cards dynamically loaded -->
-                </div>
-                <button class="load-more-btn" id="loadMoreBtn" style="display: none;" onclick="loadMore()">Xem thêm cổ phiếu</button>
-            </section>
-        </div>
-
-        <!-- Tab 4: Đánh giá Danh mục -->
-        <div class="tab-content" id="portfolio-tab">
-            <div class="portfolio-grid">
-                <!-- Left column: Portfolio input parameters -->
-                <div class="card portfolio-inputs-card">
-                    <h3 class="card-title">💼 Nhập Thông số Danh mục</h3>
-                    
-                    <!-- Portfolio Parameters -->
-                    <div class="portfolio-params-group">
-                        <div class="port-input-field">
-                            <label for="port-nav">Tiền mặt đang có (VND)</label>
-                            <input type="text" id="port-nav" value="0" oninput="formatNumberInput(this)" placeholder="Ví dụ: 100,000,000">
-                        </div>
-                        <div class="port-input-field">
-                            <label for="port-w-target">Tỷ trọng CP tối đa (%)</label>
-                            <input type="number" id="port-w-target" value="100" min="0" max="100">
-                        </div>
-                        <div class="port-input-field">
-                            <label for="port-cutloss">Tỷ lệ cutloss mặc định (%)</label>
-                            <input type="number" id="port-cutloss" value="7" min="0" max="100">
-                        </div>
-                        <div class="port-input-field">
-                            <label for="port-n-tickers">Số mã tối ưu</label>
-                            <input type="number" id="port-n-tickers" value="3" min="1" max="10">
-                        </div>
-                    </div>
-                    
-                    <div class="divider-h" style="margin: 8px 0 0 0;"></div>
-                    
-                    <!-- Individual Stocks Input -->
-                    <h4 style="font-family: 'Outfit', sans-serif; font-size: 0.9rem; margin-top: 8px; color: var(--text-secondary);">Cổ phiếu đang nắm giữ (Tối đa 10 mã)</h4>
-                    <div class="portfolio-stocks-header">
-                        <span>Mã CP</span>
-                        <span>Số lượng</span>
-                        <span>Giá vốn TB (K/VND)</span>
-                    </div>
-                    <div class="portfolio-stocks-list" id="portfolio-stocks-list">
-                        <!-- Loaded dynamically -->
-                    </div>
-                    
-                    <div class="portfolio-actions">
-                        <button class="portfolio-submit-btn" onclick="runPortfolioEvaluation()">🚀 Khởi chạy Đánh giá</button>
-                    </div>
-                </div>
-                
-                <!-- Right column: Evaluation Results -->
-                <div class="card portfolio-results-card">
-                    <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📊 Kết Quả Đánh Giá</span>
-                        <button class="btn-sm" id="port-copy-btn" onclick="copyPortfolioReportText()" style="display:none; padding:6px 12px; font-size:0.75rem;">📋 Sao chép báo cáo</button>
-                    </div>
-                    
-                    <div id="portfolio-results-loading" style="display:none; text-align:center; padding:100px 0; color:var(--text-secondary);">
-                        <div class="loading-spinner" style="display:inline-block; width:36px; height:36px; border:3px solid rgba(255,255,255,0.06); border-radius:50%; border-top-color:var(--accent-purple); animation:spin 1s ease-in-out infinite;"></div>
-                        <div style="margin-top:16px; font-family:'Outfit'; font-size:0.95rem;">Hệ thống AI đang phân tích danh mục rủi ro...</div>
-                    </div>
-                    
-                    <div id="portfolio-results-placeholder" style="text-align:center; padding:100px 20px; color:var(--text-secondary);">
-                        <span style="font-size: 3.5rem; display:block; margin-bottom:16px;">📈</span>
-                        <div style="font-family:'Outfit'; font-size:1.1rem; font-weight:600; color:var(--text-primary); margin-bottom:8px;">Chưa có dữ liệu đánh giá</div>
-                        Vui lòng điền thông tin danh mục ở bên trái và bấm <strong>Khởi chạy Đánh giá</strong>.
-                    </div>
-                    
-                    <!-- Dashboard formatted results -->
-                    <div id="portfolio-results-container" style="display:none; flex-direction:column; gap:20px;">
-                        <!-- Summary Cards -->
-                        <div class="portfolio-summary-cards">
-                            <div class="summary-card" style="border-left: 3px solid var(--accent-purple);">
-                                <span class="summary-card-lbl">Tổng tài sản (NAV)</span>
-                                <span class="summary-card-val text-primary" id="port-val-nav">0 VND</span>
-                            </div>
-                            <div class="summary-card" style="border-left: 3px solid var(--accent-blue);">
-                                <span class="summary-card-lbl">Tiền mặt / Cổ phiếu</span>
-                                <span class="summary-card-val" id="port-val-allocation" style="color:var(--accent-blue);">0% / 0%</span>
-                            </div>
-                            <div class="summary-card" id="port-card-profit">
-                                <span class="summary-card-lbl">Lợi nhuận trạng thái</span>
-                                <span class="summary-card-val" id="port-val-profit">0 VND</span>
-                            </div>
-                            <div class="summary-card" id="port-card-risk">
-                                <span class="summary-card-lbl">Rủi ro tiềm ẩn (Hit SL)</span>
-                                <span class="summary-card-val" id="port-val-risk">0 VND (0%)</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Warnings Section -->
-                        <div class="portfolio-alerts" id="portfolio-alerts-div"></div>
-                        
-                        <!-- Stocks Analysis Table -->
-                        <div class="portfolio-table-container">
-                            <table class="portfolio-table" id="portfolio-table">
-                                <thead>
-                                    <tr>
-                                        <th>Mã CP</th>
-                                        <th>Lãi/Lỗ %</th>
-                                        <th>Trạng Thái</th>
-                                        <th>Khuyến Nghị</th>
-                                        <th>KL Hiện Tại</th>
-                                        <th>KL Khuyên</th>
-                                        <th>Giá Hành Động</th>
-                                        <th>Lý Do Kỹ Thuật</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="portfolio-table-body"></tbody>
-                            </table>
-                        </div>
-                        
-                        <!-- Plaintext area -->
-                        <div class="portfolio-plaintext-section">
-                            <h4 style="font-family: 'Outfit', sans-serif; font-size: 0.9rem; margin-bottom: 8px; color: var(--text-secondary); display:flex; align-items:center; gap:6px;">
-                                📝 <span>Báo cáo chi tiết (Dạng văn bản)</span>
-                            </h4>
-                            <pre id="portfolio-plaintext-report" class="portfolio-report-pre"></pre>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Popup Modal for Ticker Details -->
-    <div id="tickerDetailsModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeTickerDetailsModal()">&times;</span>
-            <div id="modalStockDetailsContainer"></div>
-        </div>
-    </div>
-
-    <!-- Fullscreen Chart Modal -->
-    <div id="chartFsModal" class="chart-fs-modal">
-        <div class="chart-fs-header">
-            <span class="chart-fs-title" id="chartFsTitle">📈 Biểu đồ</span>
-            <div id="chartFsControls" class="chart-fs-controls"></div>
-            <button class="chart-fs-close" onclick="closeChartFullscreen()">✕ Đóng (Esc)</button>
-        </div>
-        <div class="chart-fs-body">
-            <div id="chartFsMount"></div>
-        </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="settings-modal">
-        <div class="settings-panel" style="max-width:540px;">
-            <h2>⚙️ Quản trị Hệ thống</h2>
-            <div class="settings-field">
-                <label>🔑 Mật khẩu quản trị</label>
-                <input type="password" id="settingsPassword" placeholder="Nhập mật khẩu để mở khóa..." />
-            </div>
-            <div id="settingsContent" style="display:none;">
-                <!-- URL cURL Section -->
-                <div class="settings-section-title">🔗 Cấu hình URL Vietstock</div>
-                <div class="settings-field">
-                    <label>Dán toàn bộ cURL command</label>
-                    <textarea id="settingsUrl" placeholder="curl 'https://finance.vietstock.vn/...' -H 'Cookie: ...'"></textarea>
-                </div>
-                <div class="settings-actions">
-                    <button class="btn-primary" onclick="saveSettings()">💾 Lưu URL</button>
-                </div>
-
-                <div class="settings-divider"></div>
-                <div class="settings-actions">
-                    <button class="btn-secondary" onclick="closeSettings()">Đóng</button>
-                </div>
-            </div>
-            <div id="settingsLocked" style="text-align:center; padding:12px 0;">
-                <button class="btn-primary" onclick="unlockSettings()" style="max-width:200px;">🔓 Mở khóa</button>
-                <button class="btn-secondary" onclick="closeSettings()" style="max-width:200px; margin-top:8px;">Đóng</button>
-            </div>
-            <div class="settings-msg" id="settingsMsg"></div>
-        </div>
-    </div>
-
-    <script>
         let rawData = null;
         let searchQuery = '';
         let breadthChart = null;
@@ -2743,10 +44,6 @@
                         series.applyOptions({ visible: techChartVisibility[key] });
                     }
                 }
-                // Custom toggle for cloud areas
-                const isKumoVisible = techChartVisibility.SpanA || techChartVisibility.SpanB;
-                if (registry.KumoCloud) registry.KumoCloud.applyOptions({ visible: isKumoVisible });
-                if (registry.KumoMask) registry.KumoMask.applyOptions({ visible: isKumoVisible });
             }
         }
 
@@ -2847,52 +144,28 @@
                 // Set update time
                 document.getElementById('updateTimeText').innerText = `Cập nhật: ${rawData.last_update}`;
                 
-                // Set Vietstock / data status: show stock count instead of BYPASSED
+                // Set Vietstock cURL token status
                 const vsStatus = rawData.vietstock_status || "UNKNOWN";
-                const stockCount = rawData.stocks_updated_count ?? null;
-                
-                // 1. Update Bypass URL Status
-                const urlDot = document.getElementById('urlStatusDot');
-                const urlText = document.getElementById('urlStatusText');
-                if (urlDot && urlText) {
-                    if (vsStatus === "VALID" || vsStatus === "LIMITED_BYPASSED") {
-                        urlDot.className = "status-dot-indicator green";
-                        urlText.style.color = "var(--accent-green)";
-                        urlText.innerText = "Bypass URL: OK";
-                    } else if (vsStatus === "LIMITED") {
-                        urlDot.className = "status-dot-indicator yellow";
-                        urlText.style.color = "var(--accent-orange)";
-                        urlText.innerText = "Bypass URL: Bị giới hạn";
-                    } else {
-                        urlDot.className = "status-dot-indicator red";
-                        urlText.style.color = "var(--accent-red)";
-                        urlText.innerText = `Bypass URL: Lỗi (${vsStatus})`;
-                    }
-                    urlDot.title = `Trạng thái Vietstock: ${vsStatus}`;
-                }
-
-                // 2. Update Stock Count
                 const vsDot = document.getElementById('vietstockStatusDot');
                 const vsText = document.getElementById('vietstockStatusText');
                 if (vsDot && vsText) {
-                    if (stockCount !== null) {
-                        if (stockCount >= 1300) {
-                            vsDot.className = "status-dot-indicator green";
-                            vsText.style.color = "var(--accent-green)";
-                        } else if (stockCount > 0) {
-                            vsDot.className = "status-dot-indicator yellow";
-                            vsText.style.color = "var(--accent-orange)";
-                        } else {
-                            vsDot.className = "status-dot-indicator red";
-                            vsText.style.color = "var(--accent-red)";
-                        }
-                        vsText.innerText = `Dữ liệu: ${stockCount} mã`;
+                    if (vsStatus === "VALID" || vsStatus === "LIMITED_BYPASSED") {
+                        vsDot.className = "status-dot-indicator green";
+                        vsText.innerText = `Kết nối: ${vsStatus === "VALID" ? "OK" : "BYPASSED"}`;
+                        vsText.style.color = "var(--accent-green)";
+                    } else if (vsStatus === "LIMITED") {
+                        vsDot.className = "status-dot-indicator red";
+                        vsText.innerText = "Kết nối: Bị giới hạn";
+                        vsText.style.color = "var(--accent-red)";
+                    } else if (vsStatus === "CSV_MODE") {
+                        vsDot.className = "status-dot-indicator yellow";
+                        vsText.innerText = "Kết nối: Nạp CSV";
+                        vsText.style.color = "var(--accent-orange)";
                     } else {
                         vsDot.className = "status-dot-indicator red";
+                        vsText.innerText = `Kết nối: Lỗi (${vsStatus})`;
                         vsText.style.color = "var(--accent-red)";
-                        vsText.innerText = "Dữ liệu: Không có";
                     }
-                    vsDot.title = `Số lượng mã cập nhật: ${stockCount ?? 'Không có'}`;
                 }
                 
                 // Render Market Indices Cards (VNINDEX / HNX)
@@ -2924,24 +197,6 @@
             } catch (error) {
                 console.error("Error loading JSON:", error);
                 document.getElementById('updateTimeText').innerText = "Lỗi kết nối dữ liệu";
-                const urlDot = document.getElementById('urlStatusDot');
-                if (urlDot) {
-                    urlDot.className = "status-dot-indicator red";
-                }
-                const urlText = document.getElementById('urlStatusText');
-                if (urlText) {
-                    urlText.innerText = "Bypass URL: Lỗi";
-                    urlText.style.color = "var(--accent-red)";
-                }
-                const vsDot = document.getElementById('vietstockStatusDot');
-                if (vsDot) {
-                    vsDot.className = "status-dot-indicator red";
-                }
-                const vsText = document.getElementById('vietstockStatusText');
-                if (vsText) {
-                    vsText.innerText = "Dữ liệu: Lỗi";
-                    vsText.style.color = "var(--accent-red)";
-                }
                 document.getElementById('tickersGrid').innerHTML = `
                     <div class="empty-state">
                         <p style="color: var(--accent-red); font-weight: 600;">Không thể tải dữ liệu phân tích</p>
@@ -3064,6 +319,17 @@
             detailSection.style.display = 'block';
 
             // Populate AI Detailed Report Card
+            const aiCard = document.getElementById('marketAIReportCard');
+            const aiContent = document.getElementById('marketAIReportContent');
+            if (aiCard && aiContent) {
+                if (indexData.ReportText) {
+                    aiContent.textContent = indexData.ReportText;
+                    aiCard.style.display = 'block';
+                } else {
+                    aiCard.style.display = 'none';
+                }
+            }
+
             // Summary Header
             const headerEl = document.getElementById('vnindexSummaryHeader');
             if (headerEl) {
@@ -3117,33 +383,9 @@
 
                 function diagClass(st, act) {
                     const s = (st + ' ' + act).toLowerCase();
-                    if (s.includes('bull') || s.includes('uptrend') || s.includes('buy') || s.includes('strong') || s.includes('tích cực') || s.includes('tăng')) return 'bullish';
-                    if (s.includes('bear') || s.includes('downtrend') || s.includes('sell') || s.includes('weak') || s.includes('tiêu cực') || s.includes('giảm')) return 'bearish';
+                    if (s.includes('bull') || s.includes('uptrend') || s.includes('buy') || s.includes('strong')) return 'bullish';
+                    if (s.includes('bear') || s.includes('downtrend') || s.includes('sell') || s.includes('weak')) return 'bearish';
                     return 'neutral';
-                }
-
-                function renderDiagTable(diag) {
-                    if (!diag) return '<div class="empty-state">Không có dữ liệu chẩn đoán</div>';
-                    const diagItems = [
-                        { label: 'Hệ thống MA Lines',  status: diag.ma?.status       || 'N/A', action: diag.ma?.action       || '', cls: diagClass(diag.ma?.status, diag.ma?.action) },
-                        { label: 'Ichimoku Cloud',      status: diag.ichimoku?.status  || 'N/A', action: diag.ichimoku?.action  || '', cls: diagClass(diag.ichimoku?.status, diag.ichimoku?.action) },
-                        { label: 'Sức mạnh RSI',        status: diag.rsi?.status       || 'N/A', action: diag.rsi?.action       || '', cls: diagClass(diag.rsi?.status, diag.rsi?.action) },
-                        { label: 'Động lượng MACD',     status: diag.macd?.status      || 'N/A', action: diag.macd?.action      || '', cls: diagClass(diag.macd?.status, diag.macd?.action) },
-                        { label: 'Sức mạnh ADX',        status: diag.adx?.status       || 'N/A', action: diag.adx?.action       || '', cls: diagClass(diag.adx?.status, diag.adx?.action) },
-                    ];
-
-                    let html = '<table class="diag-table" style="width:100%; border-collapse: collapse; font-size: 0.9rem;">';
-                    html += '<thead><tr style="border-bottom: 1px solid var(--border-color); text-align: left; color: var(--text-secondary);">';
-                    html += '<th style="padding: 8px 12px;">Chỉ báo</th><th style="padding: 8px 12px;">Trạng thái</th><th style="padding: 8px 12px;">Khuyến nghị</th></tr></thead>';
-                    html += '<tbody>';
-                    diagItems.forEach(function(d) {
-                        html += '<tr class="' + d.cls + '" style="border-bottom: 1px solid rgba(255,255,255,0.03);">';
-                        html += '<td style="padding: 8px 12px; color: var(--text-secondary);">' + d.label + '</td>';
-                        html += '<td style="padding: 8px 12px; font-weight: 600;">' + d.status + '</td>';
-                        html += '<td style="padding: 8px 12px; font-weight: 600;">' + d.action + '</td></tr>';
-                    });
-                    html += '</tbody></table>';
-                    return html;
                 }
 
                 let regimeClass = indexData.regime.includes('UPTREND') ? 'bullish' : indexData.regime.includes('DOWNTREND') ? 'bearish' : 'neutral';
@@ -3180,8 +422,7 @@
                         <h4>🔍 Chẩn Đoán Kỹ Thuật</h4>
                         <div class="diag-row"><span>Hệ thống MA</span><strong class="${diagClass(diag.ma?.status, diag.ma?.action)}">${diag.ma?.status || 'N/A'}</strong></div>
                         <div class="diag-row"><span>Ichimoku Cloud</span><strong class="${diagClass(diag.ichimoku?.status, diag.ichimoku?.action)}">${diag.ichimoku?.status || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>RSI / MACD</span><strong class="${diagClass(diag.rsi?.status, '')}">RSI: ${diag.rsi?.status || 'N/A'}</strong> / <strong class="${diagClass(diag.macd?.status, '')}">MACD: ${diag.macd?.status || 'N/A'}</strong></div>
-                        <div class="diag-row"><span>Xu hướng ADX</span><strong class="${diagClass(diag.adx?.status, '')}">${diag.adx?.status || 'N/A'}</strong></div>
+                        <div class="diag-row"><span>RSI / MACD</span><strong class="${diagClass(diag.rsi?.status, diag.rsi?.action)}">${diag.rsi?.status || 'N/A'}</strong> / <strong class="${diagClass(diag.macd?.status, diag.macd?.action)}">${diag.macd?.status || 'N/A'}</strong></div>
                         <div class="diag-row"><span>Hỗ trợ S1 / S2</span><strong class="text-green">${formatPrice(sr.s1, true)} / ${formatPrice(sr.s2, true)}</strong></div>
                         <div class="diag-row"><span>Kháng cự R1 / R2</span><strong class="text-red">${formatPrice(sr.r1, true)} / ${formatPrice(sr.r2, true)}</strong></div>
                         <div class="diag-row"><span>Bản đồ nhiệt (Heatmap)</span><strong>${indexData.heatmap_eval || 'N/A'}</strong></div>
@@ -3200,86 +441,8 @@
                         </div>
                     </div>
                 `;
-                
-                // Thêm hàng ngang chẩn đoán kỹ thuật (full-width dưới 4 card)
-                const diagRowEl = document.createElement('div');
-                diagRowEl.style.cssText = 'grid-column: 1 / -1; margin-top: 12px;';
-                
-                const diagItems = [
-                    { label: 'Hệ thống MA Lines',  status: diag.ma?.status       || 'N/A', action: diag.ma?.action       || '', cls: diagClass(diag.ma?.status, diag.ma?.action) },
-                    { label: 'Ichimoku Cloud',      status: diag.ichimoku?.status  || 'N/A', action: diag.ichimoku?.action  || '', cls: diagClass(diag.ichimoku?.status, diag.ichimoku?.action) },
-                    { label: 'Sức mạnh RSI',        status: diag.rsi?.status       || 'N/A', action: diag.rsi?.action       || '', cls: diagClass(diag.rsi?.status, diag.rsi?.action) },
-                    { label: 'Động lượng MACD',     status: diag.macd?.status      || 'N/A', action: diag.macd?.action      || '', cls: diagClass(diag.macd?.status, diag.macd?.action) },
-                    { label: 'Sức mạnh ADX',        status: diag.adx?.status       || 'N/A', action: diag.adx?.action       || '', cls: diagClass(diag.adx?.status, diag.adx?.action) },
-                ];
-                let rawBanker = mcdx.banker_pct !== undefined ? parseFloat(mcdx.banker_pct) : 0;
-                let rawHot = mcdx.hot_pct !== undefined ? parseFloat(mcdx.hot_pct) : 0;
-                let bWidth = Math.min(100, (rawBanker / 20.0) * 100);
-                let hWidth = Math.min(100 - bWidth, (rawHot / 20.0) * 100);
-                let rWidth = Math.max(0, 100 - bWidth - hWidth);
-                const bPct = bWidth.toFixed(1); const hPct = hWidth.toFixed(1); const rPct = rWidth.toFixed(1);
-
-                let dHtml = '';
-
-                // Block 1: Bảng chẩn đoán kỹ thuật CHI TIẾT
-                dHtml += '<div class="card block-card" style="margin-bottom:16px;">';
-                dHtml += '<h3 class="card-title">\uD83D\uDD0D Ch\u1EA9n \u0111o\u00E1n K\u1EF9 thu\u1EADt (M15-Day)</h3>';
-                dHtml += renderDiagTable(diag);
-                dHtml += '</div>';
-
-                // Block 2: MCDX & Mini Chart (Dòng tiền MCDX & Đồ thị Lịch sử)
-                dHtml += '<div class="card block-card" style="margin-bottom:16px;">';
-                dHtml += '<h3 class="card-title">\uD83D\uDCCA D\u00F2ng ti\u1EC1n MCDX &amp; \u0110\u1ED3 th\u1ECB L\u1ECBch s\u1EED</h3>';
-                dHtml += '<div class="divider-h" style="margin: 12px 0;"></div>';
-                dHtml += '<div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; font-weight: 500;">';
-                dHtml += '<span class="text-red">T\u1EA1o l\u1EADp (Bankers): ' + bPct + '%</span>';
-                dHtml += '<span style="color:var(--text-primary);">D\u00F2ng ti\u1EC1n n\u00F3ng: ' + hPct + '%</span>';
-                dHtml += '<span class="text-green">Nh\u1ECF l\u1EBB: ' + rPct + '%</span>';
-                dHtml += '</div>';
-                dHtml += '<div class="mcdx-bar-container">';
-                dHtml += '<div class="mcdx-segment banker" style="width: ' + bWidth + '%"></div>';
-                dHtml += '<div class="mcdx-segment hot" style="width: ' + hWidth + '%"></div>';
-                dHtml += '<div class="mcdx-segment retailer" style="width: ' + rWidth + '%"></div>';
-                dHtml += '</div>';
-                dHtml += '<div class="mcdx-eval-text" style="margin-top:12px;">';
-                dHtml += '<div><strong>Tr\u1EA1ng th\u00E1i d\u00F2ng ti\u1EC1n:</strong> ' + (mcdx.status || 'N/A') + '</div>';
-                dHtml += '<div><strong>Khuy\u1EBFn ngh\u1ECB MCDX:</strong> ' + (mcdx.action || 'N/A') + '</div>';
-                if (mcdx.details) dHtml += '<div class="text-secondary" style="font-size: 0.75rem; margin-top: 4px;">' + mcdx.details + '</div>';
-                dHtml += '</div>';
-                
-                dHtml += '<div class="divider-h" style="margin: 16px 0;"></div>';
-                dHtml += '<h4 style="margin: 0 0 12px 0; font-size: 1rem;">\u0110\u1ED3 th\u1ECB Xu h\u01B0\u1EDBng Gi\u00E1 &amp; Kh\u1ED1i l\u01B0\u1EE3ng (30 ng\u00E0y g\u1EA7n nh\u1EA5t)</h4>';
-                dHtml += '<div id="vnindex_mini_chart" style="height: 250px; background: rgba(0,0,0,0.1); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); padding: 10px; position: relative;">';
-                dHtml += '<canvas id="vnindex_mini_chart_canvas" style="width: 100%; height: 100%;"></canvas>';
-                dHtml += '</div>';
-                dHtml += '</div>';
-
-                // Block 3: Báo cáo Phân tích Chi tiết từ AI
-                if (indexData.ReportText) {
-                    dHtml += '<div class="card block-card" style="margin-bottom:16px;">';
-                    dHtml += '<h3 class="card-title">\uD83D\uDCDD B\u00E1o c\u00E1o Ph\u00E2n t\u00EDch Chi ti\u1EBFt t\u1EEB AI</h3>';
-                    dHtml += '<div class="divider-h" style="margin: 12px 0;"></div>';
-                    dHtml += '<pre style="padding: 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.22); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6; color: var(--text-primary); border: 1px solid var(--border-color); max-height: 500px; overflow-y: auto;">' + indexData.ReportText + '</pre>';
-                    dHtml += '</div>';
-                }
-
-                diagRowEl.innerHTML = dHtml;
-                gridEl.appendChild(diagRowEl);
-                
-                // Mount Mini Chart
-                setTimeout(() => {
-                    fetchHistory(indexName).then(hist => {
-                        if (hist) {
-                            const t = { Ticker: indexName, History: hist };
-                            renderMiniTrendChart(t, 'vnindex_mini_chart_canvas');
-                        }
-                    }).catch(err => {
-                        console.error("Failed to load history for index: ", err);
-                    });
-                }, 100);
             }
         }
-
 
 
         let breadthChartLwc = null;
@@ -3399,12 +562,7 @@
                     wickUpColor: '#00ff6a',
                     wickDownColor: '#ff3b3b',
                     title: '',
-                    visible: breadthVNINDEXVisible,
-                    priceFormat: {
-                        type: 'price',
-                        precision: 0,
-                        minMove: 1,
-                    },
+                    visible: breadthVNINDEXVisible
                 });
                 vnSeries.setData(ohlcv(vnHistory));
             } else if (data.VNINDEX_Closes && data.VNINDEX_Closes.length > 0) {
@@ -3414,12 +572,7 @@
                     color: '#ef4444',
                     lineWidth: 2.5,
                     title: '',
-                    visible: breadthVNINDEXVisible,
-                    priceFormat: {
-                        type: 'price',
-                        precision: 0,
-                        minMove: 1,
-                    },
+                    visible: breadthVNINDEXVisible
                 });
                 const vnData = [];
                 for (let i = 0; i < data.dates.length; i++) {
@@ -3939,7 +1092,7 @@
                             <div class="chart-cell-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <span class="chart-cell-label">📊 Kỹ thuật</span>
-                                    ${getTechTogglesHtml()}
+                                    \${getTechTogglesHtml()}
                                 </div>
                                 <button class="chart-expand-btn" onclick="expandChart('${containerId}','techreport')">⛶ Mở rộng</button>
                             </div>
@@ -4110,26 +1263,6 @@
             applyCustomFilters();
         }
 
-        function removeVietnameseTones(str) {
-            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a");
-            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e");
-            str = str.replace(/ì|í|ị|ỉ|ĩ/g,"i");
-            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o");
-            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u");
-            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y");
-            str = str.replace(/đ/g,"d");
-            str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
-            str = str.replace(/È|É|Ẹ|Ẻ|E|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
-            str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
-            str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
-            str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
-            str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
-            str = str.replace(/Đ/g, "D");
-            str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, "");
-            str = str.replace(/\u02C6|\u0306|\u031B/g, "");
-            return str;
-        }
-
         // Apply custom filters logically using AND matching
         function applyCustomFilters() {
             let list = [...rawData.tickers_analysis];
@@ -4139,18 +1272,18 @@
                 list = list.filter(t => {
                     for (const filterKey of activeCustomFilters) {
                         if (filterKey === 'VOL_AVG10_GT_100K') {
-                            const val = t.AvgVolume10 !== undefined ? t.AvgVolume10 : (t.Volume || 0);
+                            const val = t.AvgVolume10 !== undefined ? t.AvgVolume10 : 0;
                             if (val <= 100000) {
                                 return false;
                             }
                         } else if (filterKey === 'ACTION_YES_GREEN') {
-                            const a = removeVietnameseTones(t.Action || '').toUpperCase();
-                            if (!a.includes('CAN NHAC')) {
+                            const a = (t.Action || '').toUpperCase();
+                            if (!a.includes('CÂN NHẮC') && !a.includes('CAN NHAC')) {
                                 return false;
                             }
                         } else if (filterKey === 'ACTION_YES_PURPLE') {
-                            const a = removeVietnameseTones(t.Action || '').toUpperCase();
-                            if (!a.includes('RAT NEN') && !a.includes('UU TIEN')) {
+                            const a = (t.Action || '').toUpperCase();
+                            if (!a.includes('RẤT NÊN') && !a.includes('ƯU TIÊN') && !a.includes('RAT NEN') && !a.includes('UU TIEN')) {
                                 return false;
                             }
                         } else {
@@ -4285,17 +1418,14 @@
         const ADMIN_PASS = '2307';
         let settingsUnlocked = false;
 
-        const settingsBtn = document.getElementById('settingsBtn');
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', () => {
-                document.getElementById('settingsModal').classList.add('active');
-                document.getElementById('settingsPassword').value = '';
-                document.getElementById('settingsMsg').textContent = '';
-                settingsUnlocked = false;
-                document.getElementById('settingsContent').style.display = 'none';
-                document.getElementById('settingsLocked').style.display = 'block';
-            });
-        }
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            document.getElementById('settingsModal').classList.add('active');
+            document.getElementById('settingsPassword').value = '';
+            document.getElementById('settingsMsg').textContent = '';
+            settingsUnlocked = false;
+            document.getElementById('settingsContent').style.display = 'none';
+            document.getElementById('settingsLocked').style.display = 'block';
+        });
 
         function closeSettings() {
             document.getElementById('settingsModal').classList.remove('active');
@@ -4331,12 +1461,10 @@
         });
 
         // Load saved URL on settings open
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', () => {
-                const saved = localStorage.getItem('aic_vietstock_curl');
-                if (saved) document.getElementById('settingsUrl').value = saved;
-            });
-        }
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            const saved = localStorage.getItem('aic_vietstock_curl');
+            if (saved) document.getElementById('settingsUrl').value = saved;
+        });
 
 
         // ============================================================
@@ -4368,35 +1496,18 @@
             timeScale: { borderColor: 'rgba(255,255,255,0.08)',
                          timeVisible: true, secondsVisible: false,
                          fixLeftEdge: false, fixRightEdge: false,
-                         rightOffset: 30,
-                         minBarSpacing: 1 },
-            rightPriceScale: { 
-                borderColor: 'rgba(255,255,255,0.08)',
-                autoScale: true,
-                scaleMargins: {
-                    top: 0.12,
-                    bottom: 0.08
-                }
-            },
-            // Cho phép co kéo bằng pinch-zoom và giữ kéo trục giá/trục thời gian
-            handleScale: { 
-                mouseWheel: true, 
-                pinch: true, 
-                axisPressedMouseMove: { time: true, price: true } 
-            },
-            handleScroll: { 
-                mouseWheel: true, 
-                pressedMouseMove: true, 
-                horzTouchDrag: true, 
-                vertTouchDrag: true 
-            }
+                         minBarSpacing: 5 },
+            rightPriceScale: { borderColor: 'rgba(255,255,255,0.08)' },
+            // Mouse wheel = zoom in/out at current position (not pan to past)
+            handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: false, price: true } },
+            handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false }
         };
 
         // ── Utility: date string → Unix seconds ──
         function d2ts(s) { return Math.floor(new Date(s + 'T00:00:00Z').getTime() / 1000); }
 
         // Helper to set chart range default to 90 days from the latest date
-        function applyDefaultChartRange(chartObj, dates, days = 30) {
+        function applyDefaultChartRange(chartObj, dates, days = 90) {
             if (!dates || dates.length === 0) return;
             if (days >= dates.length) {
                 chartObj.timeScale().fitContent();
@@ -4480,21 +1591,11 @@
             if (el) el.innerHTML = '';
         }
 
+        // ── Create a LWC chart inside a cell-body div ──
         function mkChart(hostEl, h, dates = null, extraOpts = {}) {
             hostEl.style.height = h + 'px';
-            
-            const formatOpts = window.isCurrentIndex ? {
-                localization: {
-                    priceFormatter: p => Math.round(p).toString()
-                }
-            } : {};
-            
             const chart = LightweightCharts.createChart(hostEl, {
-                ...LWC_THEME, 
-                width: hostEl.clientWidth || 100, 
-                height: h, 
-                ...formatOpts,
-                ...extraOpts
+                ...LWC_THEME, width: hostEl.clientWidth || 100, height: h, ...extraOpts
             });
             let rangeSet = false;
             const ro = new ResizeObserver(() => {
@@ -4539,77 +1640,10 @@
         // ================================================================
         //  renderGPChart  — in a cell body div (mountId), returns primary chart
         // ================================================================
-        function getHistoricalDataOnly(data) {
-            let histLen = data.dates.length;
-            for (let i = data.dates.length - 1; i >= 0; i--) {
-                if (data.closes[i] !== null && data.closes[i] !== undefined) {
-                    histLen = i + 1;
-                    break;
-                }
-            }
-            const histData = {};
-            for (const key in data) {
-                if (Array.isArray(data[key])) {
-                    histData[key] = data[key].slice(0, histLen);
-                } else {
-                    histData[key] = data[key];
-                }
-            }
-            return histData;
-        }
-
-        function addColoredLineSegments(chart, dates, values, colors, scaleFactor = 1, lineWidth = 2) {
-            let currentSegment = [];
-            let currentColor = null;
-            
-            for (let i = 0; i < dates.length; i++) {
-                const v = values[i];
-                if (v === null || v === undefined) {
-                    if (currentSegment.length > 0) {
-                        chart.addLineSeries({ color: currentColor, lineWidth: lineWidth, priceLineVisible: false, lastValueVisible: false, title: '' })
-                             .setData(currentSegment);
-                        currentSegment = [];
-                    }
-                    currentColor = null;
-                    continue;
-                }
-                
-                const col = colors ? colors[i] : '#808080';
-                const t = d2ts(dates[i]);
-                const val = v * scaleFactor;
-                
-                if (currentColor === null) {
-                    currentColor = col;
-                    currentSegment.push({ time: t, value: val });
-                } else if (col !== currentColor) {
-                    // End previous segment, overlap by 1 point to make the line continuous
-                    currentSegment.push({ time: t, value: val });
-                    chart.addLineSeries({ color: currentColor, lineWidth: lineWidth, priceLineVisible: false, lastValueVisible: false, title: '' })
-                         .setData(currentSegment);
-                    
-                    currentColor = col;
-                    currentSegment = [{ time: t, value: val }];
-                } else {
-                    currentSegment.push({ time: t, value: val });
-                }
-            }
-            
-            if (currentSegment.length > 0) {
-                chart.addLineSeries({ color: currentColor, lineWidth: lineWidth, priceLineVisible: false, lastValueVisible: false, title: '' })
-                     .setData(currentSegment);
-            }
-        }
-
-        // ================================================================
-        //  renderGPChart  — in a cell body div (mountId), returns primary chart
-        // ================================================================
-        function renderGPChart(mountId, rawDataInput, instances) {
+        function renderGPChart(mountId, data, instances) {
             const root = document.getElementById(mountId);
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
-
-            // Filter out projected future dates
-            const data = getHistoricalDataOnly(rawDataInput);
 
             const h1 = 360, h2 = 120, h3 = 120;
 
@@ -4622,18 +1656,21 @@
             const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c1, ro: ro1});
 
-            // GP Cloud: colored fill between GP_E14 and GP_E21 with #000000 layout background mask
-            if (data.GP_E14 && data.GP_E21) {
+            // BB bands (behind everything)
+            if (data.GP_BB_Top) c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Top'));
+            if (data.GP_BB_Bot) c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Bot'));
+
+            // GP Cloud: colored fill between xFast (green) and xSlow (red)
+            if (data.GP_xFast && data.GP_xSlow) {
                 const sc = priceScale(data);
                 const gpBullish = [], gpBearish = [], gpMask = [];
                 for (let i = 0; i < data.dates.length; i++) {
-                    const e14 = data.GP_E14[i], e21 = data.GP_E21[i], close = data.closes[i];
-                    if (e14 === null || e21 === null || e14 === undefined || e21 === undefined) continue;
+                    const f = data.GP_xFast[i], s = data.GP_xSlow[i];
+                    if (f === null || s === null || f === undefined || s === undefined) continue;
                     const t = d2ts(data.dates[i]);
-                    const top = Math.max(e14, e21) * sc;
-                    const bot = Math.min(e14, e21) * sc;
-                    const isBull = close > e14 && close > e21;
-                    if (isBull) {
+                    const top = Math.max(f, s) * sc;
+                    const bot = Math.min(f, s) * sc;
+                    if (f >= s) {
                         gpBullish.push({time: t, value: top});
                         gpBearish.push({time: t, value: null});
                     } else {
@@ -4643,31 +1680,24 @@
                     gpMask.push({time: t, value: bot});
                 }
                 c1.addAreaSeries({
-                    topColor: 'rgba(39, 194, 46, 0.6)', bottomColor: 'rgba(39, 194, 46, 0.15)',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
+                    topColor: 'rgba(0, 255, 0, 0.35)', bottomColor: 'rgba(0, 255, 0, 0.05)',
+                    lineColor: '#00ff00', lineWidth: 2,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(gpBullish);
                 c1.addAreaSeries({
-                    topColor: 'rgba(255, 0, 128, 0.6)', bottomColor: 'rgba(255, 0, 128, 0.15)',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
+                    topColor: 'rgba(255, 105, 180, 0.35)', bottomColor: 'rgba(255, 105, 180, 0.05)',
+                    lineColor: '#ff69b4', lineWidth: 2,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(gpBearish);
                 c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
+                    priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(gpMask);
+            } else {
+                if (data.GP_xFast) c1.addLineSeries({color:'#00ff00',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));
+                if (data.GP_xSlow) c1.addLineSeries({color:'#ff69b4',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));
             }
-            
-            if (data.GP_xFast) c1.addLineSeries({color:'#00ff00',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));
-            if (data.GP_xSlow) c1.addLineSeries({color:'#ff0000',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));
-
-            // Bollinger Bands
-            if (data.GP_BB_Top) c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Top'));
-            if (data.GP_BB_Bot) c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Bot'));
 
             // Candles on top
             c1.addCandlestickSeries({
@@ -4677,31 +1707,21 @@
                 priceLineVisible: false, lastValueVisible: false
             }).setData(ohlcv(data));
 
-            // Pane 2: Octopus (A1 and B1 dynamically colored line segments + BB cloud)
+            // Pane 2: Octopus (A1 histogram colored + B1 dashed)
             const {chart: c2, ro: ro2} = mkChart(d2, h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c2, ro: ro2});
-            
-            // Draw BB cloud for Octopus
-            if (data.OCT_BB_Top && data.OCT_BB_Bot) {
-                const octBBTopData = lineData(data, 'OCT_BB_Top', 1);
-                const octBBBotData = lineData(data, 'OCT_BB_Bot', 1);
-                c2.addAreaSeries({
-                    topColor: 'rgba(173, 216, 230, 0.4)', bottomColor: 'rgba(173, 216, 230, 0.1)',
-                    lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(octBBTopData);
-                c2.addAreaSeries({
-                    topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(octBBBotData);
+            if (data.OCT_A1) {
+                const octData = data.dates.map((dt, i) => {
+                    const v = data.OCT_A1[i];
+                    if (v === null || v === undefined) return null;
+                    const col = data.OCT_Color ? data.OCT_Color[i] : '#808080';
+                    return { time: d2ts(dt), value: v, color: col };
+                }).filter(Boolean);
+                c2.addHistogramSeries({
+                    priceLineVisible: false, lastValueVisible: true, title: ''
+                }).setData(octData);
             }
-            
-            if (data.OCT_A1) addColoredLineSegments(c2, data.dates, data.OCT_A1, data.OCT_Color, 1);
-            if (data.OCT_B1) addColoredLineSegments(c2, data.dates, data.OCT_B1, data.OCT_Color, 1);
-
+            if (data.OCT_B1) c2.addLineSeries({color:'#a78bfa',lineWidth:1.5,lineStyle:2,priceLineVisible:false,lastValueVisible:true,title: ''}).setData(lineData(data,'OCT_B1',1));
             // zero baseline
             if (data.dates.length > 0) {
                 c2.addLineSeries({color:'rgba(255,255,255,0.12)',lineWidth:1,priceLineVisible:false,lastValueVisible:false})
@@ -4712,7 +1732,7 @@
             const {chart: c3, ro: ro3} = mkChart(d3, h3, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c3, ro: ro3});
             if (data.RS13) c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
-            if (data.RS52) c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title: '',priceLineVisible:true,lastValueVisible:true}).setData(lineData(data,'RS52',1));
+            if (data.RS52) c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS52',1));
             // 50 reference
             if (data.dates.length > 0) {
                 c3.addLineSeries({color:'rgba(239,68,68,0.4)',lineWidth:1,lineStyle:1,priceLineVisible:false,lastValueVisible:false})
@@ -4727,12 +1747,10 @@
         // ================================================================
         //  renderHeikinChart  — Heikin-Ashi + 2Trend
         // ================================================================
-        function renderHeikinChart(mountId, rawDataInput, instances) {
+        function renderHeikinChart(mountId, data, instances) {
             const root = document.getElementById(mountId);
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
-
-            const data = getHistoricalDataOnly(rawDataInput);
 
             const h1 = 320, h2 = 280;
             const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
@@ -4743,7 +1761,7 @@
             const {chart: c1, ro: ro1} = mkChart(d1, h1, data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart:c1,ro:ro1});
 
-            // TC Cloud: fill between TC_Trend and TC_StopLine (separate bullish/bearish clouds)
+            // TC Cloud: fill between TC_Trend and TC_StopLine (like TrendColor PineScript cloud)
             if (data.TC_Trend && data.TC_StopLine) {
                 const sc = priceScale(data);
                 const tcCloudBull = [], tcCloudBear = [], tcMask = [];
@@ -4751,38 +1769,33 @@
                     const tr = data.TC_Trend[i], sl = data.TC_StopLine[i];
                     if (tr === null || sl === null || tr === undefined || sl === undefined) continue;
                     const t = d2ts(data.dates[i]);
+                    // T=1 means bullish (stopline below trend), T=-1 means bearish
                     const tcT = data.TC_T ? data.TC_T[i] : (tr > sl ? 1 : -1);
                     const top = Math.max(tr, sl) * sc;
                     const bot = Math.min(tr, sl) * sc;
                     if (tcT >= 0) {
                         tcCloudBull.push({time: t, value: top});
-                        tcCloudBear.push({time: t, value: bot});
+                        tcCloudBear.push({time: t, value: null});
                     } else {
-                        tcCloudBull.push({time: t, value: bot});
+                        tcCloudBull.push({time: t, value: null});
                         tcCloudBear.push({time: t, value: top});
                     }
                     tcMask.push({time: t, value: bot});
                 }
-                
                 c1.addAreaSeries({
-                    topColor: 'rgba(39, 194, 46, 0.6)', bottomColor: 'rgba(39, 194, 46, 0.15)',
-                    lineColor: 'rgba(39, 194, 46, 0.65)', lineWidth: 1.5,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
+                    topColor: 'rgba(39,194,46,0.22)', bottomColor: 'rgba(39,194,46,0.01)',
+                    lineColor: 'rgba(39,194,46,0.6)', lineWidth: 1.5,
+                    priceLineVisible: false, title: ''
                 }).setData(tcCloudBull);
-                
                 c1.addAreaSeries({
-                    topColor: 'rgba(255, 59, 59, 0.6)', bottomColor: 'rgba(255, 59, 59, 0.15)',
-                    lineColor: 'rgba(255, 59, 59, 0.65)', lineWidth: 1.5,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
+                    topColor: 'rgba(255,0,0,0.18)', bottomColor: 'rgba(255,0,0,0.01)',
+                    lineColor: 'rgba(255,0,0,0.5)', lineWidth: 1.5,
+                    priceLineVisible: false, title: ''
                 }).setData(tcCloudBear);
-                
                 c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
+                    priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(tcMask);
             } else if (data.TC_Trend) {
                 c1.addLineSeries({color:'#f59e0b',lineWidth:2,title: ''}).setData(lineData(data,'TC_Trend'));
@@ -4811,10 +1824,8 @@
                 // Buy/sell markers on HK
                 const markers = [];
                 for (let i = 0; i < data.dates.length; i++) {
-                    const isBuy = (data.HK_BuySignal && (data.HK_BuySignal[i] === 1 || data.HK_BuySignal[i] === true)) ||
-                                  (data.HK_BuyManh && (data.HK_BuyManh[i] === 1 || data.HK_BuyManh[i] === true));
-                    const isSell = (data.HK_SellSignal && (data.HK_SellSignal[i] === 1 || data.HK_SellSignal[i] === true)) ||
-                                   (data.HK_SellManh && (data.HK_SellManh[i] === 1 || data.HK_SellManh[i] === true));
+                    const isBuy = (data.HK_BuySignal && data.HK_BuySignal[i]) || (data.HK_BuyManh && data.HK_BuyManh[i]);
+                    const isSell = (data.HK_SellSignal && data.HK_SellSignal[i]) || (data.HK_SellManh && data.HK_SellManh[i]);
                     if (isBuy) {
                         markers.push({time:d2ts(data.dates[i]),position:'belowBar',color:'#00ff6a',shape:'arrowUp',text:'B'});
                     }
@@ -4884,12 +1895,10 @@
         // ================================================================
         //  renderHeatmapChart  — Bản đồ nhiệt
         // ================================================================
-        function renderHeatmapChart(mountId, rawDataInput, instances) {
+        function renderHeatmapChart(mountId, data, instances) {
             const root = document.getElementById(mountId);
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
-
-            const data = getHistoricalDataOnly(rawDataInput);
 
             const h1 = 400, h2 = 200;
             const d1 = document.createElement('div'); d1.style.cssText = `flex:none;height:${h1}px;`;
@@ -4917,6 +1926,7 @@
                     wickUpColor:'#ffffff',wickDownColor:'#ff3b3b'
                 });
                 const fArr = [];
+                const fSc = priceScale(data);
                 for (let i = 0; i < data.dates.length; i++) {
                     const fo=data.HM_Flower_Open[i],fc=data.HM_Flower_Close[i],
                           fh=data.HM_Flower_High[i],fl=data.HM_Flower_Low[i];
@@ -4925,7 +1935,7 @@
                     const up = fc>=fo;
                     const clr = (up&&mf===1)?'#ffffff':(!up&&mf===-1)?'#ff3b3b':'#fbbf24';
                     fArr.push({time:d2ts(data.dates[i]),
-                        open:fo,high:fh,low:fl,close:fc,
+                        open:fo*fSc,high:fh*fSc,low:fl*fSc,close:fc*fSc,
                         color:clr,borderColor:clr,wickColor:clr});
                 }
                 fcs.setData(fArr);
@@ -4937,17 +1947,8 @@
             c2.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
-                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
-                priceLineVisible: false
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
             }).setData(ohlcv(data));
-
-            // Overlay L&L Trend System (TrendColor)
-            if (data.TC_Trend) {
-                addColoredLineSegments(c2, data.dates, data.TC_Trend, data.TC_TrendColor || [], 1, 2);
-            }
-            if (data.TC_StopLine) {
-                addColoredLineSegments(c2, data.dates, data.TC_StopLine, data.TC_StopColor || [], 1, 2);
-            }
 
             syncCharts([c1,c2]);
             applyDefaultChartRange(c1, data.dates, 90);
@@ -4957,11 +1958,10 @@
         // ================================================================
         //  renderTechReportChart  — Candlestick+Ichimoku+MCDX+ADX+MACD
         // ================================================================
-        function renderTechReportChart(mountId, rawDataInput, instances) {
+        function renderTechReportChart(mountId, data, instances) {
             const root = document.getElementById(mountId);
             if (!root) return null;
             root.innerHTML = ''; root.style.display = 'flex'; root.style.flexDirection = 'column';
-            const data = getHistoricalDataOnly(rawDataInput); // strip projected SpanA/SpanB future dates
 
             const h1 = 300, h2 = 100, h3 = 100, h4 = 100;
             const mk = (h, border=true) => {
@@ -4978,7 +1978,8 @@
             // Initialize registry for this mount to manage line visibility toggles
             techReportSeriesRegistry[mountId] = {};
 
-            // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB
+            // Ichimoku Kumo Cloud: colored fill between SpanA and SpanB (green when SpanA>SpanB, red otherwise)
+            // Uses two area series (green cloud top, red cloud top) rendering cloud background
             if (data.SpanA && data.SpanB) {
                 const sc = priceScale(data);
                 const bullishCloud = [], bearishCloud = [], maskCloud = [];
@@ -4989,39 +1990,32 @@
                     const top = Math.max(a, b) * sc;
                     const bot = Math.min(a, b) * sc;
                     if (a >= b) {
-                        // Bullish: SpanA >= SpanB → green cloud fills top→bot
                         bullishCloud.push({time: t, value: top});
-                        bearishCloud.push({time: t, value: bot});
+                        bearishCloud.push({time: t, value: null});
                     } else {
-                        // Bearish: SpanB > SpanA → red cloud fills top→bot
-                        bullishCloud.push({time: t, value: bot});
+                        bullishCloud.push({time: t, value: null});
                         bearishCloud.push({time: t, value: top});
                     }
                     maskCloud.push({time: t, value: bot});
                 }
                 const sKumoGreen = c1.addAreaSeries({
-                    topColor: 'rgba(39, 194, 46, 0.6)', bottomColor: 'rgba(39, 194, 46, 0.15)',
-                    lineColor: 'rgba(39, 194, 46, 0.65)', lineWidth: 1.5,
-                    title: '', visible: techChartVisibility.SpanA, priceLineVisible: false, lastValueVisible: false,
-                    autoscaleInfoProvider: () => null
+                    topColor: 'rgba(0,255,106,0.22)', bottomColor: 'rgba(0,255,106,0.01)',
+                    lineColor: 'rgba(0,255,106,0.65)', lineWidth: 1.5,
+                    title: '', visible: techChartVisibility.SpanA, priceLineVisible: false
                 });
                 sKumoGreen.setData(bullishCloud);
                 techReportSeriesRegistry[mountId].SpanA = sKumoGreen;
-                
                 const sKumoRed = c1.addAreaSeries({
-                    topColor: 'rgba(255, 59, 59, 0.6)', bottomColor: 'rgba(255, 59, 59, 0.15)',
-                    lineColor: 'rgba(255, 59, 59, 0.65)', lineWidth: 1.5,
-                    title: '', visible: techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false,
-                    autoscaleInfoProvider: () => null
+                    topColor: 'rgba(255,59,59,0.22)', bottomColor: 'rgba(255,59,59,0.01)',
+                    lineColor: 'rgba(255,59,59,0.65)', lineWidth: 1.5,
+                    title: '', visible: techChartVisibility.SpanB, priceLineVisible: false
                 });
                 sKumoRed.setData(bearishCloud);
                 techReportSeriesRegistry[mountId].SpanB = sKumoRed;
-                
                 const sKumoMask = c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
-                    title: '', visible: true, priceLineVisible: false, lastValueVisible: false,
-                    autoscaleInfoProvider: () => null
+                    title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
                 });
                 sKumoMask.setData(maskCloud);
             } else {
@@ -5073,54 +2067,46 @@
             c1.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
-                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
-                priceLineVisible: false
+                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
             }).setData(ohlcv(data));
 
-            // Pane 2: MCDX Stacked Histogram
+            // Pane 2: MCDX Stacked Area Chart (Layered Retailer, Hot Money, Banker)
             const {chart: c2, ro: ro2} = mkChart(d2, h2);
             instances.push({chart:c2,ro:ro2});
-
-            // Stacked Histogram calculation logic (tallest drawn first):
-            // 1. Retailer (Green): value = banker + hot + 20
-            // 2. Hot Money (Yellow): value = banker + hot
-            // 3. Banker (Red): value = banker
             
-            // Retailer (Green)
-            const greenData = data.dates.map((dt, i) => {
-                return { time: d2ts(dt), value: 20.0 }; // Fixed base height
-            });
-            c2.addHistogramSeries({
-                color: '#34d399',
+            // Retailer (Green) constant 20
+            const greenData = data.dates.map(dt => ({ time: d2ts(dt), value: 20.0 }));
+            c2.addAreaSeries({
+                topColor: 'rgba(52, 211, 153, 0.4)',
+                bottomColor: 'rgba(52, 211, 153, 0.05)',
+                lineColor: '#34d399',
+                lineWidth: 1,
                 priceLineVisible: false,
                 title: ''
             }).setData(greenData);
 
             // Hot Money (Yellow)
-            if (data.MCDX_HotMoney && data.MCDX_Banker) {
-                const yellowData = data.dates.map((dt, i) => {
-                    const bankerVal = data.MCDX_Banker[i] || 0.0;
-                    const hotVal = data.MCDX_HotMoney[i] || 0.0;
-                    return { time: d2ts(dt), value: Math.min(20.0, bankerVal + hotVal) };
-                });
-                c2.addHistogramSeries({
-                    color: '#fbbf24',
+            if (data.MCDX_HotMoney) {
+                c2.addAreaSeries({
+                    topColor: 'rgba(251, 191, 36, 0.65)',
+                    bottomColor: 'rgba(251, 191, 36, 0.1)',
+                    lineColor: '#fbbf24',
+                    lineWidth: 1,
                     priceLineVisible: false,
                     title: ''
-                }).setData(yellowData);
+                }).setData(lineData(data, 'MCDX_HotMoney', 1));
             }
 
             // Banker (Red)
             if (data.MCDX_Banker) {
-                const redData = data.dates.map((dt, i) => {
-                    const bankerVal = data.MCDX_Banker[i] || 0.0;
-                    return { time: d2ts(dt), value: Math.min(20.0, bankerVal) };
-                });
-                c2.addHistogramSeries({
-                    color: '#f43f5e',
+                c2.addAreaSeries({
+                    topColor: 'rgba(244, 63, 94, 0.85)',
+                    bottomColor: 'rgba(244, 63, 94, 0.2)',
+                    lineColor: '#f43f5e',
+                    lineWidth: 1,
                     priceLineVisible: false,
                     title: ''
-                }).setData(redData);
+                }).setData(lineData(data, 'MCDX_Banker', 1));
             }
 
             // Banker MA (White/Gray)
@@ -5218,9 +2204,6 @@
                 heatmap: renderHeatmapChart, techreport: renderTechReportChart
             };
 
-            // Set global index flag for mkChart formatting
-            window.isCurrentIndex = ticker && (ticker === 'VNINDEX' || ticker === 'HNX-INDEX' || ticker.includes('INDEX') || ticker.includes('index'));
-
             // Show loading in all cells
             ids.forEach(type => {
                 const mid = `${mountPrefix}-mount-${type}`;
@@ -5246,8 +2229,8 @@
                 if (primary) primaryCharts.push(primary);
             });
 
-            // Cross-chart time-scale sync disabled to keep charts independent
-            // syncCharts(primaryCharts);
+            // Cross-chart time-scale sync (all 4 primary panes scroll together)
+            syncCharts(primaryCharts);
 
             // Update evaluations for each chart cell
             updateChartEvaluations(mountPrefix, ticker);
@@ -5451,94 +2434,56 @@
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChartFullscreen(); });
 
         // ── Fullscreen variants (larger heights) ──
-        function renderGPChartFs(mountId, rawDataInput, instances) {
+        function renderGPChartFs(mountId, data, instances) {
             const root = document.getElementById(mountId);
             root.innerHTML = ''; root.style.display='flex'; root.style.flexDirection='column';
-            
-            const data = getHistoricalDataOnly(rawDataInput);
-            
             const total = root.offsetHeight || window.innerHeight - 120;
             const h1=Math.round(total*0.55), h2=Math.round(total*0.225), h3=Math.round(total*0.225);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
             const d1=mk(h1,false),d2=mk(h2),d3=mk(h3);
             const {chart:c1,ro:r1}=mkChart(d1,h1,data.dates, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c1,ro:r1});
-            
-            // GP cloud fill
-            if (data.GP_E14 && data.GP_E21) {
-                const sc = priceScale(data);
-                const gpBullish = [], gpBearish = [], gpMask = [];
-                for (let i = 0; i < data.dates.length; i++) {
-                    const e14 = data.GP_E14[i], e21 = data.GP_E21[i], close = data.closes[i];
-                    if (e14 === null || e21 === null || e14 === undefined || e21 === undefined) continue;
-                    const t = d2ts(data.dates[i]);
-                    const top = Math.max(e14, e21) * sc;
-                    const bot = Math.min(e14, e21) * sc;
-                    const isBull = close > e14 && close > e21;
-                    if (isBull) {
-                        gpBullish.push({time: t, value: top});
-                        gpBearish.push({time: t, value: null});
-                    } else {
-                        gpBullish.push({time: t, value: null});
-                        gpBearish.push({time: t, value: top});
-                    }
-                    gpMask.push({time: t, value: bot});
-                }
-                c1.addAreaSeries({
-                    topColor: 'rgba(39, 194, 46, 0.6)', bottomColor: 'rgba(39, 194, 46, 0.15)',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(gpBullish);
-                c1.addAreaSeries({
-                    topColor: 'rgba(255, 0, 128, 0.6)', bottomColor: 'rgba(255, 0, 128, 0.15)',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(gpBearish);
-                c1.addAreaSeries({
-                    topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(gpMask);
-            }
-            
-            if (data.GP_xFast) c1.addLineSeries({color:'#00ff00',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));
-            if (data.GP_xSlow) c1.addLineSeries({color:'#ff0000',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));
-
             // BB bands
             if(data.GP_BB_Top)c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Top'));
             if(data.GP_BB_Bot)c1.addLineSeries({color:'rgba(68,136,255,0.45)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_BB_Bot'));
-            
+            // GP cloud fill
+            if(data.GP_xFast&&data.GP_xSlow){
+                const sc=priceScale(data);
+                const gpBullish = [], gpBearish = [], gpMask = [];
+                for(let i=0;i<data.dates.length;i++){
+                    const f=data.GP_xFast[i],s=data.GP_xSlow[i];
+                    if(f===null||s===null||f===undefined||s===undefined)continue;
+                    const t=d2ts(data.dates[i]);
+                    const top = Math.max(f, s) * sc;
+                    const bot = Math.min(f, s) * sc;
+                    if(f>=s){
+                        gpBullish.push({time:t,value:top});
+                        gpBearish.push({time:t,value:null});
+                    }else{
+                        gpBullish.push({time:t,value:null});
+                        gpBearish.push({time:t,value:top});
+                    }
+                    gpMask.push({time:t,value:bot});
+                }
+                c1.addAreaSeries({topColor:'rgba(57,255,20,0.2)',bottomColor:'rgba(57,255,20,0.01)',lineColor:'#39ff14',lineWidth:2,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpBullish);
+                c1.addAreaSeries({topColor:'rgba(255,68,68,0.2)',bottomColor:'rgba(255,68,68,0.01)',lineColor:'#ff4444',lineWidth:2,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpBearish);
+                c1.addAreaSeries({topColor:'#000000',bottomColor:'#000000',lineColor:'rgba(0,0,0,0)',lineWidth:0,priceLineVisible:false,lastValueVisible:false,title: ''}).setData(gpMask);
+            }
+            else{if(data.GP_xFast)c1.addLineSeries({color:'#39ff14',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xFast'));if(data.GP_xSlow)c1.addLineSeries({color:'#ff4444',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'GP_xSlow'));}
             // Candles on top
             c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',priceLineVisible:false,lastValueVisible:false}).setData(ohlcv(data));
-            
             // Octopus pane
             const {chart:c2,ro:r2}=mkChart(d2,h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c2,ro:r2});
-            
-            // Draw BB cloud for Octopus
-            if (data.OCT_BB_Top && data.OCT_BB_Bot) {
-                const octBBTopData = lineData(data, 'OCT_BB_Top', 1);
-                const octBBBotData = lineData(data, 'OCT_BB_Bot', 1);
-                c2.addAreaSeries({
-                    topColor: 'rgba(173, 216, 230, 0.4)', bottomColor: 'rgba(173, 216, 230, 0.1)',
-                    lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(octBBTopData);
-                c2.addAreaSeries({
-                    topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(173, 216, 230, 0.4)', lineWidth: 1, lineStyle: 2,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(octBBBotData);
+            if(data.OCT_A1) {
+                const octData = data.dates.map((dt, i) => {
+                    const v = data.OCT_A1[i];
+                    if (v === null || v === undefined) return null;
+                    const col = data.OCT_Color ? data.OCT_Color[i] : '#808080';
+                    return { time: d2ts(dt), value: v, color: col };
+                }).filter(Boolean);
+                c2.addHistogramSeries({priceLineVisible:false,lastValueVisible:true,title: ''}).setData(octData);
             }
-            
-            if (data.OCT_A1) addColoredLineSegments(c2, data.dates, data.OCT_A1, data.OCT_Color, 1);
-            if (data.OCT_B1) addColoredLineSegments(c2, data.dates, data.OCT_B1, data.OCT_Color, 1);
-
+            if(data.OCT_B1)c2.addLineSeries({color:'#a78bfa',lineWidth:1.5,lineStyle:2,priceLineVisible:false,lastValueVisible:true,title: ''}).setData(lineData(data,'OCT_B1',1));
             if(data.dates.length>0)c2.addLineSeries({color:'rgba(255,255,255,0.12)',lineWidth:1,priceLineVisible:false,lastValueVisible:false}).setData([{time:d2ts(data.dates[0]),value:0},{time:d2ts(data.dates[data.dates.length-1]),value:0}]);
-            
             // RS pane
             const {chart:c3,ro:r3}=mkChart(d3,h3, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c3,ro:r3});
             if(data.RS13)c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
@@ -5547,10 +2492,9 @@
             syncCharts([c1,c2,c3]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
-        function renderHeikinChartFs(mountId, rawDataInput, instances) {
+        function renderHeikinChartFs(mountId, data, instances) {
             const root=document.getElementById(mountId);
             root.innerHTML=''; root.style.display='flex'; root.style.flexDirection='column';
-            const data = getHistoricalDataOnly(rawDataInput);
             const total=root.offsetHeight||window.innerHeight-120;
             const h1=Math.round(total*0.55),h2=Math.round(total*0.45);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
@@ -5569,32 +2513,19 @@
                     const bot = Math.min(tr, sl) * sc;
                     if(tcT>=0){
                         tcCloudBull.push({time:t,value:top});
-                        tcCloudBear.push({time:t,value:bot});
+                        tcCloudBear.push({time:t,value:null});
                     }else{
-                        tcCloudBull.push({time:t,value:bot});
+                        tcCloudBull.push({time:t,value:null});
                         tcCloudBear.push({time:t,value:top});
                     }
                     tcMask.push({time:t,value:bot});
                 }
-                c1.addAreaSeries({
-                    topColor: 'rgba(39, 194, 46, 0.6)', bottomColor: 'rgba(39, 194, 46, 0.15)',
-                    lineColor: 'rgba(39, 194, 46, 0.65)', lineWidth: 1.5,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(tcCloudBull);
-                
-                c1.addAreaSeries({
-                    topColor: 'rgba(255, 59, 59, 0.6)', bottomColor: 'rgba(255, 59, 59, 0.15)',
-                    lineColor: 'rgba(255, 59, 59, 0.65)', lineWidth: 1.5,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
-                }).setData(tcCloudBear);
-                
+                c1.addAreaSeries({topColor:'rgba(39,194,46,0.22)',bottomColor:'rgba(39,194,46,0.01)',lineColor:'rgba(39,194,46,0.6)',lineWidth:1.5,priceLineVisible:false}).setData(tcCloudBull);
+                c1.addAreaSeries({topColor:'rgba(255,0,0,0.18)',bottomColor:'rgba(255,0,0,0.01)',lineColor:'rgba(255,0,0,0.5)',lineWidth:1.5,priceLineVisible:false}).setData(tcCloudBear);
                 c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
                     lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
-                    priceLineVisible: false, lastValueVisible: false, title: '',
-                    autoscaleInfoProvider: () => null
+                    priceLineVisible: false, lastValueVisible: false, title: ''
                 }).setData(tcMask);
             }
             else if(data.TC_Trend)c1.addLineSeries({color:'#f59e0b',lineWidth:2.5}).setData(lineData(data,'TC_Trend'));
@@ -5602,22 +2533,6 @@
                 const hk=c1.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'});
                 const arr=[]; const hkSc=priceScale(data); for(let i=0;i<data.dates.length;i++){const ho=data.HK_Flower_Open[i],hc=data.HK_Flower_Close[i],hh=data.HK_Flower_High[i],hl=data.HK_Flower_Low[i]; if(!ho||!hc)continue; const col=data.HK_BarColor&&data.HK_BarColor[i]; const clr=col==='brightGreen'?'#00ff6a':col==='red'?'#ff3b3b':'#ffffff'; arr.push({time:d2ts(data.dates[i]),open:ho*hkSc,high:hh*hkSc,low:hl*hkSc,close:hc*hkSc,color:clr,borderColor:clr,wickColor:clr}); }
                 hk.setData(arr);
-
-                // Buy/sell markers on HK (Fullscreen)
-                const markers = [];
-                for (let i = 0; i < data.dates.length; i++) {
-                    const isBuy = (data.HK_BuySignal && (data.HK_BuySignal[i] === 1 || data.HK_BuySignal[i] === true)) ||
-                                  (data.HK_BuyManh && (data.HK_BuyManh[i] === 1 || data.HK_BuyManh[i] === true));
-                    const isSell = (data.HK_SellSignal && (data.HK_SellSignal[i] === 1 || data.HK_SellSignal[i] === true)) ||
-                                   (data.HK_SellManh && (data.HK_SellManh[i] === 1 || data.HK_SellManh[i] === true));
-                    if (isBuy) {
-                        markers.push({time:d2ts(data.dates[i]),position:'belowBar',color:'#00ff6a',shape:'arrowUp',text:'B'});
-                    }
-                    if (isSell) {
-                        markers.push({time:d2ts(data.dates[i]),position:'aboveBar',color:'#ff3b3b',shape:'arrowDown',text:'S'});
-                    }
-                }
-                if (markers.length) hk.setMarkers(markers.sort((a,b)=>a.time-b.time));
             }
             if(data.HK_NW) c1.addLineSeries({color:'#38bdf8',lineWidth:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'HK_NW'));
             const {chart:c2,ro:r2}=mkChart(d2,h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c2,ro:r2});
@@ -5630,10 +2545,9 @@
             syncCharts([c1,c2]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
-        function renderHeatmapChartFs(mountId, rawDataInput, instances) {
+        function renderHeatmapChartFs(mountId, data, instances) {
             const root=document.getElementById(mountId);
             root.innerHTML=''; root.style.display='flex'; root.style.flexDirection='column';
-            const data = getHistoricalDataOnly(rawDataInput);
             const total=root.offsetHeight||window.innerHeight-120;
             const h1=Math.round(total*0.68),h2=Math.round(total*0.32);
             const mk=(h,b=true)=>{const d=document.createElement('div');d.style.cssText=`flex:none;height:${h}px;${b?'border-top:1px solid rgba(255,255,255,0.04);':''}`;root.appendChild(d);return d;};
@@ -5647,21 +2561,7 @@
                 fcs.setData(arr);
             }
             const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
-            c2.addCandlestickSeries({
-                upColor:'#00ff6a',downColor:'#ff3b3b',
-                borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
-                wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
-                priceLineVisible: false
-            }).setData(ohlcv(data));
-
-            // Overlay L&L Trend System (TrendColor)
-            if (data.TC_Trend) {
-                addColoredLineSegments(c2, data.dates, data.TC_Trend, data.TC_TrendColor || [], 1, 2);
-            }
-            if (data.TC_StopLine) {
-                addColoredLineSegments(c2, data.dates, data.TC_StopLine, data.TC_StopColor || [], 1, 2);
-            }
-
+            c2.addCandlestickSeries({upColor:'#00ff6a',downColor:'#ff3b3b',borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'}).setData(ohlcv(data));
             syncCharts([c1,c2]); applyDefaultChartRange(c1, data.dates, 90);
         }
 
@@ -5694,51 +2594,32 @@
                     const top = Math.max(a, b) * sc;
                     const bot = Math.min(a, b) * sc;
                     if (a >= b) {
-                        // Bullish: SpanA >= SpanB → green cloud fills top→bot
                         bullishCloud.push({time: t, value: top});
-                        bearishCloud.push({time: t, value: bot});
+                        bearishCloud.push({time: t, value: null});
                     } else {
-                        // Bearish: SpanB > SpanA → red cloud fills top→bot
-                        bullishCloud.push({time: t, value: bot});
+                        bullishCloud.push({time: t, value: null});
                         bearishCloud.push({time: t, value: top});
                     }
                     maskCloud.push({time: t, value: bot});
                 }
-                const sKumoGreen = c1.addAreaSeries({
-                    topColor: 'rgba(39, 194, 46, 0.6)', bottomColor: 'rgba(39, 194, 46, 0.15)',
-                    lineColor: 'rgba(39, 194, 46, 0.65)', lineWidth: 1.5,
-                    title: '', visible: techChartVisibility.SpanA, priceLineVisible: false, lastValueVisible: false,
-                    autoscaleInfoProvider: () => null
-                });
-                sKumoGreen.setData(bullishCloud);
-                techReportSeriesRegistry[mountId].SpanA = sKumoGreen;
-                
-                const sKumoRed = c1.addAreaSeries({
-                    topColor: 'rgba(255, 59, 59, 0.6)', bottomColor: 'rgba(255, 59, 59, 0.15)',
-                    lineColor: 'rgba(255, 59, 59, 0.65)', lineWidth: 1.5,
-                    title: '', visible: techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false,
-                    autoscaleInfoProvider: () => null
-                });
-                sKumoRed.setData(bearishCloud);
-                techReportSeriesRegistry[mountId].SpanB = sKumoRed;
-                
-                const sKumoMask = c1.addAreaSeries({
+                const sKumoG = c1.addAreaSeries({topColor:'rgba(0,255,106,0.22)',bottomColor:'rgba(0,255,106,0.01)',lineColor:'rgba(0,255,106,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
+                sKumoG.setData(bullishCloud); techReportSeriesRegistry[mountId].SpanA = sKumoG;
+                const sKumoR = c1.addAreaSeries({topColor:'rgba(255,59,59,0.22)',bottomColor:'rgba(255,59,59,0.01)',lineColor:'rgba(255,59,59,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
+                sKumoR.setData(bearishCloud); techReportSeriesRegistry[mountId].SpanB = sKumoR;
+                const sKumoM = c1.addAreaSeries({
                     topColor: '#000000', bottomColor: '#000000',
-                    lineColor: 'rgba(0,0,0,0)', lineWidth: 1, lineVisible: false,
-                    title: '', visible: true, priceLineVisible: false, lastValueVisible: false,
-                    autoscaleInfoProvider: () => null
+                    lineColor: 'rgba(0,0,0,0)', lineWidth: 0,
+                    title: '', visible: techChartVisibility.SpanA || techChartVisibility.SpanB, priceLineVisible: false, lastValueVisible: false
                 });
-                sKumoMask.setData(maskCloud);
+                sKumoM.setData(maskCloud);
             } else {
                 if (data.SpanA) {
-                    const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
-                    sSpanA.setData(lineData(data,'SpanA'));
-                    techReportSeriesRegistry[mountId].SpanA = sSpanA;
+                    const sSpanA = c1.addLineSeries({color:'rgba(0,255,106,0.65)',lineWidth:2,title: '',visible:techChartVisibility.SpanA,priceLineVisible:false});
+                    sSpanA.setData(lineData(data,'SpanA')); techReportSeriesRegistry[mountId].SpanA = sSpanA;
                 }
                 if (data.SpanB) {
-                    const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:1.5,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
-                    sSpanB.setData(lineData(data,'SpanB'));
-                    techReportSeriesRegistry[mountId].SpanB = sSpanB;
+                    const sSpanB = c1.addLineSeries({color:'rgba(255,59,59,0.65)',lineWidth:2,title: '',visible:techChartVisibility.SpanB,priceLineVisible:false});
+                    sSpanB.setData(lineData(data,'SpanB')); techReportSeriesRegistry[mountId].SpanB = sSpanB;
                 }
             }
             
@@ -5781,40 +2662,40 @@
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b'
             }).setData(ohlcv(data));
 
-            // Pane 2: MCDX Stacked Histogram Chart
+            // Pane 2: MCDX Stacked Area Chart
             const {chart: c2, ro: r2} = mkChart(d2, h2);
             instances.push({chart: c2, ro: r2});
             
             const greenData = data.dates.map(dt => ({ time: d2ts(dt), value: 20.0 }));
-            c2.addHistogramSeries({
-                color: '#34d399',
+            c2.addAreaSeries({
+                topColor: 'rgba(52, 211, 153, 0.4)',
+                bottomColor: 'rgba(52, 211, 153, 0.05)',
+                lineColor: '#34d399',
+                lineWidth: 1,
                 priceLineVisible: false,
                 title: ''
             }).setData(greenData);
 
-            if (data.MCDX_HotMoney && data.MCDX_Banker) {
-                const yellowData = data.dates.map((dt, i) => {
-                    const bankerVal = data.MCDX_Banker[i] || 0.0;
-                    const hotVal = data.MCDX_HotMoney[i] || 0.0;
-                    return { time: d2ts(dt), value: Math.min(20.0, bankerVal + hotVal) };
-                });
-                c2.addHistogramSeries({
-                    color: '#fbbf24',
+            if (data.MCDX_HotMoney) {
+                c2.addAreaSeries({
+                    topColor: 'rgba(251, 191, 36, 0.65)',
+                    bottomColor: 'rgba(251, 191, 36, 0.1)',
+                    lineColor: '#fbbf24',
+                    lineWidth: 1,
                     priceLineVisible: false,
                     title: ''
-                }).setData(yellowData);
+                }).setData(lineData(data, 'MCDX_HotMoney', 1));
             }
 
             if (data.MCDX_Banker) {
-                const redData = data.dates.map((dt, i) => {
-                    const bankerVal = data.MCDX_Banker[i] || 0.0;
-                    return { time: d2ts(dt), value: Math.min(20.0, bankerVal) };
-                });
-                c2.addHistogramSeries({
-                    color: '#f43f5e',
+                c2.addAreaSeries({
+                    topColor: 'rgba(244, 63, 94, 0.85)',
+                    bottomColor: 'rgba(244, 63, 94, 0.2)',
+                    lineColor: '#f43f5e',
+                    lineWidth: 1,
                     priceLineVisible: false,
                     title: ''
-                }).setData(redData);
+                }).setData(lineData(data, 'MCDX_Banker', 1));
             }
 
             if (data.MCDX_Banker_MA) {
@@ -6426,6 +3307,4 @@
 
         // Add listener to load data on page load
         window.addEventListener('DOMContentLoaded', loadData);
-    </script>
-</body>
-</html>
+    

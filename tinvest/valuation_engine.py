@@ -539,10 +539,14 @@ def evaluate_stock_valuation(ticker: str, df: pd.DataFrame, entry_info: dict) ->
             target_pct = "10–20% (Quan sát chặt)"
 
     action = "WAIT (Chờ tín hiệu rõ ràng)"
-    if "0%" in target_pct:
+    if is_trend_broken or risk_col > 70:
+        action = "NO (Đứng ngoài)"
+    elif price >= exits["tp1"] and opp_col >= 50:
+        action = "TAKE PROFIT (Chốt lời bớt)"
+    elif "0%" in target_pct:
         action = "WAIT (Chờ tín hiệu rõ ràng)"
     elif "70–100%" in target_pct or "50–70%" in target_pct:
-        action = "YES (Rất nên tham gia)"
+        action = "YES (Nên tham gia)"
     else:
         action = "YES (Có thể cân nhắc)"
 

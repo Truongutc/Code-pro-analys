@@ -830,7 +830,9 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             
             # Portfolio Engine helpers
             "Support1": int(val.get("s1", 0) * 1000) if val.get("s1", 0) > 0 else None,
+            "Support2": int(val.get("s2", 0) * 1000) if val.get("s2", 0) > 0 else None,
             "Resistance1": int(val.get("r1", 0) * 1000) if val.get("r1", 0) > 0 else None,
+            "Resistance2": int(val.get("r2", 0) * 1000) if val.get("r2", 0) > 0 else None,
             "TrendStatus": str(ma_trend.get("trend_status", "Sideway")),
             "TechWeak": bool(tech_weak),
             "SidewaysNearRes": bool(sideways_near_res),
