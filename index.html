@@ -5347,11 +5347,13 @@
             if (!status) return '';
             const s = status.toLowerCase();
             let cls = 'neutral';
-            let label = status;
+            let label = 'TRUNG LẬP';
             if (s.includes('bull') || s.includes('uptrend') || s.includes('buy') || s.includes('tăng') || s.includes('tích cực') || s.includes('mạnh')) {
                 cls = 'bullish';
+                label = 'TÍCH CỰC';
             } else if (s.includes('bear') || s.includes('downtrend') || s.includes('sell') || s.includes('giảm') || s.includes('tiêu cực') || s.includes('yếu')) {
                 cls = 'bearish';
+                label = 'TIÊU CỰC';
             }
             return `<span class="eval-badge-inline ${cls}">${label}</span>`;
         }
