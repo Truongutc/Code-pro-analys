@@ -393,10 +393,10 @@ def _calculate_exits_and_sr(df: pd.DataFrame, inds: dict, entry_info: dict, tick
     if not sl1 or pd.isna(sl1) or sl1 >= p: sl1 = p * 0.97
     if not sl2 or pd.isna(sl2) or sl2 >= sl1: sl2 = sl1 * 0.96
 
-    # Ensure trailing stop is valid (not > current price)
+    # Ensure trailing stop is just under s1
     ts = s1 * 0.99
-    if not ts or pd.isna(ts) or ts >= p:
-        ts = p * 0.98
+    if not ts or pd.isna(ts):
+        ts = sl1
 
     return {
         "s1": float(s1) if s1 else 0.0, "s2": float(s2) if s2 else 0.0, 
