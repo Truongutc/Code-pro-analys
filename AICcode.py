@@ -2804,12 +2804,36 @@ class TinvestApp:
                 realtime_sig = rt_sig_map.get(data.get("state_rules", {}).get("signal", ""), "")
                 state_signal = (realtime_sig if realtime_sig else holding_sig).upper()
 
+                s1_vnd = val.get("s1", 0) * 1000
+                r1_vnd = val.get("r1", 0) * 1000
+                action_upper = action.upper()
+                entry_display = int(ep * 1000) if ep > 0 else None
+
+                if "NO " in action_upper or "ĐỨNG NGOÀI" in action_upper:
+                    entry_display = "KHÔNG THAM GIA"
+                elif "TAKE PROFIT" in action_upper or "CHỐT LỜI" in action_upper:
+                    entry_display = int(s1_vnd) if s1_vnd > 0 else entry_display
+                elif "WAIT" in action_upper:
+                    entry_display = int(s1_vnd) if s1_vnd > 0 else entry_display
+                elif "NÊN THAM GIA" in action_upper or "RẤT NÊN" in action_upper:
+                    entry_display = int(current_p)
+                elif "YES" in action_upper or "MUA" in action_upper or "CÂN NHẮC" in action_upper:
+                    if r1_vnd > 0 and s1_vnd > 0:
+                        dist_r1 = r1_vnd - current_p
+                        dist_s1 = current_p - s1_vnd
+                        if dist_r1 > dist_s1:
+                            entry_display = int(current_p)
+                        else:
+                            entry_display = int(s1_vnd)
+                    else:
+                        entry_display = int(current_p)
+
                 ticker_record = {
                     "Ticker": ticker,
                     "Price": int(current_p),
                     "Volume": int(current_vol),
                     "AvgVolume10": int(avg_vol_10),
-                    "Entry": int(ep * 1000) if ep > 0 else None,
+                    "Entry": entry_display,
                     "Target": int(tp * 1000) if tp > 0 else None,
                     "Target2": int(tp2 * 1000) if tp2 > 0 else None,
                     "ReportText": report_text,

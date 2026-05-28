@@ -2787,6 +2787,7 @@
 
         // Formatting utilities
         function formatPrice(p, isIndex = false) {
+            if (typeof p === 'string' && isNaN(Number(p))) return p;
             if (p === null || p === undefined || isNaN(p) || p === 0) return "N/A";
             if (isIndex) {
                 return Math.round(p / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
