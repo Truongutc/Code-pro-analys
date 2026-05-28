@@ -47,6 +47,15 @@ class StorageManager:
         cols = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume', 'source', 'updated_at']
         work_df = work_df[[c for c in cols if c in work_df.columns]]
         
+        # Self-healing for indices in work_df
+        is_index = ("VNINDEX" in ticker.upper()) or ("HNX" in ticker.upper()) or ("HAINDEX" in ticker.upper())
+        if is_index:
+            for col in ['Open', 'High', 'Low', 'Close']:
+                if col in work_df.columns:
+                    mask = work_df[col] < 10.0
+                    if mask.any():
+                        work_df.loc[mask, col] = work_df.loc[mask, col] * 1000.0
+        
         if not target_path.exists():
             work_df.sort_values('Date').to_parquet(target_path, index=False)
             return work_df['Date'].min()
@@ -55,6 +64,13 @@ class StorageManager:
         try:
             old_df = pd.read_parquet(target_path)
             old_df['Date'] = pd.to_datetime(old_df['Date'])
+            # Self-healing for indices in old_df
+            if is_index:
+                for col in ['Open', 'High', 'Low', 'Close']:
+                    if col in old_df.columns:
+                        mask = old_df[col] < 10.0
+                        if mask.any():
+                            old_df.loc[mask, col] = old_df.loc[mask, col] * 1000.0
         except Exception as e:
             logger.error(f"Error reading existing parquet for {ticker}: {e}")
             old_df = pd.DataFrame()
@@ -136,6 +152,15 @@ class StorageManager:
         
         prices = pd.read_parquet(p_path)
         prices['Date'] = pd.to_datetime(prices['Date'])
+        
+        # Self-healing for indices in prices
+        is_index = ("VNINDEX" in ticker.upper()) or ("HNX" in ticker.upper()) or ("HAINDEX" in ticker.upper())
+        if is_index:
+            for col in ['Open', 'High', 'Low', 'Close']:
+                if col in prices.columns:
+                    mask = prices[col] < 10.0
+                    if mask.any():
+                        prices.loc[mask, col] = prices.loc[mask, col] * 1000.0
         
         if i_path.exists():
             indicators = pd.read_parquet(i_path)
