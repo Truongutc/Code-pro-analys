@@ -3809,7 +3809,7 @@
                             </div>
                             <div class="detail-metric-row">
                                 <span>Điểm mua gợi ý:</span>
-                                <strong>${showBuyInfo ? formatPrice(t.Entry) : 'N/A'}</strong>
+                                <strong>${actionUpper.includes('NO') || actionUpper.includes('ĐỨNG NGOÀI') ? 'KHÔNG' : formatPrice(t.Entry)}</strong>
                             </div>
                             <div class="detail-metric-row">
                                 <span>Hỗ trợ 1 (S1):</span>
@@ -3821,29 +3821,29 @@
                             </div>
                             <div class="detail-metric-row">
                                 <span>Mục tiêu chốt lời (Target 1):</span>
-                                <strong class="text-green">${showBuyInfo ? formatPrice(t.Target) : 'N/A'}</strong>
+                                <strong class="text-green">${formatPrice(t.Target)}</strong>
                             </div>
                             ${t.Target2 ? `
                             <div class="detail-metric-row">
                                 <span>Mục tiêu chốt lời (Target 2):</span>
-                                <strong class="text-green">${showBuyInfo ? formatPrice(t.Target2) : 'N/A'}</strong>
+                                <strong class="text-green">${formatPrice(t.Target2)}</strong>
                             </div>
                             ` : ''}
                             <div class="detail-metric-row">
                                 <span>Cắt lỗ (Bán một phần):</span>
-                                <strong class="text-red">${showBuyInfo ? formatPrice(t.StopLoss) : 'N/A'}</strong>
+                                <strong class="text-red">${formatPrice(t.StopLoss)}</strong>
                             </div>
                             <div class="detail-metric-row">
                                 <span>Cắt lỗ (Toàn bộ):</span>
-                                <strong class="text-red">${showBuyInfo ? formatPrice(t.CutlossFull) : 'N/A'}</strong>
+                                <strong class="text-red">${formatPrice(t.CutlossFull)}</strong>
                             </div>
                             <div class="detail-metric-row">
                                 <span>Chặn lãi (Trailing Stop):</span>
-                                <strong class="text-orange">${showBuyInfo ? formatPrice(t.TrailingStop) : 'N/A'}</strong>
+                                <strong class="text-orange">${formatPrice(t.TrailingStop)}</strong>
                             </div>
                             <div class="detail-metric-row">
                                 <span>Tỷ lệ Risk/Reward:</span>
-                                <strong>${showBuyInfo ? t.RR : 'N/A'}</strong>
+                                <strong>${t.RR}</strong>
                             </div>
                             <div class="detail-metric-row">
                                 <span>Đánh giá Rủi ro:</span>
