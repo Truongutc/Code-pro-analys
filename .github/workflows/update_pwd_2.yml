@@ -1,0 +1,33 @@
+name: Cập nhật mật khẩu cấp 2
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_password:
+        description: 'Mật khẩu cấp 2 hiện tại: 222222' # PWD_L2_DESC
+        required: true
+        type: string
+
+jobs:
+  update-password:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        
+      - name: Update password in index.html
+        run: |
+          sed -i "s/if (pwd === '.*') { \/\/ SYS_PWD_L2/if (pwd === '${{ github.event.inputs.new_password }}') { \/\/ SYS_PWD_L2/" index.html
+          
+      - name: Update password in workflow file
+        run: |
+          sed -i "s/description: 'Mật khẩu cấp 2 hiện tại: .*' # PWD_L2_DESC/description: 'Mật khẩu cấp 2 hiện tại: ${{ github.event.inputs.new_password }}' # PWD_L2_DESC/" .github/workflows/update_pwd_2.yml
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add index.html .github/workflows/update_pwd_2.yml
+          git commit -m "Update System Password Level 2"
+          git push
