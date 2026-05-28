@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       new_password:
-        description: 'Mật khẩu cấp 1 hiện tại: 111111' # PWD_L1_DESC
+        description: 'Nhập mật khẩu cấp 1 mới'
         required: true
         type: string
 
@@ -13,22 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      workflows: write
     steps:
       - uses: actions/checkout@v3
         
       - name: Update password in index.html
         run: |
           sed -i "s/if (pwd === '.*') { \/\/ SYS_PWD_L1/if (pwd === '${{ github.event.inputs.new_password }}') { \/\/ SYS_PWD_L1/" index.html
-          
-      - name: Update password in workflow file
-        run: |
-          sed -i "s/description: 'Mật khẩu cấp 1 hiện tại: .*' # PWD_L1_DESC/description: 'Mật khẩu cấp 1 hiện tại: ${{ github.event.inputs.new_password }}' # PWD_L1_DESC/" .github/workflows/update_pwd_1.yml
 
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add index.html .github/workflows/update_pwd_1.yml
+          git add index.html
           git commit -m "Update System Password Level 1"
           git push
