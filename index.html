@@ -2814,7 +2814,7 @@
             return 'wait';
         }
 
-        let isAuthenticated = false;
+        let authLevel = 0;
         let pendingTabId = null;
 
         function showPasswordModal(tabId) {
@@ -2833,14 +2833,31 @@
 
         function submitPassword() {
             const pwd = document.getElementById('sysPasswordInput').value;
-            if (pwd === '111111') {
-                isAuthenticated = true;
+            
+            if (pwd === '222222') {
+                authLevel = Math.max(authLevel, 2);
+            } else if (pwd === '111111') {
+                authLevel = Math.max(authLevel, 1);
+            } else {
+                document.getElementById('passwordErrorMsg').innerText = 'Mật khẩu không chính xác!';
+                document.getElementById('passwordErrorMsg').style.display = 'block';
+                document.getElementById('sysPasswordInput').value = '';
+                document.getElementById('sysPasswordInput').focus();
+                return;
+            }
+            
+            let requiredLevel = 0;
+            if (pendingTabId === 'lookup-tab') requiredLevel = 1;
+            else if (pendingTabId === 'filter-tab' || pendingTabId === 'portfolio-tab') requiredLevel = 2;
+            
+            if (authLevel >= requiredLevel) {
                 document.getElementById('passwordModal').style.display = 'none';
                 if (pendingTabId) {
                     switchTab(pendingTabId, true);
                     pendingTabId = null;
                 }
             } else {
+                document.getElementById('passwordErrorMsg').innerText = 'Mật khẩu cấp 1 không đủ quyền truy cập mục này!';
                 document.getElementById('passwordErrorMsg').style.display = 'block';
                 document.getElementById('sysPasswordInput').value = '';
                 document.getElementById('sysPasswordInput').focus();
@@ -2849,7 +2866,11 @@
 
         // Tab Switching Mechanism
         function switchTab(tabId, skipAuth = false) {
-            if (tabId !== 'market-tab' && !isAuthenticated && !skipAuth) {
+            let requiredLevel = 0;
+            if (tabId === 'lookup-tab') requiredLevel = 1;
+            else if (tabId === 'filter-tab' || tabId === 'portfolio-tab') requiredLevel = 2;
+
+            if (requiredLevel > authLevel && !skipAuth) {
                 showPasswordModal(tabId);
                 return;
             }
