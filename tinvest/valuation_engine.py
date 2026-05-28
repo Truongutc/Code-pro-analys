@@ -551,6 +551,23 @@ def evaluate_stock_valuation(ticker: str, df: pd.DataFrame, entry_info: dict) ->
     else:
         action = "YES (Có thể cân nhắc)"
 
+    # Calculate suggested entry price based on tag & R/R profile
+    curr_risk = max(0.01, price - exits["cutloss_partial"])
+    curr_reward = max(0.01, exits["tp1"] - price)
+    
+    entry_price = price
+    is_wait = "WAIT" in action.upper()
+    is_yes = "YES" in action.upper()
+    
+    if is_wait or (is_yes and curr_reward < curr_risk):
+        if exits["s1"] > 0 and exits["s1"] < price:
+            entry_price = exits["s1"]
+            
+    # Calculate R/R ratio at suggested entry price
+    risk_amt = max(0.01, entry_price - exits["cutloss_partial"])
+    reward_amt = max(0.01, exits["tp1"] - entry_price)
+    rr = round(reward_amt / risk_amt, 2)
+
     topup = _calculate_topup_level(df, inds, entry_info, exits)
     
     # Mức độ an toàn: (Cơ hội * 0.6 + (100 - Rủi ro) * 0.4)
@@ -558,14 +575,14 @@ def evaluate_stock_valuation(ticker: str, df: pd.DataFrame, entry_info: dict) ->
 
     return {
         "is_valid": True, "ticker": ticker, "state": state, "position": pos,
-        "price": price, "s1": exits["s1"], "s2": exits["s2"],
+        "price": entry_price, "s1": exits["s1"], "s2": exits["s2"],
         "r1": exits["r1"], "r2": exits["r2"], "break_buy": exits["break_buy"],
         "cutloss_partial": exits["cutloss_partial"], "cutloss_full": exits["cutloss_full"],
         "tp1": exits["tp1"], "tp2": exits["tp2"], "trailing_stop": exits["trailing_stop"],
         "risk_score": risk_col, "risk_desc": risk_desc,
         "opp_score": opp_col, "opp_desc": opp_desc,
-        "rr_ratio": rr, "risk_pct": round((risk_amt / price) * 100, 2),
-        "reward_pct": round((reward_amt / price) * 100, 2),
+        "rr_ratio": rr, "risk_pct": round((risk_amt / entry_price) * 100, 2),
+        "reward_pct": round((reward_amt / entry_price) * 100, 2),
         "action": action, "bull_trap": bull_trap,
         "topup_price": topup["topup_price"],
         "topup_desc":  topup["topup_desc"],
