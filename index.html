@@ -2211,6 +2211,174 @@
             max-height: 400px;
             overflow-y: auto;
         }
+
+        /* Contact and Philosophy Tab */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1.8fr;
+            gap: 24px;
+            margin-top: 16px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        @media (max-width: 900px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .info-card {
+            background: var(--panel-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .info-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .contact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .contact-item:hover {
+            background: rgba(139, 92, 246, 0.06);
+            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-2px);
+        }
+        .contact-icon {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+        .contact-item:hover .contact-icon {
+            background: var(--accent-purple);
+            color: white;
+            box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+        }
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .contact-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+        .contact-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .qr-section {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.01);
+            border-radius: 8px;
+            border: 1px dashed var(--border-color);
+        }
+        .qr-image {
+            width: 140px;
+            height: 140px;
+            background: white;
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .qr-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .philosophy-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .philosophy-path {
+            padding: 16px 20px;
+            background: rgba(20, 184, 166, 0.03);
+            border-left: 4px solid var(--accent-teal);
+            border-radius: 0 8px 8px 0;
+            transition: transform 0.2s;
+        }
+        .philosophy-path:hover {
+            transform: translateX(4px);
+        }
+        .philosophy-path-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent-teal);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .philosophy-path-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .philosophy-workflow {
+            padding: 20px;
+            background: rgba(139, 92, 246, 0.03);
+            border: 1px solid rgba(139, 92, 246, 0.1);
+            border-radius: 8px;
+            margin-top: 4px;
+        }
+        .philosophy-workflow-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .philosophy-workflow-desc {
+            font-size: 0.88rem;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
     </style>
 
 </head>
@@ -2249,6 +2417,7 @@
                 <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')">🔍 Tra cứu Cổ phiếu</button>
                 <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Lọc Cổ phiếu')">🎯 Lọc Cổ phiếu</button>
                 <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Đánh giá Danh mục')">💼 Đánh giá Danh mục</button>
+                <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', '📞', 'Liên hệ & Triết lý')">📞 Liên hệ & Triết lý</button>
             </div>
         </div>
     </nav>
@@ -2650,6 +2819,78 @@
                                 📝 <span>Báo cáo chi tiết (Dạng văn bản)</span>
                             </h4>
                             <pre id="portfolio-plaintext-report" class="portfolio-report-pre"></pre>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <!-- Tab 5: Liên hệ & Triết lý -->
+        <div class="tab-content" id="contact-tab">
+            <div class="info-grid">
+                <!-- Left Column: Contact info -->
+                <div class="info-card">
+                    <h3>📞 Thông tin Liên hệ</h3>
+                    <div class="contact-list">
+                        <a href="https://www.facebook.com/vietnamstock" target="_blank" class="contact-item">
+                            <div class="contact-icon">📘</div>
+                            <div class="contact-info">
+                                <span class="contact-title">Facebook Fanpage</span>
+                                <span class="contact-desc">Cập nhật tin tức và phân tích thị trường mới nhất</span>
+                            </div>
+                        </a>
+                        <a href="https://vietnamstock.substack.com" target="_blank" class="contact-item">
+                            <div class="contact-icon">✉️</div>
+                            <div class="contact-info">
+                                <span class="contact-title">Bài viết Substack</span>
+                                <span class="contact-desc">Phân tích chuyên sâu về vĩ mô và doanh nghiệp</span>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    <div class="qr-section">
+                        <span class="contact-title" style="margin-bottom: 4px;">💬 Cộng đồng Zalo</span>
+                        <div class="qr-image">
+                            <img src="zalo_qr.png" alt="Zalo Community QR Code">
+                        </div>
+                        <span class="contact-desc" style="text-align: center; margin-top: 4px;">Quét mã QR để tham gia nhóm thảo luận cộng đồng</span>
+                    </div>
+                </div>
+
+                <!-- Right Column: Investment Philosophy -->
+                <div class="info-card">
+                    <h3>💎 Triết lý & Phương pháp Đầu tư</h3>
+                    <div class="philosophy-section">
+                        <div class="philosophy-workflow">
+                            <div class="philosophy-workflow-title">
+                                <span>🎯 Phong cách Đầu tư Chủ động</span>
+                            </div>
+                            <div class="philosophy-workflow-desc">
+                                Phương pháp kết hợp linh hoạt giữa phân tích giá trị cơ bản và động lượng dòng tiền, đi theo 2 hướng chiến lược cốt lõi:
+                            </div>
+                        </div>
+
+                        <div class="philosophy-path">
+                            <div class="philosophy-path-title">🚀 Hướng 1: Tìm Cổ phiếu Giá trị & Chờ xác nhận Dòng tiền</div>
+                            <div class="philosophy-path-desc">
+                                Tập trung tìm kiếm các doanh nghiệp có nền tảng cơ bản tốt, định giá rẻ hoặc dưới giá trị thực. Tuy nhiên, không mua gom thụ động rồi chờ đợi vô hạn, mà chỉ giải ngân khi hệ thống xác nhận dòng tiền lớn (Banker) bắt đầu tham gia đẩy giá, tối ưu hóa hiệu quả sử dụng vốn.
+                            </div>
+                        </div>
+
+                        <div class="philosophy-path">
+                            <div class="philosophy-path-title">⚡ Hướng 2: Tìm Cổ phiếu có Dòng tiền & Định giá hợp lý</div>
+                            <div class="philosophy-path-desc">
+                                Săn tìm các cổ phiếu đang thu hút dòng tiền cực mạnh trên thị trường (Breakout, Trend mạnh). Để quản trị rủi ro, hệ thống sẽ chắt lọc và loại bỏ các cổ phiếu đã quá đắt đỏ hoặc tăng quá nóng (fomo), chỉ lựa chọn các cổ phiếu có định giá còn nằm trong vùng chấp nhận được và có biên an toàn tốt.
+                            </div>
+                        </div>
+
+                        <div class="philosophy-workflow" style="background: rgba(20, 184, 166, 0.02); border-color: rgba(20, 184, 166, 0.1);">
+                            <div class="philosophy-workflow-title" style="color: var(--accent-teal);">
+                                <span>🧠 Kết hợp Con người & Công nghệ (AI + Cơm)</span>
+                            </div>
+                            <div class="philosophy-workflow-desc" style="color: var(--text-secondary);">
+                                <strong>Định giá doanh nghiệp</strong> được xây dựng từ năng lực cơ bắp, chuyên môn phân tích và sự tìm hiểu sâu sắc của con người. Ngược lại, <strong>phân tích kỹ thuật, xác định hỗ trợ/kháng cự và đánh giá dòng tiền</strong> được xử lý tự động bởi AI và hệ thống thời gian thực.<br><br>
+                                Sự cộng hưởng này giúp <strong>tiết giảm tối đa thời gian & công sức</strong> của nhà đầu tư, đồng thời <strong>loại bỏ hoàn toàn yếu tố cảm xúc</strong> chủ quan khi ra quyết định giao dịch.
+                            </div>
                         </div>
                     </div>
                 </div>
