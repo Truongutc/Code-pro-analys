@@ -1787,6 +1787,9 @@
             color: #d1d5db;
             line-height: 1.45;
         }
+        .chart-cell-evaluation:empty {
+            display: none !important;
+        }
         .chart-cell-evaluation .eval-title {
             font-family: 'Outfit', sans-serif;
             font-size: 0.8rem;
@@ -5656,13 +5659,7 @@
                             <div class="eval-row"><span>Chiến lược Phân bổ Vốn:</span> <strong>Tối đa ${indexData.alloc} CP</strong></div>
                         `;
                     } else if (type === 'techreport') {
-                        html = `
-                            <div class="eval-title">🎯 Tổng hợp Báo cáo Kỹ thuật đa chỉ báo (Tech Report)</div>
-                            <div class="eval-row"><span>Ichimoku Cloud:</span> <strong>${diag.ichimoku?.status || 'N/A'} ${getEvalBadge(diag.ichimoku?.status)}</strong></div>
-                            <div class="eval-row"><span>Dòng tiền Tạo lập (MCDX):</span> <strong>${mcdx.status || 'N/A'} ${getEvalBadge(mcdx.status)}</strong></div>
-                            <div class="eval-row"><span>Chi tiết MCDX:</span> <strong>Banker: ${mcdx.banker_pct !== undefined ? parseFloat(mcdx.banker_pct).toFixed(1) + '%' : '0.0%'} | Hot: ${mcdx.hot_pct !== undefined ? parseFloat(mcdx.hot_pct).toFixed(1) + '%' : '0.0%'} | Nhỏ lẻ: ${mcdx.retailer_pct !== undefined ? parseFloat(mcdx.retailer_pct).toFixed(1) + '%' : '0.0%'}</strong></div>
-                            <div class="eval-row"><span>Động lượng RSI / MACD:</span> <strong>RSI: ${diag.rsi?.status || 'N/A'} | MACD: ${diag.macd?.status || 'N/A'} (Hist: ${stateRules.macd_hist !== undefined ? parseFloat(stateRules.macd_hist).toFixed(1) : 'N/A'})</strong></div>
-                        `;
+                        html = '';
                     }
                 } else {
                     if (!stockData) {
@@ -5694,13 +5691,7 @@
                             <div class="eval-row"><span>Vùng gợi ý:</span> <strong>Mua quanh: ${formatPrice(stockData.Entry)} | Mục tiêu: ${formatPrice(stockData.Target)} | Cắt lỗ: ${formatPrice(stockData.StopLoss)}</strong></div>
                         `;
                     } else if (type === 'techreport') {
-                        html = `
-                            <div class="eval-title">🎯 Tổng hợp Báo cáo Kỹ thuật đa chỉ báo (Tech Report)</div>
-                            <div class="eval-row"><span>Ichimoku Cloud:</span> <strong>${diag.ichimoku?.status || 'N/A'} ${getEvalBadge(diag.ichimoku?.status)}</strong></div>
-                            <div class="eval-row"><span>Dòng tiền Tạo lập (MCDX):</span> <strong>Banker: ${mcdx.banker_pct}% | Hot Money: ${mcdx.hot_pct}% | Nhỏ lẻ: ${mcdx.retailer_pct}%</strong></div>
-                            <div class="eval-row"><span>Động lượng RSI / MACD:</span> <strong>RSI: ${diag.rsi?.status || 'N/A'} | MACD: ${diag.macd?.status || 'N/A'}</strong></div>
-                            <div class="eval-row"><span>Động lượng ADX (Sức mạnh):</span> <strong>${diag.adx?.status || 'N/A'} ${getEvalBadge(diag.adx?.status)}</strong></div>
-                        `;
+                        html = '';
                     }
                 }
                 evalEl.innerHTML = html;
