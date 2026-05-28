@@ -212,13 +212,16 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 # ── Column name aliases accepted in input CSV ──────────────────────────────────
 _COLUMN_ALIASES = {
-    "date":   ["date", "time", "datetime", "ngay", "ngày", "trading_date", "dtyyyymmdd", "dtyyyymm", "date_time"],
+    # CSV column from Amibroker/MetaStock: <DTYYYYMMDD>, <DATE>, etc.
+    "date":   ["date", "time", "datetime", "ngay", "ngày", "trading_date",
+               "dtyyyymmdd", "dtyyyymm", "date_time", "dtdate"],
     "open":   ["open", "mo_cua", "mở_cửa", "open_price"],
     "high":   ["high", "cao_nhat", "cao_nhất", "high_price"],
     "low":    ["low", "thap_nhat", "thấp_nhất", "low_price"],
     "close":  ["close", "dong_cua", "đóng_cửa", "close_price", "last"],
     "volume": ["volume", "vol", "klgd", "khoi_luong", "klgd_cp"],
-    "ticker": ["ticker", "symbol", "ma_ck", "mã_ck", "stock", "code"],
+    # Amibroker exports the ticker as <Ticker>, normalized to 'ticker'
+    "ticker": ["ticker", "symbol", "ma_ck", "mã_ck", "stock", "code", "name"],
 }
 
 MIN_ROWS = 200
@@ -248,27 +251,39 @@ def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _clean_dataframe(df: pd.DataFrame, ticker: str = "") -> pd.DataFrame:
-    """Parse dates, sort, handle missing data, validate row count."""
+    """Parse dates, sort, deduplicate, handle missing data, validate row count."""
     # Parse Date
     try:
         # Convert to string and clean up potential float strings (e.g. "20231026.0")
-        date_series = df["Date"].astype(str).str.replace(r"\.0$", "", regex=True)
-        
-        # If the strings are 8-digit YYYYMMDD, use explicit format for reliability
+        # This handles the case where CSV stores YYYYMMDD as int64 (e.g. 20260528)
+        date_series = df["Date"].astype(str).str.strip().str.replace(r"\.0$", "", regex=True)
+
+        # If ALL values are exactly 8 digits (YYYYMMDD), use explicit format for reliability
         if date_series.str.match(r"^\d{8}$").all():
             df["Date"] = pd.to_datetime(date_series, format="%Y%m%d")
         else:
-            df["Date"] = pd.to_datetime(date_series, errors="coerce")
-            
+            # Try mixed format (handles ISO dates, slash-separated, etc.)
+            df["Date"] = pd.to_datetime(date_series, format='mixed', dayfirst=False, errors="coerce")
+
         if df["Date"].isna().any():
-            # Fallback for mixed or other formats
-            df["Date"] = pd.to_datetime(df["Date"], errors="raise")
-            
+            n_bad = df["Date"].isna().sum()
+            logger.warning(f"[{ticker}] {n_bad} unparseable date row(s) dropped.")
+            df = df.dropna(subset=["Date"])
+
+        if df.empty:
+            raise ValueError(f"[{ticker}] All date values were invalid.")
+
     except Exception as exc:
         raise ValueError(f"[{ticker}] Cannot parse Date column: {exc}") from exc
 
     # Sort ascending
     df = df.sort_values("Date").reset_index(drop=True)
+
+    # ── Deduplicate by Date (keep last row per date = most recent CSV update) ──
+    dup_count = df.duplicated(subset=["Date"]).sum()
+    if dup_count > 0:
+        logger.warning(f"[{ticker}] Removing {dup_count} duplicate date row(s).")
+        df = df.drop_duplicates(subset=["Date"], keep="last").reset_index(drop=True)
 
     # Drop rows where ALL price columns are NaN
     price_cols = ["Open", "High", "Low", "Close", "Volume"]

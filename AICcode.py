@@ -1044,22 +1044,22 @@ class TinvestApp:
                     sub_df = group.drop(columns=["Ticker"]).copy()
                     try:
                         clean_sub = _clean_dataframe(sub_df, ticker=t)
-                        
+
                         # 2. Bộ lọc 30 ngày (Giữ nguyên theo ý khách hàng)
                         last_date = clean_sub['Date'].max()
                         if (datetime.now() - last_date).days > 30 and not is_idx:
                             skipped_old += 1
                             continue
-                        
+
                         # Mã hợp lệ
                         all_valid_tickers.append(t)
-                            
+
                         # 1. Đồng bộ giá vào Storage
                         self.storage.sync_prices(t, clean_sub, source='CSV')
                         # 2. Luôn thêm vào danh sách tính toán để đảm bảo đủ 100% chỉ báo mới nhất
                         affected_tickers.add(t)
-                    except Exception:
-                        pass
+                    except Exception as e_ticker:
+                        self.log_sync(f"   ! Lỗi xử lý mã {t}: {e_ticker}")
 
             if skipped_3char > 0 or skipped_old > 0:
                 self.log_sync(f"   [*] Đã lọc bỏ: {skipped_3char} mã rác/không đạt tiêu chí.")
