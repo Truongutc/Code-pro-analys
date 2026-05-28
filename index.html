@@ -688,7 +688,19 @@
             border: 1px solid rgba(139, 92, 246, 0.3);
         }
 
-        .action-badge.no-trade { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); } .action-badge.wait {
+        .action-badge.no-trade {
+            background: rgba(14, 165, 233, 0.15); 
+            color: #38bdf8; 
+            border: 1px solid rgba(14, 165, 233, 0.3); 
+        } 
+        
+        .action-badge.take-profit {
+            background: rgba(234, 179, 8, 0.15);
+            color: #facc15;
+            border: 1px solid rgba(234, 179, 8, 0.3);
+        }
+
+        .action-badge.wait {
             background: rgba(245, 158, 11, 0.15);
             color: #fbbf24;
             border: 1px solid rgba(245, 158, 11, 0.3);
@@ -2793,9 +2805,11 @@
         function getActionClass(actionStr) {
             if (!actionStr) return 'wait';
             const s = actionStr.toUpperCase();
-            if (s.includes('RẤT NÊN') || s.includes('STRONGLY') || s.includes('ƯU TIÊN') || s.includes('RẤT MẠNH')) return 'strongly-buy';
-            if (s.includes('BUY') || s.includes('YES') || s.includes('MUA') || s.includes('THAM GIA')) return 'buy';
-            if (s.includes('SELL') || s.includes('BÁN') || s.includes('NO TRADE') || s.includes('ĐỨNG NGOÀI') || s.includes('HẠN CHẾ')) return 'sell';
+            if (s.includes('TAKE PROFIT') || s.includes('CHỐT LỜI')) return 'take-profit';
+            if (s.includes('NO ') || s.includes('ĐỨNG NGOÀI') || s.includes('DỨNG NGOÀI')) return 'no-trade';
+            if (s.includes('RẤT NÊN') || s.includes('STRONGLY') || s.includes('ƯU TIÊN') || s.includes('RẤT MẠNH') || s.includes('NÊN THAM GIA')) return 'strongly-buy';
+            if (s.includes('BUY') || s.includes('YES') || s.includes('MUA') || s.includes('THAM GIA') || s.includes('CÂN NHẮC')) return 'buy';
+            if (s.includes('SELL') || s.includes('BÁN') || s.includes('NO TRADE') || s.includes('HẠN CHẾ')) return 'sell';
             return 'wait';
         }
 
@@ -3724,8 +3738,24 @@
                         <div class="divider-h"></div>
                         <div class="detail-metric-list">
                             <div class="detail-metric-row">
+                                <span>Kháng cự 2 (R2):</span>
+                                <strong class="text-green">${t.Resistance2 ? formatPrice(t.Resistance2) : 'N/A'}</strong>
+                            </div>
+                            <div class="detail-metric-row">
+                                <span>Kháng cự 1 (R1):</span>
+                                <strong class="text-green">${t.Resistance1 ? formatPrice(t.Resistance1) : 'N/A'}</strong>
+                            </div>
+                            <div class="detail-metric-row">
                                 <span>Điểm mua gợi ý:</span>
                                 <strong>${formatPrice(t.Entry)}</strong>
+                            </div>
+                            <div class="detail-metric-row">
+                                <span>Hỗ trợ 1 (S1):</span>
+                                <strong class="text-red">${t.Support1 ? formatPrice(t.Support1) : 'N/A'}</strong>
+                            </div>
+                            <div class="detail-metric-row">
+                                <span>Hỗ trợ 2 (S2):</span>
+                                <strong class="text-red">${t.Support2 ? formatPrice(t.Support2) : 'N/A'}</strong>
                             </div>
                             <div class="detail-metric-row">
                                 <span>Mục tiêu chốt lời (Target 1):</span>
