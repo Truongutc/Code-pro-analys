@@ -210,6 +210,47 @@
             font-weight: 700;
         }
 
+        /* Responsive Navigation Tab Bar for Desktop */
+        @media (min-width: 768px) {
+            .menu-btn {
+                display: none !important;
+            }
+            .menu-content {
+                display: flex !important;
+                position: static !important;
+                transform: none !important;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                flex-direction: row !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                margin-top: 0 !important;
+                width: 100% !important;
+                max-width: 1200px !important;
+            }
+            .menu-item {
+                width: auto !important;
+                background: rgba(255, 255, 255, 0.03) !important;
+                border: 1px solid rgba(255, 255, 255, 0.05) !important;
+                border-radius: 8px !important;
+                padding: 6px 16px !important;
+                text-align: center !important;
+                justify-content: center !important;
+                color: var(--text-secondary) !important;
+            }
+            .menu-item:hover {
+                background: rgba(139, 92, 246, 0.15) !important;
+                border-color: var(--accent-purple) !important;
+                color: white !important;
+            }
+            .menu-item.active {
+                background: linear-gradient(135deg, var(--accent-purple) 0%, #6366f1 100%) !important;
+                border-color: transparent !important;
+                color: white !important;
+            }
+        }
+
         /* Status indicators */
         .status-dot-indicator {
             width: 8px;
