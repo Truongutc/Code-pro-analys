@@ -258,12 +258,19 @@ def _clean_dataframe(df: pd.DataFrame, ticker: str = "") -> pd.DataFrame:
         # This handles the case where CSV stores YYYYMMDD as int64 (e.g. 20260528)
         date_series = df["Date"].astype(str).str.strip().str.replace(r"\.0$", "", regex=True)
 
-        # If ALL values are exactly 8 digits (YYYYMMDD), use explicit format for reliability
-        if date_series.str.match(r"^\d{8}$").all():
-            df["Date"] = pd.to_datetime(date_series, format="%Y%m%d")
-        else:
-            # Try mixed format (handles ISO dates, slash-separated, etc.)
-            df["Date"] = pd.to_datetime(date_series, format='mixed', dayfirst=False, errors="coerce")
+        parsed = pd.Series(pd.NaT, index=df.index)
+        
+        # Parse 8-digit YYYYMMDD values
+        mask_8d = date_series.str.match(r"^\d{8}$") == True
+        if mask_8d.any():
+            parsed[mask_8d] = pd.to_datetime(date_series[mask_8d], format="%Y%m%d", errors="coerce")
+            
+        # Parse other valid date formats
+        mask_other = ~mask_8d & (date_series.notna()) & (date_series != "") & (date_series.str.lower() != "nan")
+        if mask_other.any():
+            parsed[mask_other] = pd.to_datetime(date_series[mask_other], format='mixed', dayfirst=False, errors="coerce")
+
+        df["Date"] = parsed
 
         if df["Date"].isna().any():
             n_bad = df["Date"].isna().sum()

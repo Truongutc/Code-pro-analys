@@ -1384,12 +1384,20 @@ def run_csv_import(csv_paths):
             is_idx = ("VNINDEX" in t) or ("HNX" in t) or ("HAINDEX" in t)
             
             try:
-                # Đồng nhất định dạng cột Date trước khi sắp xếp và loại bỏ trùng lặp
-                date_series = combined_df["Date"].astype(str).str.replace(r"\.0$", "", regex=True)
-                if date_series.str.match(r"^\d{8}$").all():
-                    combined_df["Date"] = pd.to_datetime(date_series, format="%Y%m%d")
-                else:
-                    combined_df["Date"] = pd.to_datetime(date_series, errors="coerce")
+                date_series = combined_df["Date"].astype(str).str.strip().str.replace(r"\.0$", "", regex=True)
+                parsed = pd.Series(pd.NaT, index=combined_df.index)
+                
+                # Parse 8-digit YYYYMMDD values
+                mask_8d = date_series.str.match(r"^\d{8}$") == True
+                if mask_8d.any():
+                    parsed[mask_8d] = pd.to_datetime(date_series[mask_8d], format="%Y%m%d", errors="coerce")
+                    
+                # Parse other valid date formats
+                mask_other = ~mask_8d & (date_series.notna()) & (date_series != "") & (date_series.str.lower() != "nan")
+                if mask_other.any():
+                    parsed[mask_other] = pd.to_datetime(date_series[mask_other], format='mixed', dayfirst=False, errors="coerce")
+                    
+                combined_df["Date"] = parsed
                 
                 # Loại bỏ các dòng có Date lỗi (NaT)
                 combined_df = combined_df.dropna(subset=["Date"])
