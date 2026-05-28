@@ -544,9 +544,9 @@ def evaluate_stock_valuation(ticker: str, df: pd.DataFrame, entry_info: dict) ->
         action = "NO (Đứng ngoài)"
     elif price >= exits["tp1"] and opp_col >= 50:
         action = "TAKE PROFIT (Chốt lời bớt)"
-    elif "0%" in target_pct:
+    elif target_pct.startswith("0%"):
         action = "WAIT (Chờ tín hiệu rõ ràng)"
-    elif "70–100%" in target_pct or "50–70%" in target_pct:
+    elif "70–100%" in target_pct or "50–70%" in target_pct or "70-100%" in target_pct or "50-70%" in target_pct:
         action = "YES (Nên tham gia)"
     else:
         action = "YES (Có thể cân nhắc)"
