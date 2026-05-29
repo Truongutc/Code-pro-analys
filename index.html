@@ -2496,6 +2496,138 @@
             color: var(--text-primary);
             line-height: 1.6;
         }
+
+        /* AIC Pro Tab Styles */
+        .pro-card {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+        }
+        .pro-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #8b5cf6, #ec4899);
+            opacity: 0.8;
+        }
+        .pro-card.web-system::before {
+            background: linear-gradient(90deg, #06b6d4, #3b82f6);
+        }
+        .pro-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .pro-card-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .pro-feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .pro-feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+        .pro-feature-icon {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            line-height: 1;
+            margin-top: 1px;
+        }
+        .pro-media-container {
+            margin-top: 16px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #090d16;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .pro-media-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+        .pro-media-container img:hover {
+            transform: scale(1.02);
+        }
+        .pwa-guide-box {
+            background: rgba(139, 92, 246, 0.04);
+            border: 1px dashed rgba(139, 92, 246, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .pwa-guide-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #c084fc;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pwa-icon-showcase {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .pwa-icon-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .pwa-icon-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .pwa-icon-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: white;
+        }
+        .pwa-icon-desc {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
     </style>
 
 </head>
@@ -2534,6 +2666,7 @@
                 <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')">🔍 Tra cứu Cổ phiếu</button>
                 <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Lọc Cổ phiếu')">🎯 Lọc Cổ phiếu</button>
                 <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Đánh giá Danh mục')">💼 Đánh giá Danh mục</button>
+                <button class="menu-item" data-tab="aicpro-tab" onclick="selectMenuTab('aicpro-tab', '⚡', 'AIC Pro')">⚡ AIC Pro</button>
                 <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', 'ℹ️', 'Information')">ℹ️ Information</button>
             </div>
         </div>
@@ -3027,6 +3160,112 @@
                                 <strong>Định giá doanh nghiệp</strong> được xây dựng từ năng lực cơ bắp, chuyên môn phân tích và sự tìm hiểu sâu sắc của con người. Ngược lại, <strong>phân tích kỹ thuật, xác định hỗ trợ/kháng cự và đánh giá dòng tiền</strong> được xử lý tự động bởi AI và hệ thống thời gian thực.<br><br>
                                 Sự cộng hưởng này giúp <strong>tiết giảm tối đa thời gian & công sức</strong> của nhà đầu tư, đồng thời <strong>loại bỏ hoàn toàn yếu tố cảm xúc</strong> chủ quan khi ra quyết định giao dịch.
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 6: AIC Pro -->
+        <div class="tab-content" id="aicpro-tab">
+            <div class="info-grid">
+                <!-- Left Column: AIC Pro App -->
+                <div class="pro-card">
+                    <h3>💻 Hệ thống 1: AIC Pro APP</h3>
+                    <div class="pro-card-subtitle">
+                        Phần mềm chuyên dụng chạy trực tiếp trên hệ điều hành Windows do AIC phát triển, cung cấp bộ công cụ phân tích kỹ thuật chuyên sâu dưới góc độ đa chỉ báo, hỗ trợ tư vấn danh mục và đánh giá thị trường toàn diện.
+                    </div>
+                    
+                    <div class="pro-feature-list">
+                        <div class="pro-feature-item">
+                            <span class="pro-feature-icon">⚡</span>
+                            <div>
+                                <strong>Chủ động cập nhật dữ liệu:</strong> Tương tự phiên bản Web, nhưng người dùng có toàn quyền chủ động nạp thêm file dữ liệu đầu vào (CSV) bất cứ lúc nào (từ CafeF, Vietstock, Amibroker...) hoặc tự động cập nhật nhanh chóng mà không phụ thuộc vào chu kỳ cập nhật hệ thống.
+                            </div>
+                        </div>
+                        <div class="pro-feature-item">
+                            <span class="pro-feature-icon">🔍</span>
+                            <div>
+                                <strong>Bộ chỉ báo nâng cao độc quyền:</strong> Tích hợp các hệ thống phân tích đa chiều (Heikin Flower, Heatmap Bands, GP Chart, Trending Scanner) giúp phát hiện xu hướng và điểm gom hàng của dòng tiền lớn với độ chính xác cao.
+                            </div>
+                        </div>
+                        <div class="pro-feature-item">
+                            <span class="pro-feature-icon">💼</span>
+                            <div>
+                                <strong>Tư vấn & Quản trị Danh mục:</strong> Đánh giá chi tiết điểm mua, điểm bán, vùng cắt lỗ và mục tiêu chốt lời của từng mã cổ phiếu cụ thể dựa trên thuật toán quản lý rủi ro nâng cao.
+                            </div>
+                        </div>
+                        <div class="pro-feature-item">
+                            <span class="pro-feature-icon">🎁</span>
+                            <div>
+                                <strong>Tiện ích nâng cấp liên tục:</strong> Được tích hợp sẵn các công cụ bổ trợ, bộ lọc tùy chọn thông minh và tự động tối ưu hóa hệ thống thông qua các bản cập nhật phần mềm định kỳ.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pro-media-container" title="Giao diện phần mềm AIC Pro APP">
+                        <img src="aic_pro_app_intro.png" alt="Giao diện phần mềm AIC Pro APP">
+                    </div>
+                </div>
+
+                <!-- Right Column: AIC Pro Web -->
+                <div class="pro-card web-system">
+                    <h3>🌐 Hệ thống 2: AIC Pro WEB</h3>
+                    <div class="pro-card-subtitle">
+                        Hệ thống Web App do AIC phát triển trên nền tảng đám mây, vận hành và xây dựng dựa trên AI số hóa. Cho phép truy cập linh hoạt bằng máy tính hoặc thiết bị di động ở bất cứ đâu mà không bắt buộc phải chạy trên Windows như bản App.
+                    </div>
+                    
+                    <div class="pro-feature-list">
+                        <div class="pro-feature-item">
+                            <span class="pro-feature-icon">🧠</span>
+                            <div>
+                                <strong>Vận hành bởi AI & Số hóa:</strong> Mọi đánh giá, phân loại và nhận diện các mẫu hình dòng tiền được thiết lập tự động bằng trí tuệ nhân tạo, đảm bảo tính khách quan và nhất quán.
+                            </div>
+                        </div>
+                        <div class="pro-feature-item">
+                            <span class="pro-feature-icon">📱</span>
+                            <div>
+                                <strong>Đa nền tảng, Tiện dụng:</strong> Phù hợp cho mọi loại thiết bị (PC, Laptop, iPad, iPhone, Android). Chỉ cần một kết nối internet để theo dõi thị trường mọi lúc mọi nơi.
+                            </div>
+                        </div>
+                        <div class="pro-feature-item">
+                            <span class="pro-feature-icon">⏰</span>
+                            <div>
+                                <strong>Dữ liệu cập nhật định kỳ:</strong> Phiên bản Web chạy ở chế độ bán thời gian thực (non-realtime). Dữ liệu được tính toán và tự động cập nhật cố định vào <strong>12:00</strong> (kết thúc phiên sáng) và <strong>15:30</strong> (kết thúc ngày giao dịch) hàng ngày từ Thứ 2 đến Thứ 6.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- PWA Section -->
+                    <div class="pwa-guide-box">
+                        <div class="pwa-guide-title">
+                            <span>📲 Hướng dẫn Ghim Web thành App di động (PWA)</span>
+                        </div>
+                        <div class="pro-card-subtitle" style="margin-top:-6px;">
+                            Bạn có thể lưu lại URL trang web lên màn hình chính của điện thoại để sử dụng mượt mà và trực quan giống như một ứng dụng gốc (App native) với biểu tượng ứng dụng riêng và không bị chiếm dụng không gian bởi thanh địa chỉ trình duyệt.
+                        </div>
+                        
+                        <div class="pwa-icon-showcase">
+                            <img src="aic_pro_icon_mobile.png" alt="AIC PRO 2.0 Icon" class="pwa-icon-img">
+                            <div class="pwa-icon-text">
+                                <span class="pwa-icon-name">AIC PRO 2.0</span>
+                                <span class="pwa-icon-desc">Biểu tượng ứng dụng trên màn hình điện thoại khi lưu URL</span>
+                            </div>
+                        </div>
+                        
+                        <div style="font-size:0.78rem; line-height:1.5; color:var(--text-primary); display:flex; flex-direction:column; gap:6px;">
+                            <div>
+                                <strong>Dành cho iPhone (Safari):</strong>
+                                <span style="color:var(--text-secondary);">Mở URL bằng Safari -> Bấm nút <strong>Chia sẻ (Share)</strong> dưới thanh công cụ -> Chọn <strong>Thêm vào MH chính (Add to Home Screen)</strong>.</span>
+                            </div>
+                            <div>
+                                <strong>Dành cho Android (Chrome):</strong>
+                                <span style="color:var(--text-secondary);">Mở URL bằng Chrome -> Bấm nút <strong>Tùy chọn (3 chấm)</strong> ở góc trên bên phải -> Chọn <strong>Cài đặt ứng dụng</strong> hoặc <strong>Thêm vào màn hình chính</strong>.</span>
+                            </div>
+                        </div>
+                        
+                        <div class="pro-media-container" style="margin-top: 8px;" title="Hướng dẫn chi tiết lưu URL ra màn hình điện thoại">
+                            <img src="huong_dan_save_app.jpg" alt="Hướng dẫn lưu Web App">
                         </div>
                     </div>
                 </div>
