@@ -2498,6 +2498,18 @@
         }
 
         /* AIC Pro Tab Styles */
+        .pro-grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        @media (min-width: 992px) {
+            .pro-grid-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
         .pro-card {
             background: rgba(15, 23, 42, 0.4);
             border: 1px solid rgba(139, 92, 246, 0.15);
@@ -2581,7 +2593,7 @@
             transform: scale(1.02);
         }
         .pro-media-container.small-media {
-            max-width: 320px;
+            max-width: 250px;
             margin-left: auto;
             margin-right: auto;
             border-color: rgba(139, 92, 246, 0.25);
