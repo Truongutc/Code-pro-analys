@@ -250,14 +250,13 @@ def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _clean_dataframe(df: pd.DataFrame, ticker: str = "") -> pd.DataFrame:
+def _clean_dataframe(df: pd.DataFrame, ticker: str = "", min_rows: int = 1) -> pd.DataFrame:
     """Parse dates, sort, deduplicate, handle missing data, validate row count."""
     # Parse Date
     try:
         # Convert to string and clean up potential float strings (e.g. "20231026.0")
         # This handles the case where CSV stores YYYYMMDD as int64 (e.g. 20260528)
         date_series = df["Date"].astype(str).str.strip().str.replace(r"\.0$", "", regex=True)
-
         parsed = pd.Series(pd.NaT, index=df.index)
         
         # Parse 8-digit YYYYMMDD values
@@ -307,9 +306,9 @@ def _clean_dataframe(df: pd.DataFrame, ticker: str = "") -> pd.DataFrame:
     df = df.dropna(subset=price_cols).reset_index(drop=True)
 
     # Minimum row check
-    if len(df) < MIN_ROWS:
+    if len(df) < min_rows:
         raise ValueError(
-            f"[{ticker}] Insufficient data: {len(df)} rows found, minimum required is {MIN_ROWS}."
+            f"[{ticker}] Insufficient data: {len(df)} rows found, minimum required is {min_rows}."
         )
 
     logger.info(f"[{ticker}] Loaded {len(df)} rows from {df['Date'].iloc[0].date()} to {df['Date'].iloc[-1].date()}")
@@ -368,7 +367,7 @@ def load_data(file_path: "str | list[str]") -> "pd.DataFrame | dict[str, pd.Data
         if len(tickers) == 1:
             ticker = str(tickers[0]).upper()
             single = df[df["Ticker"] == tickers[0]].copy().drop(columns=["Ticker"])
-            return _clean_dataframe(single, ticker=ticker)
+            return _clean_dataframe(single, ticker=ticker, min_rows=MIN_ROWS)
 
         result = {}
         errors = []
@@ -381,7 +380,7 @@ def load_data(file_path: "str | list[str]") -> "pd.DataFrame | dict[str, pd.Data
                 
             sub = df[df["Ticker"] == ticker_val].copy().drop(columns=["Ticker"])
             try:
-                result[ticker] = _clean_dataframe(sub, ticker=ticker)
+                result[ticker] = _clean_dataframe(sub, ticker=ticker, min_rows=MIN_ROWS)
             except ValueError as e:
                 errors.append(str(e))
                 logger.debug(f"Skipping ticker {ticker}: {e}")
@@ -396,4 +395,4 @@ def load_data(file_path: "str | list[str]") -> "pd.DataFrame | dict[str, pd.Data
         return result
 
     # ── Single-ticker (no Ticker column) ──────────────────────────────────────
-    return _clean_dataframe(df, ticker="SINGLE")
+    return _clean_dataframe(df, ticker="SINGLE", min_rows=MIN_ROWS)

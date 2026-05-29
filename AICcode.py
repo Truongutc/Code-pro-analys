@@ -996,7 +996,8 @@ class TinvestApp:
                     if "Ticker" not in df_norm.columns:
                         path_obj = Path(f)
                         potential_ticker = path_obj.stem.upper().split('_')[0].split(' ')[0]
-                        if len(potential_ticker) == 3 and potential_ticker.isalnum():
+                        is_idx = ("VNINDEX" in potential_ticker) or ("HNX" in potential_ticker) or ("HAINDEX" in potential_ticker)
+                        if (len(potential_ticker) == 3 and potential_ticker.isalnum()) or is_idx:
                             df_norm["Ticker"] = potential_ticker
                             self.log_sync(f"   + Nhận diện mã '{potential_ticker}' từ tên file: {path_obj.name}")
                     
@@ -2236,46 +2237,34 @@ class TinvestApp:
                 
 
 
-                # Fetch Indices (VNINDEX=1, HNX-INDEX=2)
-
-
-                self.log_sync(f"   + Đang nạp Indices (VNINDEX, HNX-INDEX)...")
-
-
-                indices = [("VNINDEX", 1, -19), ("HNX-INDEX", 2, -18)]
-
-
-                for ticker, tid, sid in indices:
-
-
-                    try:
-
-
-                        idx_raw = self.vs_client.fetch_index_day(ticker, tid, sid, d)
-
-
-                        if idx_raw:
-
-
-                            day_idx = self.vs_client.format_to_df(idx_raw)
-
-
-                            self.storage.sync_prices(ticker, day_idx, source='API')
-
-
-                            # Always force update UX/Indicators for Indices if fetch succeeds
-
-
-                            affected_tickers.add(ticker)
-
-
-                            self.log_sync(f"   ---> Xong Index: {ticker} ({d})")
-
-
-                    except Exception as e:
-
-
-                        self.log_sync(f"   ! Lỗi Index {ticker}: {e}")
+            # --- STEP 4: INDEPENDENT INDEX UPDATE (PREVENT INDEX LAG BUG) ---
+            self.log_sync("\n--- BẮT ĐẦU ĐỒNG BỘ CHỈ SỐ VNINDEX & HNX-INDEX ---")
+            indices = [("VNINDEX", 1, -19), ("HNX-INDEX", 2, -18)]
+            for ticker, tid, sid in indices:
+                try:
+                    idx_last_date = self.storage.get_last_date(ticker)
+                    self.log_sync(f"[*] Chỉ số {ticker}: Ngày cuối cùng trong storage: {idx_last_date}")
+                    idx_missing_dates = self.vs_client.get_missing_dates(idx_last_date)
+                    
+                    # Force update current trading day for indices too
+                    if eff_today_str not in idx_missing_dates:
+                        idx_missing_dates.append(eff_today_str)
+                        idx_missing_dates = sorted(idx_missing_dates)
+                        
+                    if idx_missing_dates:
+                        self.log_sync(f"[*] Chỉ số {ticker} cần tải {len(idx_missing_dates)} ngày: {', '.join(idx_missing_dates)}")
+                        for idx_d in idx_missing_dates:
+                            idx_raw = self.vs_client.fetch_index_day(ticker, tid, sid, idx_d)
+                            if idx_raw:
+                                day_idx = self.vs_client.format_to_df(idx_raw)
+                                t_min = self.storage.sync_prices(ticker, day_idx, source='API')
+                                if t_min is not None:
+                                    affected_tickers.add(ticker)
+                                self.log_sync(f"   ---> ✅ Tải xong Index: {ticker} ({idx_d})")
+                    else:
+                        self.log_sync(f"✅ Chỉ số {ticker} đã cập nhật đầy đủ.")
+                except Exception as e:
+                    self.log_sync(f"❌ Lỗi cập nhật Index {ticker}: {e}")
 
 
 
@@ -3049,10 +3038,10 @@ class TinvestApp:
                                 alloc = "10-20%"
                                 alloc_note = "Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp"
 
-                        cleaned_sr = {k: float(v) * 1000 for k, v in sr.items()}
+                        cleaned_sr = {k: float(v) for k, v in sr.items()}
                         
                         market_indices[index_ticker] = {
-                            "price": float(idx_df['Close'].iloc[-1]) * 1000,
+                            "price": float(idx_df['Close'].iloc[-1]),
                             "date": pd.to_datetime(idx_df['Date'].iloc[-1]).strftime("%Y-%m-%d") if not pd.isna(idx_df['Date'].iloc[-1]) else "N/A",
                             "regime": str(res_regime.get("regime", "UNKNOWN")),
                             "action": str(res_regime.get("action", "WAIT")),
@@ -3131,6 +3120,15 @@ class TinvestApp:
                 json.dump(final_output, f, ensure_ascii=False, indent=2)
                 
             self.log_sync(f"✅ Đã xuất {len(tickers_analysis)} mã ra {output_file}.")
+            
+            # Export individual history JSONs for Web Dashboard (chart rendering)
+            self.log_sync("📊 Đang xuất dữ liệu lịch sử JSON cho Web Dashboard...")
+            try:
+                from tinvest.chart_exporter import export_ticker_history_json
+                export_ticker_history_json(self.data_dict, self.analysis_cache, output_dir)
+            except Exception as e_hist:
+                self.log_sync(f"⚠️ Cảnh báo: Lỗi khi xuất history JSON: {e_hist}")
+            
             return True
         except Exception as e:
             self.log_sync(f"❌ Lỗi xuất dữ liệu Web JSON: {e}")
@@ -3154,9 +3152,10 @@ class TinvestApp:
                     self.log_sync("❌ Thư mục không phải Git repository hoặc Git chưa được cài đặt.")
                     return
                 
-                # Git add Output/analysis_results.json
+                # Git add Output/analysis_results.json and Output/history/
                 self.log_sync("   [+] Đang thêm file dữ liệu vào Git...")
                 subprocess.run(["git", "add", "Output/analysis_results.json"], cwd=app_dir, check=True)
+                subprocess.run(["git", "add", "Output/history/"], cwd=app_dir, check=True)
                 
                 # Git commit
                 self.log_sync("   [+] Đang tạo commit...")

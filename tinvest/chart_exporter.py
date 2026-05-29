@@ -624,3 +624,139 @@ def export_tech_report_chart(ticker, df_full, save_path):
         logger.error(f"Error exporting Tech Report chart for {ticker}: {e}")
         import traceback
         traceback.print_exc()
+
+
+def export_ticker_history_json(data_dict, analysis_cache, output_dir):
+    """
+    Export full OHLCV + computed indicators for each ticker to individual JSON files.
+    These files are lazy-loaded by the web frontend to render interactive charts
+    (replacing Matplotlib PNG exports entirely).
+    
+    Output: Output/history/{TICKER}.json  (one file per ticker)
+    """
+    import math
+    import json
+    from concurrent.futures import ThreadPoolExecutor
+    
+    history_dir = os.path.join(output_dir, "history")
+    os.makedirs(history_dir, exist_ok=True)
+    
+    # Columns needed for each chart type
+    GP_COLS = ['GP_E14', 'GP_E21', 'GP_xFast', 'GP_xSlow',
+               'GP_BB_Top', 'GP_BB_Bot',
+               'OCT_A1', 'OCT_B1', 'OCT_Color',
+               'OCT_BB_Top', 'OCT_BB_Bot',
+               'RS13', 'RS52']
+    
+    HK_COLS = ['HK_Flower_Open', 'HK_Flower_High', 'HK_Flower_Low', 'HK_Flower_Close',
+               'HK_MHull', 'HK_SHull', 'HK_NW', 'HK_Trend', 'HK_BarColor',
+               'HK_BuySignal', 'HK_BuyManh', 'HK_SellSignal', 'HK_SellManh',
+               'TC_Trend', 'TC_TrendColor', 'TC_StopLine', 'TC_StopColor',
+               'T2_SMA', 'T2_SMA_Trend', 'T2_ST_Upper', 'T2_ST_Lower', 'T2_ST_Trend']
+    
+    HM_COLS = ['HM_PFE', 'HM_STC', 'HM_MoneyFlow',
+               'HM_Flower_Open', 'HM_Flower_High', 'HM_Flower_Low', 'HM_Flower_Close',
+               'HM_Band_Hi', 'HM_Band_KH', 'HM_Band_KM', 'HM_Band_KL', 'HM_Band_Lo',
+               'HM_Band_Long_Hr', 'HM_Band_Long_Ls']
+    
+    TR_COLS = ['MA10', 'MA20', 'MA50',
+               'Tenkan', 'Kijun', 'Kijun65', 'SpanA', 'SpanB',
+               'MCDX_Banker', 'MCDX_HotMoney', 'MCDX_Retailer', 'MCDX_Banker_MA',
+               'ADX', 'ADX_Color', 'DI_Plus', 'DI_Minus',
+               'MACD', 'MACD_Signal', 'MACD_Hist',
+               'RSI']
+    
+    ALL_INDICATOR_COLS = list(dict.fromkeys(GP_COLS + HK_COLS + HM_COLS + TR_COLS))
+    
+    df_vn = data_dict.get("VNINDEX")
+    df_vn_indexed = None
+    if df_vn is not None and not df_vn.empty:
+        try:
+            df_vn_temp = df_vn.copy()
+            df_vn_temp['Date'] = pd.to_datetime(df_vn_temp['Date'])
+            df_vn_indexed = df_vn_temp.set_index('Date')
+        except Exception as e_vn:
+            logger.warning(f"Could not build VNINDEX index for RS: {e_vn}")
+ 
+    all_tickers_to_export = list(data_dict.keys())
+    
+    def process_single_ticker(t):
+        try:
+            cached = analysis_cache.get(t)
+            if cached and 'df' in cached and cached['df'] is not None:
+                df = cached['df'].copy()
+            else:
+                df = data_dict.get(t)
+                if df is None or df.empty:
+                    return False
+                df = df.copy()
+            
+            if df.empty or 'Date' not in df.columns:
+                return False
+            
+            df['Date'] = pd.to_datetime(df['Date'])
+            df = df.sort_values('Date').reset_index(drop=True)
+            
+            # Calculate RS13 / RS52 against VNINDEX
+            if df_vn_indexed is not None:
+                try:
+                    bench_close = df['Date'].map(df_vn_indexed['Close']).ffill().bfill()
+                    rs_raw = df['Close'] / (bench_close + 1e-10)
+                    
+                    rs52_min = rs_raw.rolling(window=260, min_periods=1).min()
+                    rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
+                    df['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
+                    
+                    rs13_min = rs_raw.rolling(window=65, min_periods=1).min()
+                    rs13_max = rs_raw.rolling(window=65, min_periods=1).max()
+                    df['RS13'] = 100 * (rs_raw - rs13_min) / (rs13_max - rs13_min + 0.0001)
+                except Exception:
+                    df['RS13'] = 50.0
+                    df['RS52'] = 50.0
+            else:
+                df['RS13'] = 50.0
+                df['RS52'] = 50.0
+            
+            df_extended = df.copy()
+ 
+            def clean_nan_list(series):
+                return [None if (pd.isna(x) or (isinstance(x, float) and np.isnan(x))) else x for x in series.tolist()]
+ 
+            record = {
+                "ticker": t,
+                "dates": df_extended['Date'].dt.strftime("%Y-%m-%d").tolist(),
+                "opens":   clean_nan_list(df_extended['Open'].round(6)),
+                "highs":   clean_nan_list(df_extended['High'].round(6)),
+                "lows":    clean_nan_list(df_extended['Low'].round(6)),
+                "closes":  clean_nan_list(df_extended['Close'].round(6)),
+                "volumes": clean_nan_list(df_extended['Volume'].round(6)),
+            }
+            
+            for col in ALL_INDICATOR_COLS:
+                if col in df_extended.columns:
+                    series = df_extended[col]
+                    if series.dtype == bool or col in ['HK_BuySignal', 'HK_BuyManh', 'HK_SellSignal', 'HK_SellManh']:
+                        record[col] = [bool(v) if pd.notna(v) and v is not None else None for v in series]
+                    elif series.dtype == object:
+                        record[col] = [None if pd.isna(v) else v for v in series.tolist()]
+                    else:
+                        series_rounded = series.round(6)
+                        record[col] = clean_nan_list(series_rounded)
+            
+            out_path = os.path.join(history_dir, f"{t}.json")
+            with open(out_path, 'w', encoding='utf-8') as f:
+                json.dump(record, f, ensure_ascii=False, separators=(',', ':'))
+            return True
+        except Exception as ex:
+            logger.error(f"   ! Lỗi xuất history JSON mã {t}: {ex}")
+            return False
+ 
+    max_workers = min(16, (os.cpu_count() or 4) * 2)
+    logger.info(f"⚡ Đang xuất JSON song song sử dụng {max_workers} threads...")
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        results = list(executor.map(process_single_ticker, all_tickers_to_export))
+        
+    exported = sum(1 for r in results if r)
+    errors = len(all_tickers_to_export) - exported
+    logger.info(f"✅ Đã xuất history JSON: {exported} mã thành công, {errors} lỗi → {history_dir}")
+

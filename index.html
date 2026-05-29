@@ -399,6 +399,30 @@
             gap: 12px;
         }
 
+        .chart-toggles-container {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            font-size: 0.7rem;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .chart-toggles-container label {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .chart-toggles-container input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+        }
+
 
         .breadth-chart-container {
             position: relative;
@@ -1436,6 +1460,45 @@
         @media (max-width: 768px) {
             .vnindex-analysis-grid {
                 grid-template-columns: 1fr;
+            }
+            .chart-fs-modal {
+                padding: 10px 12px 12px;
+            }
+            .chart-fs-header {
+                display: grid !important;
+                grid-template-columns: 1fr auto !important;
+                gap: 8px 8px !important;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+            .chart-fs-title {
+                grid-column: 1;
+                font-size: 0.95rem;
+            }
+            .chart-fs-close {
+                grid-column: 2;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            .chart-fs-controls {
+                grid-column: 1 / span 2;
+                margin-left: 0;
+                margin-right: 0;
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .chart-toggles-container {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                width: 100%;
+                gap: 6px 12px;
+                padding: 6px 8px;
+            }
+            .chart-toggles-container label {
+                padding: 4px 6px;
+                background: rgba(255,255,255,0.03);
+                border-radius: 4px;
+                border: 1px solid rgba(255,255,255,0.05);
             }
         }
 
@@ -2571,14 +2634,14 @@
                             <div class="chart-cell-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <span class="chart-cell-label">📊 Báo cáo Kỹ thuật</span>
-                                    <div class="chart-toggles-container" style="display:inline-flex; gap:6px; font-size:0.7rem; align-items:center; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08);">
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kumo" checked onchange="toggleTechLine('Kumo', this.checked)"> Kumo</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Tenkan" checked onchange="toggleTechLine('Tenkan', this.checked)"> Tenkan</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun" checked onchange="toggleTechLine('Kijun', this.checked)"> Kijun</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun65" checked onchange="toggleTechLine('Kijun65', this.checked)"> Kijun65</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA10" checked onchange="toggleTechLine('MA10', this.checked)"> MA10</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA20" checked onchange="toggleTechLine('MA20', this.checked)"> MA20</label>
-                                        <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA50" checked onchange="toggleTechLine('MA50', this.checked)"> MA50</label>
+                                    <div class="chart-toggles-container">
+                                        <label><input type="checkbox" class="tech-toggle-Kumo" checked onchange="toggleTechLine('Kumo', this.checked)"> Kumo</label>
+                                        <label><input type="checkbox" class="tech-toggle-Tenkan" checked onchange="toggleTechLine('Tenkan', this.checked)"> Tenkan</label>
+                                        <label><input type="checkbox" class="tech-toggle-Kijun" checked onchange="toggleTechLine('Kijun', this.checked)"> Kijun</label>
+                                        <label><input type="checkbox" class="tech-toggle-Kijun65" checked onchange="toggleTechLine('Kijun65', this.checked)"> Kijun65</label>
+                                        <label><input type="checkbox" class="tech-toggle-MA10" checked onchange="toggleTechLine('MA10', this.checked)"> MA10</label>
+                                        <label><input type="checkbox" class="tech-toggle-MA20" checked onchange="toggleTechLine('MA20', this.checked)"> MA20</label>
+                                        <label><input type="checkbox" class="tech-toggle-MA50" checked onchange="toggleTechLine('MA50', this.checked)"> MA50</label>
                                     </div>
                                 </div>
                                 <button class="chart-expand-btn" onclick="expandChart('market','techreport')">⛶ Mở rộng</button>
@@ -3078,14 +3141,14 @@
 
         function getTechTogglesHtml() {
             return `
-            <div class="chart-toggles-container" style="display:inline-flex; gap:6px; font-size:0.7rem; align-items:center; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08);">
-                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kumo" ${techChartVisibility.SpanA ? 'checked' : ''} onchange="toggleTechLine('Kumo', this.checked)"> Kumo</label>
-                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Tenkan" ${techChartVisibility.Tenkan ? 'checked' : ''} onchange="toggleTechLine('Tenkan', this.checked)"> Tenkan</label>
-                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun" ${techChartVisibility.Kijun ? 'checked' : ''} onchange="toggleTechLine('Kijun', this.checked)"> Kijun</label>
-                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-Kijun65" ${techChartVisibility.Kijun65 ? 'checked' : ''} onchange="toggleTechLine('Kijun65', this.checked)"> Kijun65</label>
-                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA10" ${techChartVisibility.MA10 ? 'checked' : ''} onchange="toggleTechLine('MA10', this.checked)"> MA10</label>
-                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA20" ${techChartVisibility.MA20 ? 'checked' : ''} onchange="toggleTechLine('MA20', this.checked)"> MA20</label>
-                <label style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" class="tech-toggle-MA50" ${techChartVisibility.MA50 ? 'checked' : ''} onchange="toggleTechLine('MA50', this.checked)"> MA50</label>
+            <div class="chart-toggles-container">
+                <label><input type="checkbox" class="tech-toggle-Kumo" ${techChartVisibility.SpanA ? 'checked' : ''} onchange="toggleTechLine('Kumo', this.checked)"> Kumo</label>
+                <label><input type="checkbox" class="tech-toggle-Tenkan" ${techChartVisibility.Tenkan ? 'checked' : ''} onchange="toggleTechLine('Tenkan', this.checked)"> Tenkan</label>
+                <label><input type="checkbox" class="tech-toggle-Kijun" ${techChartVisibility.Kijun ? 'checked' : ''} onchange="toggleTechLine('Kijun', this.checked)"> Kijun</label>
+                <label><input type="checkbox" class="tech-toggle-Kijun65" ${techChartVisibility.Kijun65 ? 'checked' : ''} onchange="toggleTechLine('Kijun65', this.checked)"> Kijun65</label>
+                <label><input type="checkbox" class="tech-toggle-MA10" ${techChartVisibility.MA10 ? 'checked' : ''} onchange="toggleTechLine('MA10', this.checked)"> MA10</label>
+                <label><input type="checkbox" class="tech-toggle-MA20" ${techChartVisibility.MA20 ? 'checked' : ''} onchange="toggleTechLine('MA20', this.checked)"> MA20</label>
+                <label><input type="checkbox" class="tech-toggle-MA50" ${techChartVisibility.MA50 ? 'checked' : ''} onchange="toggleTechLine('MA50', this.checked)"> MA50</label>
             </div>
             `;
         }
@@ -3104,7 +3167,7 @@
             if (typeof p === 'string' && isNaN(Number(p))) return p;
             if (p === null || p === undefined || isNaN(p) || p === 0) return "N/A";
             if (isIndex) {
-                return Math.round(p / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+                return Math.round(p).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
             }
             return (p / 1000).toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
         }
