@@ -89,7 +89,10 @@ from tinvest.valuation_engine import evaluate_stock_valuation
 import sys
 import os
 import matplotlib
-matplotlib.use('TkAgg') # Force TkAgg for compatibility with Tkinter and PyInstaller
+try:
+    matplotlib.use('TkAgg') # Force TkAgg for compatibility with Tkinter and PyInstaller
+except ImportError:
+    matplotlib.use('Agg') # Fallback to Agg for headless mode (e.g. GitHub Actions)
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.image as mpimg
