@@ -4694,6 +4694,11 @@
             const hist = t.History;
             if (!hist || !hist.dates) return;
 
+            // Only draw the last 30 trading days
+            const dates = hist.dates.slice(-30);
+            const closes = hist.closes.slice(-30);
+            const volumes = hist.volumes.slice(-30);
+
             if (stockChartInstances[canvasId]) {
                 stockChartInstances[canvasId].destroy();
             }
@@ -4701,11 +4706,11 @@
             stockChartInstances[canvasId] = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: hist.dates,
+                    labels: dates,
                     datasets: [
                         {
                             label: 'Giá Đóng Cửa',
-                            data: hist.closes,
+                            data: closes,
                             borderColor: '#8b5cf6',
                             borderWidth: 2,
                             pointRadius: 1,
@@ -4715,7 +4720,7 @@
                         },
                         {
                             label: 'Khối lượng',
-                            data: hist.volumes,
+                            data: volumes,
                             type: 'bar',
                             backgroundColor: 'rgba(20, 184, 166, 0.15)',
                             borderWidth: 0,
