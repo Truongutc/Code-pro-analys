@@ -53,6 +53,7 @@ jobs:
           if [ -d "gdrive_data" ] && [ -n "$csv_files" ]; then
             echo "✅ Phát hiện file CSV trong thư mục Google Drive. Đang chép sang import_data/"
             mkdir -p import_data
+            rm -f import_data/*.csv
             find gdrive_data -name "*.csv" -exec cp {} import_data/ \;
             echo "📂 Danh sách file CSV đã chép:"
             ls -l import_data/

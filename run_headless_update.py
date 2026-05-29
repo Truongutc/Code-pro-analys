@@ -1198,6 +1198,21 @@ def run_csv_import(csv_paths):
     if not unique_files:
         logger.error("❌ Không tìm thấy file CSV hợp lệ nào để xử lý.")
         sys.exit(1)
+
+    # Sort files chronologically so that newer files are processed last (overwriting older values in drop_duplicates)
+    def get_file_sort_key(p):
+        import re
+        import os
+        m = re.search(r"Upto(\d{2})\.(\d{2})\.(\d{4})", p.name, re.IGNORECASE)
+        if m:
+            day, month, year = map(int, m.groups())
+            return (1, year, month, day)
+        try:
+            return (0, os.path.getmtime(str(p)))
+        except:
+            return (0, 0)
+
+    unique_files.sort(key=get_file_sort_key)
         
     logger.info(f"[*] Tìm thấy {len(unique_files)} file CSV để xử lý...")
     
