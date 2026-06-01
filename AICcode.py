@@ -461,9 +461,9 @@ CUSTOM_RULES = {
         "label": "MACD Histogram Phân kỳ tăng giá (Bullish Divergence)",
         "func": check_macd_hist_bullish_divergence
     },
-    "RS13_GT_50": {
-        "label": "RS 13 Tuần > 50",
-        "func": lambda df: df['RS13'].iloc[-1] > 50 if 'RS13' in df.columns and len(df) >= 1 else False
+    "RS14_GT_50": {
+        "label": "RS 14 Tuần > 50",
+        "func": lambda df: df['RS14'].iloc[-1] > 50 if 'RS14' in df.columns and len(df) >= 1 else False
     },
     "RS52_GT_50": {
         "label": "RS 52 Tuần > 50",
@@ -1229,10 +1229,10 @@ class TinvestApp:
             rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
             df['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
             
-            # RS13: 13 weeks = 65 bars
-            rs13_min = rs_raw.rolling(window=65, min_periods=1).min()
-            rs13_max = rs_raw.rolling(window=65, min_periods=1).max()
-            df['RS13'] = 100 * (rs_raw - rs13_min) / (rs13_max - rs13_min + 0.0001)
+            # RS14: 14 weeks = 70 bars
+            rs14_min = rs_raw.rolling(window=70, min_periods=1).min()
+            rs14_max = rs_raw.rolling(window=70, min_periods=1).max()
+            df['RS14'] = 100 * (rs_raw - rs14_min) / (rs14_max - rs14_min + 0.0001)
 
     def open_custom_filter_dialog(self):
         if not self.analysis_cache:
@@ -3352,8 +3352,8 @@ class TinvestApp:
                 df_full = enrich_dataframe(df_full)
                 self.data_dict[ticker] = df_full
 
-            # --- CALCULATE RS13 & RS52 ---
-            if 'RS13' not in df_full.columns or 'RS52' not in df_full.columns:
+            # --- CALCULATE RS14 & RS52 ---
+            if 'RS14' not in df_full.columns or 'RS52' not in df_full.columns:
                 df_vn = None
                 if hasattr(self, 'data_dict'):
                     vn_key = next((k for k in self.data_dict.keys() if "VNINDEX" in k), None)
@@ -3368,12 +3368,12 @@ class TinvestApp:
                     rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
                     df_full['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
                     
-                    # RS13: 13 weeks = 65 bars
-                    rs13_min = rs_raw.rolling(window=65, min_periods=1).min()
-                    rs13_max = rs_raw.rolling(window=65, min_periods=1).max()
-                    df_full['RS13'] = 100 * (rs_raw - rs13_min) / (rs13_max - rs13_min + 0.0001)
+                    # RS14: 14 weeks = 70 bars
+                    rs14_min = rs_raw.rolling(window=70, min_periods=1).min()
+                    rs14_max = rs_raw.rolling(window=70, min_periods=1).max()
+                    df_full['RS14'] = 100 * (rs_raw - rs14_min) / (rs14_max - rs14_min + 0.0001)
                 else:
-                    df_full['RS13'] = 50.0
+                    df_full['RS14'] = 50.0
                     df_full['RS52'] = 50.0
 
             # 1. Prepare Data (Last 150 bars)
@@ -3448,7 +3448,7 @@ class TinvestApp:
             ax2.axhline(0, color='white', linewidth=0.5, alpha=0.5)
 
             # --- THIRD SUBPLOT: RS CHART ---
-            ax3.plot(x_idx, df['RS13'], color='white', linewidth=2.0, label='RS13')
+            ax3.plot(x_idx, df['RS14'], color='white', linewidth=2.0, label='RS14')
             ax3.plot(x_idx, df['RS52'], color='yellow', linewidth=2.0, label='RS52')
             ax3.axhline(50, color='red', linewidth=0.8, linestyle='--', alpha=0.5)
 

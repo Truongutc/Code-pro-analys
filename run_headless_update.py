@@ -604,10 +604,31 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
     for rule_key in rules_meta.keys():
         filtered_results[rule_key] = []
         
+    df_vn = data_dict.get("VNINDEX")
+    df_vn_indexed = df_vn.set_index('Date') if df_vn is not None and not df_vn.empty else None
+
     for ticker, data in list(analysis_cache.items()):
         df = data.get("df")
         if df is None or df.empty:
             continue
+            
+        # Calculate RS14 and RS52 against VNINDEX
+        if df_vn_indexed is not None and 'Date' in df.columns:
+            try:
+                bench_close = df['Date'].map(df_vn_indexed['Close']).ffill().bfill()
+                rs_raw = df['Close'] / (bench_close + 1e-10)
+                
+                # RS52: 52 weeks = 260 bars
+                rs52_min = rs_raw.rolling(window=260, min_periods=1).min()
+                rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
+                df['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
+                
+                # RS14: 14 weeks = 70 bars
+                rs14_min = rs_raw.rolling(window=70, min_periods=1).min()
+                rs14_max = rs_raw.rolling(window=70, min_periods=1).max()
+                df['RS14'] = 100 * (rs_raw - rs14_min) / (rs14_max - rs14_min + 0.0001)
+            except Exception as e_rs:
+                logger.warning(f"Error calculating RS for {ticker}: {e_rs}")
             
         # Get price indicators
         current_vol = int(df['Volume'].iloc[-1]) if 'Volume' in df.columns else 0

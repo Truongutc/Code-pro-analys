@@ -2888,9 +2888,9 @@
                                 <input type="checkbox" value="MACD_HIST_BULLISH_DIVERGENCE" onchange="toggleFilterCheckbox('MACD_HIST_BULLISH_DIVERGENCE')">
                                 <span>MACD Histogram Phân kỳ tăng giá (Bullish Divergence)</span>
                             </label>
-                            <label class="filter-checkbox-row" id="row-RS13_GT_50">
-                                <input type="checkbox" value="RS13_GT_50" onchange="toggleFilterCheckbox('RS13_GT_50')">
-                                <span>RS 13 Tuần > 50</span>
+                            <label class="filter-checkbox-row" id="row-RS14_GT_50">
+                                <input type="checkbox" value="RS14_GT_50" onchange="toggleFilterCheckbox('RS14_GT_50')">
+                                <span>RS 14 Tuần > 50</span>
                             </label>
                             <label class="filter-checkbox-row" id="row-RS52_GT_50">
                                 <input type="checkbox" value="RS52_GT_50" onchange="toggleFilterCheckbox('RS52_GT_50')">
@@ -5439,10 +5439,10 @@
                   .setData([{time:d2ts(data.dates[0]),value:0},{time:d2ts(data.dates[data.dates.length-1]),value:0}]);
             }
 
-            // Pane 3: RS13 / RS52
+            // Pane 3: RS14 / RS52
             const {chart: c3, ro: ro3} = mkChart(d3, h3, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart: c3, ro: ro3});
-            if (data.RS13) c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
+            if (data.RS14) c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS14',1));
             if (data.RS52) c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title: '',priceLineVisible:true,lastValueVisible:true}).setData(lineData(data,'RS52',1));
             // 50 reference
             if (data.dates.length > 0) {
@@ -6262,7 +6262,7 @@
             
             // RS pane
             const {chart:c3,ro:r3}=mkChart(d3,h3, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } }); instances.push({chart:c3,ro:r3});
-            if(data.RS13)c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS13',1));
+            if(data.RS14)c3.addLineSeries({color:'#ffffff',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS14',1));
             if(data.RS52)c3.addLineSeries({color:'#fbbf24',lineWidth:1.5,title: '',priceLineVisible:false,lastValueVisible:true}).setData(lineData(data,'RS52',1));
             if(data.dates.length>0)c3.addLineSeries({color:'rgba(239,68,68,0.4)',lineWidth:1,lineStyle:1,priceLineVisible:false,lastValueVisible:false}).setData([{time:d2ts(data.dates[0]),value:50},{time:d2ts(data.dates[data.dates.length-1]),value:50}]);
             syncCharts([c1,c2,c3]); applyDefaultChartRange(c1, data.dates, 90);
