@@ -697,25 +697,26 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
             df['Date'] = pd.to_datetime(df['Date'])
             df = df.sort_values('Date').reset_index(drop=True)
             
-            # Calculate RS14 / RS52 against VNINDEX
-            if df_vn_indexed is not None:
-                try:
-                    bench_close = df['Date'].map(df_vn_indexed['Close']).ffill().bfill()
-                    rs_raw = df['Close'] / (bench_close + 1e-10)
-                    
-                    rs52_min = rs_raw.rolling(window=260, min_periods=1).min()
-                    rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
-                    df['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
-                    
-                    rs14_min = rs_raw.rolling(window=70, min_periods=1).min()
-                    rs14_max = rs_raw.rolling(window=70, min_periods=1).max()
-                    df['RS14'] = 100 * (rs_raw - rs14_min) / (rs14_max - rs14_min + 0.0001)
-                except Exception:
+            # Calculate RS14 / RS52 against VNINDEX only if they are not already present
+            if 'RS14' not in df.columns or 'RS52' not in df.columns:
+                if df_vn_indexed is not None:
+                    try:
+                        bench_close = df['Date'].map(df_vn_indexed['Close']).ffill().bfill()
+                        rs_raw = df['Close'] / (bench_close + 1e-10)
+                        
+                        rs52_min = rs_raw.rolling(window=260, min_periods=1).min()
+                        rs52_max = rs_raw.rolling(window=260, min_periods=1).max()
+                        df['RS52'] = 100 * (rs_raw - rs52_min) / (rs52_max - rs52_min + 0.0001)
+                        
+                        rs14_min = rs_raw.rolling(window=70, min_periods=1).min()
+                        rs14_max = rs_raw.rolling(window=70, min_periods=1).max()
+                        df['RS14'] = 100 * (rs_raw - rs14_min) / (rs14_max - rs14_min + 0.0001)
+                    except Exception:
+                        df['RS14'] = 50.0
+                        df['RS52'] = 50.0
+                else:
                     df['RS14'] = 50.0
                     df['RS52'] = 50.0
-            else:
-                df['RS14'] = 50.0
-                df['RS52'] = 50.0
             
             df_extended = df.copy()
  
