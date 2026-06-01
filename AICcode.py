@@ -3795,7 +3795,7 @@ class TinvestApp:
                     # Logic: Tín hiệu Mua Heikin (HK_BuySignal hoặc HK_BuyManh) xuất hiện trong T-0 hoặc T-1
                     # Khớp với yêu cầu mới: Chỉ lấy mã báo mua hôm nay hoặc hôm qua
                     
-                    buy_2 = df['HK_BuySignal'].tail(2).any() or df['HK_BuyManh'].tail(2).any()
+                    buy_2 = df['HK_BuySignal'].fillna(False).tail(2).any() or df['HK_BuyManh'].fillna(False).tail(2).any()
                     
                     if buy_2:
                         match = True
