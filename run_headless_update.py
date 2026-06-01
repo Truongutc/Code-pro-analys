@@ -968,6 +968,11 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
                 
                 res_regime = analyze_market_index(idx_df, breadth_pct_ma20=breadth_ma20, breadth_pct_ma50=breadth_ma50, momentum_data=mom)
                 
+                # Save computed indicators to storage and cache so it is available for chart exporter
+                data_dict[index_ticker] = df_rich
+                storage.save_indicators(index_ticker, df_rich)
+                analysis_cache[index_ticker] = {'df': df_rich}
+                
                 st_pri_raw = state_rules.get('primary', '')
                 ftd_on = res_regime.get('ftd_active', False)
                 dist_n = res_regime.get('distribution_count', 0)
