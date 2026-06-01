@@ -3892,7 +3892,7 @@ class TinvestApp:
                     
                     has_heikin = False
                     if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
-                        has_heikin = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                        has_heikin = df.get('HK_BuySignal', pd.Series(dtype=bool)).fillna(False).tail(2).any() or df.get('HK_BuyManh', pd.Series(dtype=bool)).fillna(False).tail(2).any()
                     
                     has_upcloud = False
                     if len(df) > 0 and 'High' in df.columns and 'Low' in df.columns:
