@@ -448,6 +448,39 @@ def check_macd_hist_bullish_divergence(df):
     return False
 
 
+def check_octopus_green_cross(df):
+    """
+    Octopus Green Cross:
+    - Octopus crossover (OCT_A1 crosses above 0/OCT_B1) in the last 1-10 sessions.
+    - Two lines are green ('#008000' or '#00FF00') and expanding (diverging).
+      Since they are green/bright green and expanding, the current values are green/bright green
+      and the distance between them is expanding: df['OCT_A1'].iloc[-1] > df['OCT_A1'].iloc[-2]
+    """
+    if 'OCT_A1' not in df.columns or 'OCT_Color' not in df.columns or len(df) < 12:
+        return False
+    
+    # 1. Currently green/bright green
+    current_color = df['OCT_Color'].iloc[-1]
+    if current_color not in ['#008000', '#00FF00']:
+        return False
+        
+    # Expanding: OCT_A1[-1] > OCT_A1[-2]
+    if df['OCT_A1'].iloc[-1] <= df['OCT_A1'].iloc[-2]:
+        return False
+        
+    # 2. Crossover in the last 1 to 10 sessions (index -1 to -10)
+    # Crossover is defined as: A1 > 0 and previous A1 <= 0
+    crossed = False
+    for i in range(1, 11):
+        if len(df) > i:
+            # check crossover at session -i (i.e. between -i-1 and -i)
+            if df['OCT_A1'].iloc[-i] > 0 and df['OCT_A1'].iloc[-i-1] <= 0:
+                crossed = True
+                break
+                
+    return crossed
+
+
 CUSTOM_RULES = {
     "RSI_BULLISH_DIVERGENCE": {
         "label": "RSI Phân kỳ tăng giá (Bullish Divergence)",
@@ -528,6 +561,10 @@ CUSTOM_RULES = {
     "ACCUMULATION_BREAKOUT": {
         "label": "Vượt vùng tích lũy 1 tháng (biên độ <= 15%, breakout 0-2 phiên gần đây)",
         "func": check_accumulation_breakout
+    },
+    "OCTOPUS_GREEN_CROSS": {
+        "label": "Octopus Green Cross (Giao cắt & chuyển xanh loe rộng)",
+        "func": check_octopus_green_cross
     }
 }
 
