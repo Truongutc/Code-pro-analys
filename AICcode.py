@@ -1410,9 +1410,12 @@ class TinvestApp:
                                 matches_filter1 = True
                                 break
                         elif key == "HEIKIN_BUY":
+                            # Chỉ lọc khi có tín hiệu buy tại T-0 hoặc T-1 (2 phiên gần nhất)
                             buy_2 = False
                             if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
-                                buy_2 = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                                sig = df.get('HK_BuySignal', pd.Series(dtype=bool)).fillna(False).tail(2)
+                                manh = df.get('HK_BuyManh', pd.Series(dtype=bool)).fillna(False).tail(2)
+                                buy_2 = bool(sig.any()) or bool(manh.any())
                             if buy_2:
                                 matches_filter1 = True
                                 break
@@ -1485,9 +1488,12 @@ class TinvestApp:
                     elif key == "PERFECT_MA" and ma_trend.get("is_perfect_uptrend", False):
                         reasons.append("Perfect MA")
                     elif key == "HEIKIN_BUY":
+                        # Chỉ thêm reason khi có tín hiệu buy tại T-0 hoặc T-1
                         buy_2 = False
                         if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
-                            buy_2 = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                            sig = df.get('HK_BuySignal', pd.Series(dtype=bool)).fillna(False).tail(2)
+                            manh = df.get('HK_BuyManh', pd.Series(dtype=bool)).fillna(False).tail(2)
+                            buy_2 = bool(sig.any()) or bool(manh.any())
                         if buy_2:
                             reasons.append("Heikin Buy")
                     elif key == "UPCLOUD":
@@ -2692,9 +2698,12 @@ class TinvestApp:
                 if ma_trend.get("is_perfect_uptrend", False):
                     matched_categories.append("PERFECT_MA")
                     
+                # HEIKIN_BUY: tín hiệu buy tại T-0 hoặc T-1 (2 phiên gần nhất)
                 buy_2 = False
                 if 'HK_BuySignal' in df.columns or 'HK_BuyManh' in df.columns:
-                    buy_2 = df.get('HK_BuySignal', pd.Series([False])).tail(2).any() or df.get('HK_BuyManh', pd.Series([False])).tail(2).any()
+                    sig = df.get('HK_BuySignal', pd.Series(dtype=bool)).fillna(False).tail(2)
+                    manh = df.get('HK_BuyManh', pd.Series(dtype=bool)).fillna(False).tail(2)
+                    buy_2 = bool(sig.any()) or bool(manh.any())
                 if buy_2:
                     matched_categories.append("HEIKIN_BUY")
                     
