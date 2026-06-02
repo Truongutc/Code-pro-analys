@@ -2565,8 +2565,23 @@ class TinvestApp:
         breadth_dfs = []
         processed_count = 0
         
-        # Iterate over data_dict directly as it contains all loaded prices
-        for ticker, df_sub in self.data_dict.items():
+        # Load all active registry tickers to compute breadth completely
+        current_reg = self.storage.get_active_registry() or []
+        full_data_dict = self.data_dict.copy()
+        missing_from_cache = [t for t in current_reg if t not in full_data_dict]
+        if missing_from_cache:
+            self.log_sync(f"📊 Đang tải song song {len(missing_from_cache)} mã từ storage để tính toán độ rộng...")
+            def load_one(t):
+                df = self.storage.load_ticker_data(t)
+                return t, df
+            with ThreadPoolExecutor(max_workers=16) as executor:
+                results = executor.map(load_one, missing_from_cache)
+                for t, df in results:
+                    if df is not None:
+                        full_data_dict[t] = df
+
+        # Iterate over full_data_dict
+        for ticker, df_sub in full_data_dict.items():
             # Align with market_engine.py filtering
             if ticker in ["VNINDEX", "HNXINDEX", "UPCOM", "VN30", "HNX30", "HAINDEX", "UPCOM-INDEX", "HNX-INDEX"]:
                 continue
@@ -2582,45 +2597,56 @@ class TinvestApp:
                 if (ref_date - last_ticker_date).days > 30:
                     continue
                 
-                temp = pd.DataFrame()
-                temp['Date'] = pd.to_datetime(df_sub['Date'])
-                
-                # Deduplicate dates to prevent "cannot reindex on an axis with duplicate labels"
-                temp = temp.drop_duplicates(subset=['Date'])
+                df_sub_clean = df_sub.drop_duplicates(subset=['Date']).copy()
+                df_sub_clean['Date'] = pd.to_datetime(df_sub_clean['Date'])
+                df_sub_clean = df_sub_clean.sort_values('Date').reset_index(drop=True)
                 
                 # --- NEW: Robust state calculation ---
-                # Only consider rows with volume > 0 as "active" trading sessions
-                active_mask = (df_sub['Volume'] > 0) & (df_sub['Close'] > 0)
+                active_mask = (df_sub_clean['Volume'] > 0) & (df_sub_clean['Close'] > 0)
                 
-                # Robustly ensure we have MA columns
-                ma20 = df_sub['MA20'] if 'MA20' in df_sub.columns else df_sub['Close'].rolling(20).mean()
-                ma50 = df_sub['MA50'] if 'MA50' in df_sub.columns else df_sub['Close'].rolling(50).mean()
-                ma10 = df_sub['MA10'] if 'MA10' in df_sub.columns else df_sub['Close'].rolling(10).mean()
+                ma20 = df_sub_clean['MA20'] if 'MA20' in df_sub_clean.columns else df_sub_clean['Close'].rolling(20).mean()
+                ma50 = df_sub_clean['MA50'] if 'MA50' in df_sub_clean.columns else df_sub_clean['Close'].rolling(50).mean()
+                ma10 = df_sub_clean['MA10'] if 'MA10' in df_sub_clean.columns else df_sub_clean['Close'].rolling(10).mean()
 
-                temp['Valid'] = active_mask.astype(int)
-                temp['>MA10'] = ((df_sub['Close'] > ma10) & active_mask).astype(int)
-                temp['>MA20'] = ((df_sub['Close'] > ma20) & active_mask).astype(int)
-                temp['>MA50'] = ((df_sub['Close'] > ma50) & active_mask).astype(int)
+                raw_temp = pd.DataFrame()
+                raw_temp['Date'] = df_sub_clean['Date']
+                raw_temp['Close'] = df_sub_clean['Close']
+                raw_temp['Volume'] = df_sub_clean['Volume']
+                raw_temp['Valid'] = active_mask.astype(int)
+                raw_temp['>MA10'] = ((df_sub_clean['Close'] > ma10) & active_mask).astype(int)
+                raw_temp['>MA20'] = ((df_sub_clean['Close'] > ma20) & active_mask).astype(int)
+                raw_temp['>MA50'] = ((df_sub_clean['Close'] > ma50) & active_mask).astype(int)
                 
-                # 1. First, set index to Date
-                temp = temp.set_index('Date')
+                raw_temp = raw_temp.set_index('Date')
                 
-                # 2. Filter to only ACTIVE dates before reindexing
-                # This ensures that 'inactive' dates become NaN after reindex, 
-                # so ffill() can correctly propagate the last ACTIVE state.
-                temp = temp[temp['Valid'] == 1]
+                temp = pd.DataFrame(index=all_dates)
+                temp.index.name = 'Date'
                 
-                # 3. Reindex to all market dates and propagate state (up to 30 days)
-                temp = temp.reindex(all_dates).ffill(limit=30).reset_index()
+                temp['Close'] = raw_temp['Close']
+                temp['Volume'] = raw_temp['Volume'].fillna(0)
+                temp['Close'] = temp['Close'].ffill()
+                temp['PrevClose'] = temp['Close'].shift(1)
+                temp['Diff'] = temp['Close'] - temp['PrevClose']
+                temp['Valid_Price'] = temp['Close'].notna().astype(int)
                 
-                # After ffill, ensure 'Valid' is 1 for those filled rows
-                temp['Valid'] = temp['Valid'].fillna(0) # In case it's still NaN after ffill
+                temp['Up'] = ((temp['Volume'] > 0) & (temp['Diff'] > 0)).astype(int)
+                temp['Down'] = ((temp['Volume'] > 0) & (temp['Diff'] < 0)).astype(int)
+                temp['Flat'] = (temp['Valid_Price'] & (temp['Up'] == 0) & (temp['Down'] == 0)).astype(int)
                 
+                ma_part = raw_temp[['Valid', '>MA10', '>MA20', '>MA50']]
+                ma_part = ma_part[ma_part['Valid'] == 1]
+                ma_part = ma_part.reindex(all_dates).ffill(limit=30)
+                
+                temp['Valid'] = ma_part['Valid'].fillna(0)
+                temp['>MA10'] = ma_part['>MA10'].fillna(0)
+                temp['>MA20'] = ma_part['>MA20'].fillna(0)
+                temp['>MA50'] = ma_part['>MA50'].fillna(0)
+                
+                temp = temp.reset_index()
                 breadth_dfs.append(temp)
                 processed_count += 1
 
             except Exception as e: 
-                # Log the error for the first few failures to help debugging, then suppress
                 if processed_count < 10:
                     logger.error(f"Error processing breadth for {ticker}: {e}")
                 pass 
@@ -2629,10 +2655,15 @@ class TinvestApp:
             all_breadth = pd.concat(breadth_dfs)
             grouped = all_breadth.groupby('Date').sum()
             valid_counts = grouped['Valid'].replace(0, 1)
+            valid_price_counts = grouped['Valid_Price'].replace(0, 1)
+            
             mb = pd.DataFrame()
             mb['%MA10'] = (grouped['>MA10'] / valid_counts) * 100
             mb['%MA20'] = (grouped['>MA20'] / valid_counts) * 100
             mb['%MA50'] = (grouped['>MA50'] / valid_counts) * 100
+            mb['%UP'] = (grouped['Up'] / valid_price_counts) * 100
+            mb['%FLAT'] = (grouped['Flat'] / valid_price_counts) * 100
+            mb['%DOWN'] = (grouped['Down'] / valid_price_counts) * 100
             self.market_breadth = mb.sort_index()
             self.log_sync(f"✅ Đã cập nhật Biểu đồ Độ rộng từ {processed_count} mã cổ phiếu.")
         else:
@@ -2978,6 +3009,9 @@ class TinvestApp:
                     "MA10": mb['%MA10'].round(2).tolist(),
                     "MA20": mb['%MA20'].round(2).tolist(),
                     "MA50": mb['%MA50'].round(2).tolist(),
+                    "UP": mb['%UP'].round(2).tolist(),
+                    "FLAT": mb['%FLAT'].round(2).tolist(),
+                    "DOWN": mb['%DOWN'].round(2).tolist(),
                     "VNINDEX_Closes": vn_closes
                 }
 

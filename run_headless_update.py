@@ -574,11 +574,24 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         logger.info("✅ Tuyệt vời! 100% mã đã đầy đủ chỉ số Trending.")
 
     # 7. Calculate Market Breadth (Time-series)
-    if len(data_dict) >= 1000 or not existing_market_breadth:
+    is_failed_data = vietstock_status in ["LIMITED", "ERROR", "NO_DATA"]
+    if not is_failed_data:
         logger.info("📊 Đang tính toán dữ liệu Độ rộng Thị trường...")
-        market_breadth_data = compute_market_breadth(data_dict)
+        full_data_dict = data_dict.copy()
+        missing_from_cache = [t for t in current_reg if t not in full_data_dict]
+        if missing_from_cache:
+            logger.info(f"📊 Đang tải thêm {len(missing_from_cache)} mã từ storage để tính toán độ rộng...")
+            def load_one(t):
+                df = storage.load_ticker_data(t)
+                return t, df
+            with ThreadPoolExecutor(max_workers=16) as executor:
+                results = executor.map(load_one, missing_from_cache)
+                for t, df in results:
+                    if df is not None:
+                        full_data_dict[t] = df
+        market_breadth_data = compute_market_breadth(full_data_dict)
     else:
-        logger.info("📊 Số lượng mã cập nhật ít. Giữ nguyên dữ liệu Độ rộng Thị trường cũ.")
+        logger.info("📊 Dữ liệu đầu vào bị lỗi/thiếu. Giữ nguyên dữ liệu Độ rộng Thị trường cũ để tránh sai sót.")
         market_breadth_data = existing_market_breadth
     
     # 8. Filter Tickers & Build Output Structure
@@ -1387,25 +1400,53 @@ def compute_market_breadth(data_dict):
             if (ref_date - last_ticker_date).days > 30:
                 continue
                 
-            temp = pd.DataFrame()
-            temp['Date'] = pd.to_datetime(df_sub['Date'])
-            temp = temp.drop_duplicates(subset=['Date'])
+            df_sub_clean = df_sub.drop_duplicates(subset=['Date']).copy()
+            df_sub_clean['Date'] = pd.to_datetime(df_sub_clean['Date'])
+            df_sub_clean = df_sub_clean.sort_values('Date').reset_index(drop=True)
             
-            active_mask = (df_sub['Volume'] > 0) & (df_sub['Close'] > 0)
-            ma10 = df_sub['MA10'] if 'MA10' in df_sub.columns else df_sub['Close'].rolling(10).mean()
-            ma20 = df_sub['MA20'] if 'MA20' in df_sub.columns else df_sub['Close'].rolling(20).mean()
-            ma50 = df_sub['MA50'] if 'MA50' in df_sub.columns else df_sub['Close'].rolling(50).mean()
+            active_mask = (df_sub_clean['Volume'] > 0) & (df_sub_clean['Close'] > 0)
+            ma10 = df_sub_clean['MA10'] if 'MA10' in df_sub_clean.columns else df_sub_clean['Close'].rolling(10).mean()
+            ma20 = df_sub_clean['MA20'] if 'MA20' in df_sub_clean.columns else df_sub_clean['Close'].rolling(20).mean()
+            ma50 = df_sub_clean['MA50'] if 'MA50' in df_sub_clean.columns else df_sub_clean['Close'].rolling(50).mean()
             
-            temp['Valid'] = active_mask.astype(int)
-            temp['>MA10'] = ((df_sub['Close'] > ma10) & active_mask).astype(int)
-            temp['>MA20'] = ((df_sub['Close'] > ma20) & active_mask).astype(int)
-            temp['>MA50'] = ((df_sub['Close'] > ma50) & active_mask).astype(int)
+            raw_temp = pd.DataFrame()
+            raw_temp['Date'] = df_sub_clean['Date']
+            raw_temp['Close'] = df_sub_clean['Close']
+            raw_temp['Volume'] = df_sub_clean['Volume']
+            raw_temp['Valid'] = active_mask.astype(int)
+            raw_temp['>MA10'] = ((df_sub_clean['Close'] > ma10) & active_mask).astype(int)
+            raw_temp['>MA20'] = ((df_sub_clean['Close'] > ma20) & active_mask).astype(int)
+            raw_temp['>MA50'] = ((df_sub_clean['Close'] > ma50) & active_mask).astype(int)
             
-            temp = temp.set_index('Date')
-            temp = temp[temp['Valid'] == 1]
-            temp = temp.reindex(all_dates).ffill(limit=30).reset_index()
-            temp['Valid'] = temp['Valid'].fillna(0)
+            # Align to all_dates
+            raw_temp = raw_temp.set_index('Date')
             
+            temp = pd.DataFrame(index=all_dates)
+            temp.index.name = 'Date'
+            
+            # Reindex Close and Volume for price change calculation
+            temp['Close'] = raw_temp['Close']
+            temp['Volume'] = raw_temp['Volume'].fillna(0)
+            temp['Close'] = temp['Close'].ffill()
+            temp['PrevClose'] = temp['Close'].shift(1)
+            temp['Diff'] = temp['Close'] - temp['PrevClose']
+            temp['Valid_Price'] = temp['Close'].notna().astype(int)
+            
+            temp['Up'] = ((temp['Volume'] > 0) & (temp['Diff'] > 0)).astype(int)
+            temp['Down'] = ((temp['Volume'] > 0) & (temp['Diff'] < 0)).astype(int)
+            temp['Flat'] = (temp['Valid_Price'] & (temp['Up'] == 0) & (temp['Down'] == 0)).astype(int)
+            
+            # Reindex standard MA breadth parts
+            ma_part = raw_temp[['Valid', '>MA10', '>MA20', '>MA50']]
+            ma_part = ma_part[ma_part['Valid'] == 1]
+            ma_part = ma_part.reindex(all_dates).ffill(limit=30)
+            
+            temp['Valid'] = ma_part['Valid'].fillna(0)
+            temp['>MA10'] = ma_part['>MA10'].fillna(0)
+            temp['>MA20'] = ma_part['>MA20'].fillna(0)
+            temp['>MA50'] = ma_part['>MA50'].fillna(0)
+            
+            temp = temp.reset_index()
             breadth_dfs.append(temp)
             processed_count += 1
         except Exception as e:
@@ -1415,11 +1456,15 @@ def compute_market_breadth(data_dict):
         all_breadth = pd.concat(breadth_dfs)
         grouped = all_breadth.groupby('Date').sum()
         valid_counts = grouped['Valid'].replace(0, 1)
+        valid_price_counts = grouped['Valid_Price'].replace(0, 1)
         
         mb = pd.DataFrame()
         mb['%MA10'] = (grouped['>MA10'] / valid_counts) * 100
         mb['%MA20'] = (grouped['>MA20'] / valid_counts) * 100
         mb['%MA50'] = (grouped['>MA50'] / valid_counts) * 100
+        mb['%UP'] = (grouped['Up'] / valid_price_counts) * 100
+        mb['%FLAT'] = (grouped['Flat'] / valid_price_counts) * 100
+        mb['%DOWN'] = (grouped['Down'] / valid_price_counts) * 100
         mb = mb.sort_index()
         
         # Align VNINDEX Closes
@@ -1445,6 +1490,9 @@ def compute_market_breadth(data_dict):
             "MA10": mb['%MA10'].round(2).tolist(),
             "MA20": mb['%MA20'].round(2).tolist(),
             "MA50": mb['%MA50'].round(2).tolist(),
+            "UP": mb['%UP'].round(2).tolist(),
+            "FLAT": mb['%FLAT'].round(2).tolist(),
+            "DOWN": mb['%DOWN'].round(2).tolist(),
             "VNINDEX_Closes": vn_closes
         }
     return {}

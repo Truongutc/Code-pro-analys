@@ -2724,6 +2724,24 @@
                 <div class="breadth-chart-container" id="breadthChartContainer"></div>
             </section>
 
+            <section class="card">
+                <div class="card-title">
+                    <span>Độ Rộng Tăng Giá (Advancers/Decliners Stacked vs VNINDEX)</span>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div class="ma-toggles">
+                            <button id="toggle-price-vnindex" class="btn-sm active" onclick="togglePriceBreadthVNINDEX()">VNINDEX</button>
+                        </div>
+                        <div class="chart-controls" id="priceBreadthChartControls">
+                            <button class="btn-sm" onclick="setPriceBreadthChartRange(30)">30N</button>
+                            <button class="btn-sm active" onclick="setPriceBreadthChartRange(90)">90N</button>
+                            <button class="btn-sm" onclick="setPriceBreadthChartRange(180)">180N</button>
+                            <button class="btn-sm" onclick="setPriceBreadthChartRange(9999)">Tất cả</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="breadth-chart-container" id="priceBreadthChartContainer"></div>
+            </section>
+
             <!-- VNINDEX Detailed Analysis Section -->
             <div class="vnindex-detail-section" id="vnindexDetailSection">
                 <!-- Summary Header -->
@@ -3520,11 +3538,15 @@
             if (clickedItem) clickedItem.classList.add('active');
             
             // Re-render chart size if switching to market tab
-            if (tabId === 'market-tab' && breadthChartLwc && breadthChartLwc.chart) {
+            if (tabId === 'market-tab') {
                 setTimeout(() => {
                     const container = document.getElementById('breadthChartContainer');
-                    if (container) {
+                    if (container && breadthChartLwc && breadthChartLwc.chart) {
                         breadthChartLwc.chart.resize(container.clientWidth, 400);
+                    }
+                    const pContainer = document.getElementById('priceBreadthChartContainer');
+                    if (pContainer && priceBreadthChartLwc && priceBreadthChartLwc.chart) {
+                        priceBreadthChartLwc.chart.resize(pContainer.clientWidth, 400);
                     }
                 }, 50);
             }
@@ -3614,6 +3636,7 @@
 
                 // Initialize Breadth Chart
                 initBreadthChart();
+                initPriceBreadthChart();
 
                 // Filter & Render Grid
                 applyCustomFilters();
@@ -4361,6 +4384,217 @@
                     await renderBreadthChartFs('chartFsMount');
                 });
             });
+        }
+
+        let priceBreadthChartLwc = null;
+        let priceBreadthVNINDEXVisible = true;
+        let priceBreadthChartActiveDays = 90;
+
+        async function createPriceBreadthChart(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return null;
+            container.innerHTML = '';
+            
+            const data = rawData.market_breadth;
+            if (!data || !data.dates || !data.UP) {
+                container.innerHTML = '<div class="chart-error">Không có dữ liệu độ rộng tăng giá</div>';
+                return null;
+            }
+            
+            let vnHistory = null;
+            try {
+                vnHistory = await fetchHistory('VNINDEX');
+            } catch(e) {
+                console.warn(e);
+            }
+            
+            const chart = LightweightCharts.createChart(container, {
+                layout: {
+                    background: { color: '#ffffff' }, // White background
+                    textColor: '#333333',
+                },
+                grid: {
+                    vertLines: { color: 'rgba(0,0,0,0.06)' },
+                    horzLines: { color: 'rgba(0,0,0,0.08)' }
+                },
+                crosshair: { mode: 1 },
+                timeScale: {
+                    borderColor: 'rgba(0,0,0,0.12)',
+                    timeVisible: true,
+                    secondsVisible: false,
+                    fixLeftEdge: false,
+                    fixRightEdge: false,
+                    rightOffset: 30,
+                    minBarSpacing: 1
+                },
+                width: container.clientWidth,
+                height: 400,
+                leftPriceScale: {
+                    visible: true,
+                    borderColor: 'rgba(0,0,0,0.12)',
+                    autoScale: false,
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.1,
+                    },
+                },
+                rightPriceScale: {
+                    visible: true,
+                    borderColor: 'rgba(0,0,0,0.12)',
+                    autoScale: true,
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.1,
+                    },
+                }
+            });
+            
+            chart.priceScale('left').applyOptions({
+                minPrice: 0,
+                maxPrice: 100,
+            });
+            
+            // 1. Green Series (UP + FLAT + DOWN = 100%) - Draws at the very back
+            const upSeries = chart.addAreaSeries({
+                priceScaleId: 'left',
+                topColor: 'rgba(27, 94, 32, 0.75)',     // Dark Green
+                bottomColor: 'rgba(27, 94, 32, 0.4)',
+                lineColor: '#1b5e20',
+                lineWidth: 1.5,
+                title: '% Tăng',
+            });
+            
+            // 2. Yellow Series (FLAT + DOWN) - Draws on top of Green
+            const flatSeries = chart.addAreaSeries({
+                priceScaleId: 'left',
+                topColor: 'rgba(251, 192, 45, 0.85)',    // Yellow
+                bottomColor: 'rgba(251, 192, 45, 0.5)',
+                lineColor: '#ffd600',
+                lineWidth: 1.5,
+                title: '% Đi ngang',
+            });
+            
+            // 3. Red Series (DOWN) - Draws on top of Yellow
+            const downSeries = chart.addAreaSeries({
+                priceScaleId: 'left',
+                topColor: 'rgba(211, 47, 47, 0.95)',     // Red
+                bottomColor: 'rgba(211, 47, 47, 0.6)',
+                lineColor: '#d32f2f',
+                lineWidth: 1.5,
+                title: '% Giảm',
+            });
+            
+            const upData = [];
+            const flatData = [];
+            const downData = [];
+            
+            for (let i = 0; i < data.dates.length; i++) {
+                const ts = d2ts(data.dates[i]);
+                const upVal = data.UP[i] || 0;
+                const flatVal = data.FLAT[i] || 0;
+                const downVal = data.DOWN[i] || 0;
+                
+                const totalVal = downVal + flatVal + upVal;
+                const downFlatVal = downVal + flatVal;
+                
+                upData.push({ time: ts, value: totalVal });
+                flatData.push({ time: ts, value: downFlatVal });
+                downData.push({ time: ts, value: downVal });
+            }
+            
+            upSeries.setData(upData);
+            flatSeries.setData(flatData);
+            downSeries.setData(downData);
+            
+            let vnSeries = null;
+            if (vnHistory || (data.VNINDEX_Closes && data.VNINDEX_Closes.length > 0)) {
+                vnSeries = chart.addLineSeries({
+                    priceScaleId: 'right',
+                    color: '#000000', // Black line
+                    lineWidth: 3.5,   // Thick line
+                    title: 'VNINDEX',
+                    visible: priceBreadthVNINDEXVisible,
+                    priceFormat: {
+                        type: 'price',
+                        precision: 0,
+                        minMove: 1,
+                    },
+                });
+                
+                const vnData = [];
+                if (vnHistory) {
+                    vnHistory.forEach(bar => {
+                        vnData.push({ time: d2ts(bar.Date), value: bar.Close * 1000 });
+                    });
+                } else {
+                    for (let i = 0; i < data.dates.length; i++) {
+                        if (data.VNINDEX_Closes[i]) {
+                            vnData.push({ time: d2ts(data.dates[i]), value: data.VNINDEX_Closes[i] });
+                        }
+                    }
+                }
+                vnSeries.setData(vnData);
+            }
+            
+            const ro = new ResizeObserver(() => {
+                const w = container.clientWidth;
+                chart.resize(w, 400);
+            });
+            ro.observe(container);
+            
+            return { chart, ro, dates: data.dates, upSeries, flatSeries, downSeries, vnSeries };
+        }
+
+        async function initPriceBreadthChart() {
+            const res = await createPriceBreadthChart('priceBreadthChartContainer');
+            if (res) {
+                priceBreadthChartLwc = res;
+                setPriceBreadthChartRange(priceBreadthChartActiveDays);
+                updatePriceBreadthToggleButtons();
+            }
+        }
+
+        function togglePriceBreadthVNINDEX() {
+            priceBreadthVNINDEXVisible = !priceBreadthVNINDEXVisible;
+            if (priceBreadthChartLwc && priceBreadthChartLwc.vnSeries) {
+                priceBreadthChartLwc.vnSeries.applyOptions({ visible: priceBreadthVNINDEXVisible });
+            }
+            updatePriceBreadthToggleButtons();
+        }
+
+        function updatePriceBreadthToggleButtons() {
+            const btn = document.getElementById('toggle-price-vnindex');
+            if (btn) {
+                if (priceBreadthVNINDEXVisible) {
+                    btn.classList.add('active');
+                    btn.classList.remove('inactive');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.add('inactive');
+                }
+            }
+        }
+
+        function setPriceBreadthChartRange(days) {
+            priceBreadthChartActiveDays = days;
+            if (priceBreadthChartLwc && priceBreadthChartLwc.chart) {
+                applyBreadthRange(priceBreadthChartLwc.chart, priceBreadthChartLwc.dates, days);
+            }
+            updatePriceBreadthRangeButtons(days);
+        }
+
+        function updatePriceBreadthRangeButtons(days) {
+            const controls = document.getElementById('priceBreadthChartControls');
+            if (controls) {
+                const buttons = controls.querySelectorAll('button');
+                buttons.forEach(btn => {
+                    btn.classList.remove('active');
+                    if (days === 30 && btn.innerText.includes('30')) btn.classList.add('active');
+                    else if (days === 90 && btn.innerText.includes('90')) btn.classList.add('active');
+                    else if (days === 180 && btn.innerText.includes('180')) btn.classList.add('active');
+                    else if (days > 360 && btn.innerText.includes('Tất cả')) btn.classList.add('active');
+                });
+            }
         }
 
 
