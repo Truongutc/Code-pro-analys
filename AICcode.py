@@ -2601,46 +2601,43 @@ class TinvestApp:
                 df_sub_clean['Date'] = pd.to_datetime(df_sub_clean['Date'])
                 df_sub_clean = df_sub_clean.sort_values('Date').reset_index(drop=True)
                 
-                # --- NEW: Robust state calculation ---
-                active_mask = (df_sub_clean['Volume'] > 0) & (df_sub_clean['Close'] > 0)
-                
+                ma10 = df_sub_clean['MA10'] if 'MA10' in df_sub_clean.columns else df_sub_clean['Close'].rolling(10).mean()
                 ma20 = df_sub_clean['MA20'] if 'MA20' in df_sub_clean.columns else df_sub_clean['Close'].rolling(20).mean()
                 ma50 = df_sub_clean['MA50'] if 'MA50' in df_sub_clean.columns else df_sub_clean['Close'].rolling(50).mean()
-                ma10 = df_sub_clean['MA10'] if 'MA10' in df_sub_clean.columns else df_sub_clean['Close'].rolling(10).mean()
-
+                
+                tenkan = df_sub_clean['Tenkan'] if 'Tenkan' in df_sub_clean.columns else (df_sub_clean['High'].rolling(9).max() + df_sub_clean['Low'].rolling(9).min()) / 2
+                kijun = df_sub_clean['Kijun'] if 'Kijun' in df_sub_clean.columns else (df_sub_clean['High'].rolling(26).max() + df_sub_clean['Low'].rolling(26).min()) / 2
+                spana = df_sub_clean['SpanA'] if 'SpanA' in df_sub_clean.columns else ((tenkan + kijun) / 2).shift(26)
+                spanb = df_sub_clean['SpanB'] if 'SpanB' in df_sub_clean.columns else ((df_sub_clean['High'].rolling(52).max() + df_sub_clean['Low'].rolling(52).min()) / 2).shift(26)
+                
                 raw_temp = pd.DataFrame()
                 raw_temp['Date'] = df_sub_clean['Date']
                 raw_temp['Close'] = df_sub_clean['Close']
-                raw_temp['Volume'] = df_sub_clean['Volume']
-                raw_temp['Valid'] = active_mask.astype(int)
-                raw_temp['>MA10'] = ((df_sub_clean['Close'] > ma10) & active_mask).astype(int)
-                raw_temp['>MA20'] = ((df_sub_clean['Close'] > ma20) & active_mask).astype(int)
-                raw_temp['>MA50'] = ((df_sub_clean['Close'] > ma50) & active_mask).astype(int)
+                raw_temp['MA10'] = ma10
+                raw_temp['MA20'] = ma20
+                raw_temp['MA50'] = ma50
+                raw_temp['Tenkan'] = tenkan
+                raw_temp['Kijun'] = kijun
+                raw_temp['SpanA'] = spana
+                raw_temp['SpanB'] = spanb
                 
                 raw_temp = raw_temp.set_index('Date')
                 
                 temp = pd.DataFrame(index=all_dates)
                 temp.index.name = 'Date'
                 
-                temp['Close'] = raw_temp['Close']
-                temp['Volume'] = raw_temp['Volume'].fillna(0)
-                temp['Close'] = temp['Close'].ffill()
-                temp['PrevClose'] = temp['Close'].shift(1)
-                temp['Diff'] = temp['Close'] - temp['PrevClose']
-                temp['Valid_Price'] = temp['Close'].notna().astype(int)
+                temp = temp.join(raw_temp, how='left')
+                temp = temp.ffill()
                 
-                temp['Up'] = ((temp['Volume'] > 0) & (temp['Diff'] > 0)).astype(int)
-                temp['Down'] = ((temp['Volume'] > 0) & (temp['Diff'] < 0)).astype(int)
-                temp['Flat'] = (temp['Valid_Price'] & (temp['Up'] == 0) & (temp['Down'] == 0)).astype(int)
+                temp['Valid'] = temp['Close'].notna().astype(int)
+                temp['>MA10'] = (temp['Valid'] & (temp['Close'] > temp['MA10']) & temp['MA10'].notna()).astype(int)
+                temp['>MA20'] = (temp['Valid'] & (temp['Close'] > temp['MA20']) & temp['MA20'].notna()).astype(int)
+                temp['>MA50'] = (temp['Valid'] & (temp['Close'] > temp['MA50']) & temp['MA50'].notna()).astype(int)
                 
-                ma_part = raw_temp[['Valid', '>MA10', '>MA20', '>MA50']]
-                ma_part = ma_part[ma_part['Valid'] == 1]
-                ma_part = ma_part.reindex(all_dates).ffill(limit=30)
-                
-                temp['Valid'] = ma_part['Valid'].fillna(0)
-                temp['>MA10'] = ma_part['>MA10'].fillna(0)
-                temp['>MA20'] = ma_part['>MA20'].fillna(0)
-                temp['>MA50'] = ma_part['>MA50'].fillna(0)
+                kumo_top = temp[['SpanA', 'SpanB']].max(axis=1)
+                temp['>CLOUD'] = (temp['Valid'] & (temp['Close'] > kumo_top) & temp['SpanA'].notna() & temp['SpanB'].notna()).astype(int)
+                temp['>TENKAN'] = (temp['Valid'] & (temp['Close'] > temp['Tenkan']) & temp['Tenkan'].notna()).astype(int)
+                temp['>KIJUN'] = (temp['Valid'] & (temp['Close'] > temp['Kijun']) & temp['Kijun'].notna()).astype(int)
                 
                 temp = temp.reset_index()
                 breadth_dfs.append(temp)
@@ -2655,15 +2652,14 @@ class TinvestApp:
             all_breadth = pd.concat(breadth_dfs)
             grouped = all_breadth.groupby('Date').sum()
             valid_counts = grouped['Valid'].replace(0, 1)
-            valid_price_counts = grouped['Valid_Price'].replace(0, 1)
             
             mb = pd.DataFrame()
             mb['%MA10'] = (grouped['>MA10'] / valid_counts) * 100
             mb['%MA20'] = (grouped['>MA20'] / valid_counts) * 100
             mb['%MA50'] = (grouped['>MA50'] / valid_counts) * 100
-            mb['%UP'] = (grouped['Up'] / valid_price_counts) * 100
-            mb['%FLAT'] = (grouped['Flat'] / valid_price_counts) * 100
-            mb['%DOWN'] = (grouped['Down'] / valid_price_counts) * 100
+            mb['%ICHI_CLOUD'] = (grouped['>CLOUD'] / valid_counts) * 100
+            mb['%ICHI_TENKAN'] = (grouped['>TENKAN'] / valid_counts) * 100
+            mb['%ICHI_KIJUN'] = (grouped['>KIJUN'] / valid_counts) * 100
             self.market_breadth = mb.sort_index()
             self.log_sync(f"✅ Đã cập nhật Biểu đồ Độ rộng từ {processed_count} mã cổ phiếu.")
         else:
@@ -3009,9 +3005,9 @@ class TinvestApp:
                     "MA10": mb['%MA10'].round(2).tolist(),
                     "MA20": mb['%MA20'].round(2).tolist(),
                     "MA50": mb['%MA50'].round(2).tolist(),
-                    "UP": mb['%UP'].round(2).tolist(),
-                    "FLAT": mb['%FLAT'].round(2).tolist(),
-                    "DOWN": mb['%DOWN'].round(2).tolist(),
+                    "ICHI_CLOUD": mb['%ICHI_CLOUD'].round(2).tolist(),
+                    "ICHI_TENKAN": mb['%ICHI_TENKAN'].round(2).tolist(),
+                    "ICHI_KIJUN": mb['%ICHI_KIJUN'].round(2).tolist(),
                     "VNINDEX_Closes": vn_closes
                 }
 

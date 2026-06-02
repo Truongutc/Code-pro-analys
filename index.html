@@ -2726,20 +2726,24 @@
 
             <section class="card">
                 <div class="card-title">
-                    <span>Độ Rộng Tăng Giá (Advancers/Decliners Stacked vs VNINDEX)</span>
+                    <span>Độ Rộng Ichi (Ichimoku vs VNINDEX)</span>
                     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <div class="ma-toggles">
-                            <button id="toggle-price-vnindex" class="btn-sm active" onclick="togglePriceBreadthVNINDEX()">VNINDEX</button>
+                            <button id="toggle-ichi-vnindex" class="btn-sm active" onclick="toggleIchiVNINDEX()">VNINDEX</button>
+                            <button id="toggle-ichi-cloud" class="btn-sm active" onclick="toggleIchiLine('CLOUD')">Trên mây</button>
+                            <button id="toggle-ichi-tenkan" class="btn-sm active" onclick="toggleIchiLine('TENKAN')">Trên Tenkan</button>
+                            <button id="toggle-ichi-kijun" class="btn-sm active" onclick="toggleIchiLine('KIJUN')">Trên Kijun</button>
                         </div>
-                        <div class="chart-controls" id="priceBreadthChartControls">
-                            <button class="btn-sm" onclick="setPriceBreadthChartRange(30)">30N</button>
-                            <button class="btn-sm active" onclick="setPriceBreadthChartRange(90)">90N</button>
-                            <button class="btn-sm" onclick="setPriceBreadthChartRange(180)">180N</button>
-                            <button class="btn-sm" onclick="setPriceBreadthChartRange(9999)">Tất cả</button>
+                        <div class="chart-controls" id="ichiChartControls">
+                            <button class="btn-sm" onclick="setIchiChartRange(30)">30N</button>
+                            <button class="btn-sm active" onclick="setIchiChartRange(90)">90N</button>
+                            <button class="btn-sm" onclick="setIchiChartRange(180)">180N</button>
+                            <button class="btn-sm" onclick="setIchiChartRange(9999)">Tất cả</button>
                         </div>
+                        <button class="btn-sm" onclick="expandIchiChart()">⛶ Mở rộng</button>
                     </div>
                 </div>
-                <div class="breadth-chart-container" id="priceBreadthChartContainer"></div>
+                <div class="breadth-chart-container" id="ichiChartContainer"></div>
             </section>
 
             <!-- VNINDEX Detailed Analysis Section -->
@@ -3544,9 +3548,9 @@
                     if (container && breadthChartLwc && breadthChartLwc.chart) {
                         breadthChartLwc.chart.resize(container.clientWidth, 400);
                     }
-                    const pContainer = document.getElementById('priceBreadthChartContainer');
-                    if (pContainer && priceBreadthChartLwc && priceBreadthChartLwc.chart) {
-                        priceBreadthChartLwc.chart.resize(pContainer.clientWidth, 400);
+                    const iContainer = document.getElementById('ichiChartContainer');
+                    if (iContainer && ichiChartLwc && ichiChartLwc.chart) {
+                        ichiChartLwc.chart.resize(iContainer.clientWidth, 400);
                     }
                 }, 50);
             }
@@ -3636,7 +3640,7 @@
 
                 // Initialize Breadth Chart
                 initBreadthChart();
-                initPriceBreadthChart();
+                initIchiChart();
 
                 // Filter & Render Grid
                 applyCustomFilters();
@@ -4386,18 +4390,20 @@
             });
         }
 
-        let priceBreadthChartLwc = null;
-        let priceBreadthVNINDEXVisible = true;
-        let priceBreadthChartActiveDays = 90;
+        let ichiChartLwc = null;
+        let ichiChartFsInstance = null;
+        let ichiLineVisible = { CLOUD: true, TENKAN: true, KIJUN: true };
+        let ichiVNINDEXVisible = true;
+        let ichiChartActiveDays = 90;
 
-        async function createPriceBreadthChart(containerId) {
+        async function createIchiChart(containerId, isFs) {
             const container = document.getElementById(containerId);
             if (!container) return null;
             container.innerHTML = '';
             
             const data = rawData.market_breadth;
-            if (!data || !data.dates || !data.UP) {
-                container.innerHTML = '<div class="chart-error">Không có dữ liệu độ rộng tăng giá</div>';
+            if (!data || !data.dates || !data.ICHI_CLOUD) {
+                container.innerHTML = '<div class="chart-error">Không có dữ liệu độ rộng Ichimoku</div>';
                 return null;
             }
             
@@ -4408,30 +4414,15 @@
                 console.warn(e);
             }
             
+            const height = isFs ? Math.max(400, (container.offsetHeight || window.innerHeight - 150)) : 400;
+
             const chart = LightweightCharts.createChart(container, {
-                layout: {
-                    background: { color: '#ffffff' }, // White background
-                    textColor: '#333333',
-                },
-                grid: {
-                    vertLines: { color: 'rgba(0,0,0,0.06)' },
-                    horzLines: { color: 'rgba(0,0,0,0.08)' }
-                },
-                crosshair: { mode: 1 },
-                timeScale: {
-                    borderColor: 'rgba(0,0,0,0.12)',
-                    timeVisible: true,
-                    secondsVisible: false,
-                    fixLeftEdge: false,
-                    fixRightEdge: false,
-                    rightOffset: 30,
-                    minBarSpacing: 1
-                },
+                ...LWC_THEME,
                 width: container.clientWidth,
-                height: 400,
+                height: height,
                 leftPriceScale: {
                     visible: true,
-                    borderColor: 'rgba(0,0,0,0.12)',
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
                     autoScale: false,
                     scaleMargins: {
                         top: 0.1,
@@ -4440,7 +4431,7 @@
                 },
                 rightPriceScale: {
                     visible: true,
-                    borderColor: 'rgba(0,0,0,0.12)',
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
                     autoScale: true,
                     scaleMargins: {
                         top: 0.1,
@@ -4454,83 +4445,85 @@
                 maxPrice: 100,
             });
             
-            // 1. Green Series (UP + FLAT + DOWN = 100%) - Draws at the very back
-            const upSeries = chart.addAreaSeries({
+            const cloudSeries = chart.addLineSeries({
                 priceScaleId: 'left',
-                topColor: 'rgba(27, 94, 32, 0.75)',     // Dark Green
-                bottomColor: 'rgba(27, 94, 32, 0.4)',
-                lineColor: '#1b5e20',
-                lineWidth: 1.5,
-                title: '% Tăng',
+                color: '#ffffff', // White
+                lineWidth: 2,
+                title: '',
+                visible: ichiLineVisible.CLOUD
+            });
+            const tenkanSeries = chart.addLineSeries({
+                priceScaleId: 'left',
+                color: '#00f0ff', // Cyan
+                lineWidth: 2,
+                title: '',
+                visible: ichiLineVisible.TENKAN
+            });
+            const kijunSeries = chart.addLineSeries({
+                priceScaleId: 'left',
+                color: '#ff007f', // Fuchsia
+                lineWidth: 2,
+                title: '',
+                visible: ichiLineVisible.KIJUN
             });
             
-            // 2. Yellow Series (FLAT + DOWN) - Draws on top of Green
-            const flatSeries = chart.addAreaSeries({
-                priceScaleId: 'left',
-                topColor: 'rgba(251, 192, 45, 0.85)',    // Yellow
-                bottomColor: 'rgba(251, 192, 45, 0.5)',
-                lineColor: '#ffd600',
-                lineWidth: 1.5,
-                title: '% Đi ngang',
-            });
-            
-            // 3. Red Series (DOWN) - Draws on top of Yellow
-            const downSeries = chart.addAreaSeries({
-                priceScaleId: 'left',
-                topColor: 'rgba(211, 47, 47, 0.95)',     // Red
-                bottomColor: 'rgba(211, 47, 47, 0.6)',
-                lineColor: '#d32f2f',
-                lineWidth: 1.5,
-                title: '% Giảm',
-            });
-            
-            const upData = [];
-            const flatData = [];
-            const downData = [];
+            const cloudData = [];
+            const tenkanData = [];
+            const kijunData = [];
             
             for (let i = 0; i < data.dates.length; i++) {
                 const ts = d2ts(data.dates[i]);
-                const upVal = data.UP[i] || 0;
-                const flatVal = data.FLAT[i] || 0;
-                const downVal = data.DOWN[i] || 0;
-                
-                const totalVal = downVal + flatVal + upVal;
-                const downFlatVal = downVal + flatVal;
-                
-                upData.push({ time: ts, value: totalVal });
-                flatData.push({ time: ts, value: downFlatVal });
-                downData.push({ time: ts, value: downVal });
+                if (data.ICHI_CLOUD[i] !== null && data.ICHI_CLOUD[i] !== undefined) {
+                    cloudData.push({ time: ts, value: data.ICHI_CLOUD[i] });
+                }
+                if (data.ICHI_TENKAN[i] !== null && data.ICHI_TENKAN[i] !== undefined) {
+                    tenkanData.push({ time: ts, value: data.ICHI_TENKAN[i] });
+                }
+                if (data.ICHI_KIJUN[i] !== null && data.ICHI_KIJUN[i] !== undefined) {
+                    kijunData.push({ time: ts, value: data.ICHI_KIJUN[i] });
+                }
             }
             
-            upSeries.setData(upData);
-            flatSeries.setData(flatData);
-            downSeries.setData(downData);
+            cloudSeries.setData(cloudData);
+            tenkanSeries.setData(tenkanData);
+            kijunSeries.setData(kijunData);
             
             let vnSeries = null;
-            if (vnHistory || (data.VNINDEX_Closes && data.VNINDEX_Closes.length > 0)) {
-                vnSeries = chart.addLineSeries({
+            if (vnHistory) {
+                vnSeries = chart.addCandlestickSeries({
                     priceScaleId: 'right',
-                    color: '#000000', // Black line
-                    lineWidth: 3.5,   // Thick line
-                    title: 'VNINDEX',
-                    visible: priceBreadthVNINDEXVisible,
+                    upColor: '#00ff6a',
+                    downColor: '#ff3b3b',
+                    borderUpColor: '#00ff6a',
+                    borderDownColor: '#ff3b3b',
+                    wickUpColor: '#00ff6a',
+                    wickDownColor: '#ff3b3b',
+                    title: '',
+                    visible: ichiVNINDEXVisible,
                     priceFormat: {
                         type: 'price',
                         precision: 0,
                         minMove: 1,
                     },
                 });
-                
+                vnSeries.setData(ohlcv(vnHistory));
+            } else if (data.VNINDEX_Closes && data.VNINDEX_Closes.length > 0) {
+                vnSeries = chart.addLineSeries({
+                    priceScaleId: 'right',
+                    color: '#ef4444',
+                    lineWidth: 2.5,
+                    title: '',
+                    visible: ichiVNINDEXVisible,
+                    priceFormat: {
+                        type: 'price',
+                        precision: 0,
+                        minMove: 1,
+                    },
+                });
                 const vnData = [];
-                if (vnHistory) {
-                    vnHistory.forEach(bar => {
-                        vnData.push({ time: d2ts(bar.Date), value: bar.Close * 1000 });
-                    });
-                } else {
-                    for (let i = 0; i < data.dates.length; i++) {
-                        if (data.VNINDEX_Closes[i]) {
-                            vnData.push({ time: d2ts(data.dates[i]), value: data.VNINDEX_Closes[i] });
-                        }
+                for (let i = 0; i < data.dates.length; i++) {
+                    if (data.VNINDEX_Closes[i]) {
+                        vnData.push({ time: d2ts(data.dates[i]), value: data.VNINDEX_Closes[i] });
                     }
                 }
                 vnSeries.setData(vnData);
@@ -4538,53 +4531,45 @@
             
             const ro = new ResizeObserver(() => {
                 const w = container.clientWidth;
-                chart.resize(w, 400);
+                const h = isFs ? Math.max(400, (container.offsetHeight || window.innerHeight - 150)) : 400;
+                chart.resize(w, h);
             });
             ro.observe(container);
             
-            return { chart, ro, dates: data.dates, upSeries, flatSeries, downSeries, vnSeries };
+            return { chart, ro, dates: data.dates, cloudSeries, tenkanSeries, kijunSeries, vnSeries };
         }
 
-        async function initPriceBreadthChart() {
-            const res = await createPriceBreadthChart('priceBreadthChartContainer');
+        async function initIchiChart() {
+            const res = await createIchiChart('ichiChartContainer', false);
             if (res) {
-                priceBreadthChartLwc = res;
-                setPriceBreadthChartRange(priceBreadthChartActiveDays);
-                updatePriceBreadthToggleButtons();
+                ichiChartLwc = res;
+                setIchiChartRange(ichiChartActiveDays);
+                updateIchiToggleButtons();
             }
         }
 
-        function togglePriceBreadthVNINDEX() {
-            priceBreadthVNINDEXVisible = !priceBreadthVNINDEXVisible;
-            if (priceBreadthChartLwc && priceBreadthChartLwc.vnSeries) {
-                priceBreadthChartLwc.vnSeries.applyOptions({ visible: priceBreadthVNINDEXVisible });
-            }
-            updatePriceBreadthToggleButtons();
-        }
-
-        function updatePriceBreadthToggleButtons() {
-            const btn = document.getElementById('toggle-price-vnindex');
-            if (btn) {
-                if (priceBreadthVNINDEXVisible) {
-                    btn.classList.add('active');
-                    btn.classList.remove('inactive');
-                } else {
-                    btn.classList.remove('active');
-                    btn.classList.add('inactive');
-                }
+        async function renderIchiChartFs(mountId) {
+            const res = await createIchiChart(mountId, true);
+            if (res) {
+                ichiChartFsInstance = res;
+                fsInstances.push(res);
+                applyBreadthRange(res.chart, res.dates, ichiChartActiveDays);
             }
         }
 
-        function setPriceBreadthChartRange(days) {
-            priceBreadthChartActiveDays = days;
-            if (priceBreadthChartLwc && priceBreadthChartLwc.chart) {
-                applyBreadthRange(priceBreadthChartLwc.chart, priceBreadthChartLwc.dates, days);
+        function setIchiChartRange(days) {
+            ichiChartActiveDays = days;
+            if (ichiChartLwc && ichiChartLwc.chart) {
+                applyBreadthRange(ichiChartLwc.chart, ichiChartLwc.dates, days);
             }
-            updatePriceBreadthRangeButtons(days);
+            if (ichiChartFsInstance && ichiChartFsInstance.chart) {
+                applyBreadthRange(ichiChartFsInstance.chart, ichiChartFsInstance.dates, days);
+            }
+            updateIchiRangeButtons(days);
         }
 
-        function updatePriceBreadthRangeButtons(days) {
-            const controls = document.getElementById('priceBreadthChartControls');
+        function updateIchiRangeButtons(days) {
+            const controls = document.getElementById('ichiChartControls');
             if (controls) {
                 const buttons = controls.querySelectorAll('button');
                 buttons.forEach(btn => {
@@ -4595,6 +4580,124 @@
                     else if (days > 360 && btn.innerText.includes('Tất cả')) btn.classList.add('active');
                 });
             }
+        }
+
+        function toggleIchiLine(lineKey) {
+            ichiLineVisible[lineKey] = !ichiLineVisible[lineKey];
+            if (ichiChartLwc) {
+                const series = ichiChartLwc[lineKey.toLowerCase() + 'Series'];
+                if (series) {
+                    series.applyOptions({ visible: ichiLineVisible[lineKey] });
+                }
+            }
+            if (ichiChartFsInstance) {
+                const series = ichiChartFsInstance[lineKey.toLowerCase() + 'Series'];
+                if (series) {
+                    series.applyOptions({ visible: ichiLineVisible[lineKey] });
+                }
+            }
+            updateIchiToggleButtons();
+        }
+
+        function toggleIchiVNINDEX() {
+            ichiVNINDEXVisible = !ichiVNINDEXVisible;
+            if (ichiChartLwc && ichiChartLwc.vnSeries) {
+                ichiChartLwc.vnSeries.applyOptions({ visible: ichiVNINDEXVisible });
+            }
+            if (ichiChartFsInstance && ichiChartFsInstance.vnSeries) {
+                ichiChartFsInstance.vnSeries.applyOptions({ visible: ichiVNINDEXVisible });
+            }
+            updateIchiToggleButtons();
+        }
+
+        function updateIchiToggleButtons() {
+            const keys = ['CLOUD', 'TENKAN', 'KIJUN'];
+            keys.forEach(key => {
+                const visible = ichiLineVisible[key];
+                const btn = document.getElementById(`toggle-ichi-${key.toLowerCase()}`);
+                if (btn) {
+                    if (visible) {
+                        btn.classList.add('active');
+                        btn.classList.remove('inactive');
+                    } else {
+                        btn.classList.remove('active');
+                        btn.classList.add('inactive');
+                    }
+                }
+                const btnFs = document.getElementById(`toggle-ichi-fs-${key.toLowerCase()}`);
+                if (btnFs) {
+                    if (visible) {
+                        btnFs.classList.add('active');
+                        btnFs.classList.remove('inactive');
+                    } else {
+                        btnFs.classList.remove('active');
+                        btnFs.classList.add('inactive');
+                    }
+                }
+            });
+            const vniBtn = document.getElementById('toggle-ichi-vnindex');
+            if (vniBtn) {
+                if (ichiVNINDEXVisible) {
+                    vniBtn.classList.add('active');
+                    vniBtn.classList.remove('inactive');
+                } else {
+                    vniBtn.classList.remove('active');
+                    vniBtn.classList.add('inactive');
+                }
+            }
+            const vniBtnFs = document.getElementById('toggle-ichi-fs-vnindex');
+            if (vniBtnFs) {
+                if (ichiVNINDEXVisible) {
+                    vniBtnFs.classList.add('active');
+                    vniBtnFs.classList.remove('inactive');
+                } else {
+                    vniBtnFs.classList.remove('active');
+                    vniBtnFs.classList.add('inactive');
+                }
+            }
+        }
+
+        async function expandIchiChart() {
+            const modal = document.getElementById('chartFsModal');
+            const title = document.getElementById('chartFsTitle');
+            const fsMt  = document.getElementById('chartFsMount');
+            const fsControls = document.getElementById('chartFsControls');
+            if (!modal) return;
+
+            title.textContent = `Độ Rộng Ichi (Ichimoku vs VNINDEX)`;
+
+            fsInstances.forEach(it => { try{it.ro&&it.ro.disconnect();}catch(e){} try{it.chart&&it.chart.remove();}catch(e){} });
+            fsInstances = [];
+            fsMt.innerHTML = '';
+            ichiChartFsInstance = null;
+
+            if (fsControls) {
+                fsControls.innerHTML = `
+                    <div class="ma-toggles">
+                        <button id="toggle-ichi-fs-vnindex" class="btn-sm" onclick="toggleIchiVNINDEX()">VNINDEX</button>
+                        <button id="toggle-ichi-fs-cloud" class="btn-sm" onclick="toggleIchiLine('CLOUD')">Trên mây</button>
+                        <button id="toggle-ichi-fs-tenkan" class="btn-sm" onclick="toggleIchiLine('TENKAN')">Trên Tenkan</button>
+                        <button id="toggle-ichi-fs-kijun" class="btn-sm" onclick="toggleIchiLine('KIJUN')">Trên Kijun</button>
+                    </div>
+                    <div class="chart-controls">
+                        <button class="btn-sm" onclick="setIchiChartRange(30)">30N</button>
+                        <button class="btn-sm" onclick="setIchiChartRange(90)">90N</button>
+                        <button class="btn-sm" onclick="setIchiChartRange(180)">180N</button>
+                        <button class="btn-sm" onclick="setIchiChartRange(9999)">Tất cả</button>
+                    </div>
+                `;
+                fsControls.style.display = 'flex';
+                updateIchiToggleButtons();
+                updateIchiRangeButtons(ichiChartActiveDays);
+            }
+
+            modal.classList.add('open');
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(async () => {
+                    await renderIchiChartFs('chartFsMount');
+                });
+            });
         }
 
 
