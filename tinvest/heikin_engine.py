@@ -236,13 +236,17 @@ def analyze_heikin(df: pd.DataFrame) -> pd.DataFrame:
     out['HK_SellManh'] = (j < out['HK_NW']) & (j.shift(1) >= out['HK_NW'].shift(1))
 
     # --- Trend Color Part ---
+    tc_cols = ['TC_BarColor', 'TC_Trend', 'TC_TrendColor', 'TC_StopLine', 'TC_StopColor', 'TC_T']
     tc_out = analyze_trendcolor(df)
-    for col in tc_out.columns:
-        out[col] = tc_out[col]
+    for col in tc_cols:
+        if col in tc_out.columns:
+            out[col] = tc_out[col]
 
     # --- 2trend Part ---
+    t2_cols = ['T2_SMA', 'T2_SMA_Score', 'T2_SMA_Trend', 'T2_ST_Upper', 'T2_ST_Lower', 'T2_ST_Score', 'T2_ST_Trend']
     t2_out = analyze_2trend(df)
-    for col in t2_out.columns:
-        out[col] = t2_out[col]
+    for col in t2_cols:
+        if col in t2_out.columns:
+            out[col] = t2_out[col]
 
     return out
