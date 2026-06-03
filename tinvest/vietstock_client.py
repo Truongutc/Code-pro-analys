@@ -490,8 +490,11 @@ class VietstockClient:
                 if not isinstance(d, str): return d
                 match = re.search(r'\((\d+)\)', d)
                 if match:
+                    from datetime import timezone
                     ts = int(match.group(1)) / 1000.0
-                    return datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+                    # Convert explicitly to ICT (UTC+7) timezone to prevent shift on GitHub Actions (UTC timezone)
+                    dt = datetime.fromtimestamp(ts, tz=timezone(timedelta(hours=7)))
+                    return dt.strftime("%Y-%m-%d")
                 return d
             df['Date'] = df['Date'].apply(parse_ms_date)
 
