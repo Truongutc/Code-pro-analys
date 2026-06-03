@@ -19,11 +19,11 @@ jobs:
       - name: Update password in index.html
         run: |
           sed -i "s/if (pwd === '.*') { \/\/ SYS_PWD_L1/if (pwd === '${{ github.event.inputs.new_password }}') { \/\/ SYS_PWD_L1/" index.html
-
       - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add index.html
           git commit -m "Update System Password Level 1"
-          git push
+          git pull origin main --rebase
+          git push origin main
