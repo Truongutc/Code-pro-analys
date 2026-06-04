@@ -453,6 +453,28 @@ def format_index_report(name, res_dict, prefix=""):
                 txt += f"\n     ⛔ BỘ LỌC RỦI RO: ĐANG BẬT - TUYỆT ĐỐI KHÔNG MUA MỚI."
     return txt
 
+
+def check_mark_minervini(df):
+    """
+    Mark Minervini Filter criteria.
+    """
+    required_cols = ['Close', 'MA50', 'MA100', 'MA200', 'High52', 'Low52', 'AvgVolume10', 'AvgVolume20', 'AvgVolume60', 'SlopeMA200', 'ATR10', 'ATR30']
+    if not all(col in df.columns for col in required_cols) or len(df) < 2:
+        return False
+    try:
+        return (
+            df['Close'].iloc[-1] > df['MA50'].iloc[-1] > df['MA100'].iloc[-1] > df['MA200'].iloc[-1] and
+            df['Close'].iloc[-1] > 0.85 * df['High52'].iloc[-1] and
+            df['Close'].iloc[-1] >= 1.3 * df['Low52'].iloc[-1] and
+            df['AvgVolume20'].iloc[-1] > df['AvgVolume60'].iloc[-1] and
+            df['AvgVolume10'].iloc[-1] < 0.9 * df['AvgVolume20'].iloc[-1] and
+            df['SlopeMA200'].iloc[-1] > 0 and
+            df['ATR10'].iloc[-1] < df['ATR30'].iloc[-1]
+        )
+    except Exception:
+        return False
+
+
 def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=None):
     # Rule 2: Kiểm tra hủy niêm yết (10 phiên không giao dịch) và cập nhật registry
     current_reg = storage.get_active_registry()
@@ -604,6 +626,7 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         "HEIKIN_BUY": "Heikin Buy (Tín hiệu mua Heikin Ashi)",
         "UPCLOUD": "UpCloud (Xu hướng tăng trên mây)",
         "WHITE_ADX": "ADX Trắng (Đầu chu kỳ xu hướng)",
+        "MARK_MINERVINI": "Mark Minervini (MINERVINI)",
         "EARLY": "Điểm mua EARLY (Mua sớm)",
         "ADD_1": "Điểm mua gia tăng 1 (ADD_1)",
         "ADD_2": "Điểm mua gia tăng 2 (ADD_2)",
@@ -707,6 +730,10 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         adx_color = str(df['ADX_Color'].iloc[-1]).upper() if 'ADX_Color' in df.columns else "N/A"
         if adx_color == "WHITE":
             matched_categories.append("WHITE_ADX")
+            
+        # Mark Minervini
+        if check_mark_minervini(df):
+            matched_categories.append("MARK_MINERVINI")
             
         # Entry Type (EARLY, ADD_1, ADD_2, STRONG)
         entry_type = res.get("entry_type")
