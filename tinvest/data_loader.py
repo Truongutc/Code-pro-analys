@@ -35,16 +35,28 @@ def enrich_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     for period, name in [(10, 'MA10'), (20, 'MA20'), (50, 'MA50'), (100, 'MA100'), (200, 'MA200')]:
         out[name] = out['Close'].rolling(period).mean()
 
-    # ── 2. ATR14 ───────────────────────────────────────────────────────────
+    # Slope of MA200: MA200 > Ref(MA200,-1) and (MA200 - Ref(MA200,-20))/Ref(MA200,-20) > 0
+    cond1 = out['MA200'] > out['MA200'].shift(1)
+    cond2 = (out['MA200'] - out['MA200'].shift(20)) / (out['MA200'].shift(20) + 1e-10) > 0
+    out['SlopeMA200'] = (cond1 & cond2).astype(int)
+
+    # ── 2. ATR indicators ───────────────────────────────────────────────────
     high_low = out['High'] - out['Low']
     high_prev_close = (out['High'] - out['Close'].shift(1)).abs()
     low_prev_close = (out['Low'] - out['Close'].shift(1)).abs()
     tr = pd.concat([high_low, high_prev_close, low_prev_close], axis=1).max(axis=1)
     out['ATR14'] = tr.rolling(14).mean()
+    out['ATR10'] = tr.rolling(10).mean()
+    out['ATR30'] = tr.rolling(30).mean()
 
     # ── 3. Volume ──────────────────────────────────────────────────────────
     out['AvgVolume10'] = out['Volume'].rolling(10).mean()
     out['AvgVolume20'] = out['Volume'].rolling(20).mean()
+    out['AvgVolume60'] = out['Volume'].rolling(60).mean()
+
+    # ── 3b. 52-Week High and Low ───────────────────────────────────────────
+    out['High52'] = out['High'].rolling(260, min_periods=1).max()
+    out['Low52'] = out['Low'].rolling(260, min_periods=1).min()
 
     # ── 4. Ichimoku Cloud ──────────────────────────────────────────────────
     for period, name in [(9, 'Tenkan'), (26, 'Kijun'), (65, 'Kijun65'), (52, 'SpanB_raw')]:

@@ -256,6 +256,27 @@ def check_accumulation_breakout(df):
     return False
 
 
+def check_mark_minervini(df):
+    """
+    Mark Minervini Filter criteria.
+    """
+    required_cols = ['Close', 'MA50', 'MA100', 'MA200', 'High52', 'Low52', 'AvgVolume10', 'AvgVolume20', 'AvgVolume60', 'SlopeMA200', 'ATR10', 'ATR30']
+    if not all(col in df.columns for col in required_cols) or len(df) < 2:
+        return False
+    try:
+        return (
+            df['Close'].iloc[-1] > df['MA50'].iloc[-1] > df['MA100'].iloc[-1] > df['MA200'].iloc[-1] and
+            df['Close'].iloc[-1] > 0.85 * df['High52'].iloc[-1] and
+            df['Close'].iloc[-1] >= 1.3 * df['Low52'].iloc[-1] and
+            df['AvgVolume20'].iloc[-1] > df['AvgVolume60'].iloc[-1] and
+            df['AvgVolume10'].iloc[-1] < 0.9 * df['AvgVolume20'].iloc[-1] and
+            df['SlopeMA200'].iloc[-1] > 0 and
+            df['ATR10'].iloc[-1] < df['ATR30'].iloc[-1]
+        )
+    except Exception:
+        return False
+
+
 def check_rsi_bullish_divergence(df):
     """
     RSI Bullish Divergence check:
@@ -1290,7 +1311,7 @@ class TinvestApp:
         # Title at the top
         tk.Label(dialog, text="CHỌN CÁC TIÊU CHÍ LỌC (LOGICAL AND)", font=("Arial", 12, "bold"), fg="gold", bg="#222222", pady=15).pack(side=tk.TOP)
 
-        # 9 Primary Signals Def (Filter 1)
+        # 10 Primary Signals Def (Filter 1)
         filters_def = [
             ("EARLY", "Mua Sớm (EARLY)"),
             ("ADD_1", "Gia Tăng 1 (ADD_1)"),
@@ -1300,7 +1321,8 @@ class TinvestApp:
             ("PERFECT_MA", "Perfect MA (PERFECT_MA)"),
             ("HEIKIN_BUY", "Heikin (HEIKIN_BUY)"),
             ("UPCLOUD", "UPCLOUD"),
-            ("WHITE_ADX", "Trend ADX (WHITE_ADX)")
+            ("WHITE_ADX", "Trend ADX (WHITE_ADX)"),
+            ("MARK_MINERVINI", "Mark Minervini (MINERVINI)")
         ]
 
         vars_categories = {}
@@ -1447,6 +1469,10 @@ class TinvestApp:
                             if adx_color == "WHITE":
                                 matches_filter1 = True
                                 break
+                        elif key == "MARK_MINERVINI":
+                            if check_mark_minervini(df):
+                                matches_filter1 = True
+                                break
                         else:  # EARLY, ADD_1, ADD_2, STRONG
                             if res.get("entry_type") == key:
                                 matches_filter1 = True
@@ -1522,6 +1548,9 @@ class TinvestApp:
                         adx_color = str(df['ADX_Color'].iloc[-1]).upper() if 'ADX_Color' in df.columns else "N/A"
                         if adx_color == "WHITE":
                             reasons.append("ADX Trắng")
+                    elif key == "MARK_MINERVINI":
+                        if check_mark_minervini(df):
+                            reasons.append("Mark Minervini")
                     elif res.get("entry_type") == key:
                         reasons.append(key)
 
