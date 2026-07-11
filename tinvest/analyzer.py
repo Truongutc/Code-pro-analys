@@ -20,6 +20,30 @@ from .mcdx_engine import evaluate_mcdx_rules
 
 logger = logging.getLogger(__name__)
 
+# ── Thang tỷ trọng khuyến nghị (dùng để hạ dần từng bậc, không nhảy sốc) ────
+_POSITION_TIER_LABEL = {
+    "70–100%": "Mua Mạnh/Gồng lãi",
+    "50–70%": "Gia tăng 2",
+    "30–50%": "Thăm dò/Gia tăng 1",
+    "20–40%": "Giữ vị thế/Chờ điểm nổ",
+    "15–25%": "Mua sớm",
+    "10–20%": "Quan sát chặt",
+    "0%": "Đứng ngoài phòng thủ",
+}
+_POSITION_NEXT_TIER = {
+    "70–100%": "50–70%",
+    "50–70%": "30–50%",
+    "30–50%": "15–25%",
+    "20–40%": "15–25%",
+    "15–25%": "0%",
+    "10–20%": "0%",
+    "0%": "0%",
+}
+
+
+def _position_tier_label(rng: str) -> str:
+    return f"{rng} ({_POSITION_TIER_LABEL.get(rng, '')})"
+
 
 def evaluate_heatmap(df: pd.DataFrame) -> str:
     """Evaluate heatmap candle color transitions in the last 3-5 sessions."""
@@ -302,26 +326,78 @@ def format_report(result: dict) -> str:
     # risk_score cao đơn thuần KHÔNG đủ để phủ nhận tín hiệu AI bullish.
     ai_bullish = state in ('STRONG', 'ADD_2', 'ADD_1', 'EARLY')
 
-    target_pct = "0% (Theo dõi thêm)"
-    if is_trend_broken or (rs > 60 and not ai_bullish):
-        target_pct = "0% (Đứng ngoài phòng thủ)"
+    # Ichimoku hôm nay xác nhận downtrend mạnh/đảo chiều & áp lực bán từ Master State
+    # Engine — 2 tín hiệu "mềm" này KHÔNG được nhảy sốc thẳng về 0%, chỉ hạ dần từng
+    # bậc trên thang tỷ trọng (cộng dồn nếu cả 2 cùng xảy ra).
+    ichi_diag = tech.get('diagnostics', {}).get('ichimoku', {})
+    ichi_downtrend = bool(ichi_diag.get('is_strong_downtrend') or ichi_diag.get('is_reversal'))
+    sell_pressure = sec_raw in ('UNDER_PRESSURE', 'DISTRIBUTION')
+
+    # Ưu tiên theo Tín hiệu đang nắm giữ (Holding signal), nếu không có vị thế thì
+    # xét theo sức khỏe kỹ thuật chung.
+    base_range = "0%"
+    if state == "STRONG":
+        base_range = "70–100%"
+    elif state == "ADD_2":
+        base_range = "50–70%"
+    elif state == "ADD_1":
+        base_range = "30–50%"
+    elif state == "EARLY":
+        base_range = "15–25%"
+    elif tech.get('health_score', 0) >= 65:
+        base_range = "20–40%"
+    elif tech.get('health_score', 0) >= 45:
+        base_range = "10–20%"
+
+    is_hard_zero = is_trend_broken or (rs > 60 and not ai_bullish)
+
+    if is_hard_zero:
+        # MA gãy trend đã XÁC NHẬN (hoặc rủi ro cực cao không có tín hiệu AI bullish đỡ) là
+        # tín hiệu cắt lỗ khẩn cấp thực sự — về thẳng 0%, không hạ dần từng bậc như 2 tín
+        # hiệu mềm ở trên.
+        reason = "MA xác nhận gãy trend" if is_trend_broken else "Điểm rủi ro quá cao, không có tín hiệu AI đỡ"
+        if base_range != "0%":
+            target_pct = f"0% (Đứng ngoài phòng thủ) | ⚠️ Hạ tỷ trọng khẩn cấp từ {base_range} về 0% ({reason})"
+        else:
+            target_pct = f"0% (Đứng ngoài phòng thủ) | ⚠️ {reason}"
     else:
-        # Ưu tiên theo Tín hiệu đang nắm giữ (Holding signal)
-        if state == "STRONG":
-            target_pct = "70–100% (Mua Mạnh/Gồng lãi)"
-        elif state == "ADD_2":
-            target_pct = "50–70% (Gia tăng 2)"
-        elif state == "ADD_1":
-            target_pct = "30–50% (Thăm dò/Gia tăng 1)"
-        elif state == "EARLY":
-            target_pct = "15–25% (Mua sớm)"
-        # Nếu không có vị thế, xét theo sức khỏe kỹ thuật chung
-        elif tech.get('health_score', 0) >= 65:
-            target_pct = "20–40% (Giữ vị thế/Chờ điểm nổ)"
-        elif tech.get('health_score', 0) >= 45:
-            target_pct = "10–20% (Quan sát chặt)"
-    
+        cur_range = base_range
+        downgrade_reasons = []
+        if ichi_downtrend:
+            downgrade_reasons.append("Ichimoku xác nhận downtrend mạnh/đảo chiều")
+        if sell_pressure:
+            downgrade_reasons.append(f"Áp lực bán ({sec_raw})")
+        # anti_trap (RSI quá nhiệt / giá rướn quá xa MA20 / quá nhiều nến xanh liên
+        # tiếp) trước đây chỉ gắn nhãn "🛡️ CHẶN MUA ĐUỔI" mà KHÔNG hạ % — khiến báo
+        # cáo có thể vừa cảnh báo "chặn mua đuổi" vừa hiển thị số "70–100%" mâu
+        # thuẫn nhau. Giờ tính là một tín hiệu mềm nữa, hạ dần đúng như 2 tín hiệu
+        # trên (cộng dồn nếu trùng lúc).
+        if anti_trap:
+            downgrade_reasons.append("Chặn mua đuổi (quá nhiệt/giá rướn xa MA20)")
+
+        if cur_range != "0%" and downgrade_reasons:
+            new_range = cur_range
+            for _ in downgrade_reasons:
+                new_range = _POSITION_NEXT_TIER.get(new_range, "0%")
+            if new_range != cur_range:
+                target_pct = (
+                    f"{_position_tier_label(new_range)} | ⚠️ Hạ tỷ trọng từ {cur_range} về {new_range} "
+                    f"({', '.join(downgrade_reasons)})"
+                )
+            else:
+                target_pct = _position_tier_label(cur_range)
+        elif cur_range != "0%":
+            target_pct = _position_tier_label(cur_range)
+        else:
+            target_pct = "0% (Theo dõi thêm)"
+
     if anti_trap: target_pct += " | 🛡️ CHẶN MUA ĐUỔI"
+
+    # Headline "CHIẾN LƯỢC CỐT LÕI" chỉ đổi sang "TRÁNH MUA" khi tỷ trọng khuyến nghị
+    # THỰC SỰ về 0% — nếu chỉ bị hạ 1-2 bậc mà vẫn còn tỷ trọng dương thì giữ nguyên
+    # nhãn tín hiệu gốc, tránh mâu thuẫn giữa headline và con số %.
+    if target_pct.startswith("0%"):
+        sr_signal = "TRÁNH MUA (Đứng ngoài phòng thủ)"
 
     # 2. Xây dựng Lý do hệ thống
     if anti_trap:
