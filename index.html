@@ -144,6 +144,12 @@
             -webkit-text-fill-color: transparent;
             white-space: nowrap;
         }
+        .nganh-emoji-icon {
+            font-size: 1.05rem;
+            line-height: 1;
+            width: 20px;
+            text-align: center;
+        }
 
         .logo-img {
             height: 36px;
@@ -186,11 +192,43 @@
                 height: 17px;
                 width: 17px;
             }
+            .nganh-emoji-icon {
+                font-size: 0.9rem;
+                width: 17px;
+            }
             .fa-pro-badge span {
                 font-size: 0.66rem;
             }
             .update-badge {
                 font-size: 0.6rem;
+            }
+        }
+
+        /* Compact header while scrolling on mobile, so the sticky header+nav
+           bar don't permanently eat too much of a short phone viewport.
+           Toggled by JS (body.header-compact) once scrollY passes a small
+           threshold; header-right badges are hidden here since the same
+           FA Pro / Ngành links stay reachable via .nav-quick-links in the
+           tab bar below. */
+        header {
+            transition: padding 0.25s ease;
+        }
+        @media (max-width: 767px) {
+            body.header-compact header {
+                padding: 8px 14px;
+            }
+            body.header-compact .header-right {
+                display: none;
+            }
+            body.header-compact .logo-img {
+                height: 24px;
+                width: 24px;
+            }
+            body.header-compact .logo-section h1 {
+                font-size: 0.9rem;
+            }
+            body.header-compact .logo-section h1 span {
+                display: none;
             }
         }
 
@@ -233,7 +271,7 @@
         /* Sticky Navigation Tab Bar */
         .tab-navigation {
             position: sticky;
-            top: 65px; /* height of header */
+            top: 65px; /* height of header; kept in sync by JS (updateHeaderOffset) */
             z-index: 99;
             background: rgba(8, 11, 19, 0.95);
             backdrop-filter: var(--glass-blur);
@@ -242,6 +280,85 @@
             padding: 8px 16px;
             display: flex;
             justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: top 0.25s ease;
+        }
+
+        /* Small quick-access icons next to the mobile dropdown, so FA Pro /
+           Ngành stay one tap away without needing to scroll back up to the
+           header (which is hidden on tap, see .fa-pro-badge in header-right). */
+        .nav-quick-links {
+            display: none;
+        }
+        @media (max-width: 767px) {
+            /* FA Pro / Ngành move to .nav-quick-links (next to the tab
+               dropdown) on mobile — keeping them here too crowds the header
+               row and pushes the status column off-screen. One access point
+               per breakpoint avoids both the duplication and the overflow. */
+            .header-right .fa-pro-badge {
+                display: none;
+            }
+            .menu-dropdown {
+                width: auto;
+                flex: 1 1 auto;
+                min-width: 0;
+                text-align: left;
+            }
+            .menu-btn {
+                min-width: 0;
+                width: 100%;
+                padding: 8px 10px;
+            }
+            #currentTabLabel {
+                display: inline-block;
+                max-width: 44vw;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                vertical-align: middle;
+            }
+            .menu-content {
+                left: 0;
+                right: 0;
+                transform: none;
+                min-width: 0;
+                max-width: calc(100vw - 32px);
+            }
+            .nav-quick-links {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-shrink: 0;
+            }
+            .nav-quick-link {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 36px;
+                height: 36px;
+                border-radius: 9px;
+                border: 1px solid var(--border-color);
+                background: rgba(255, 255, 255, 0.05);
+                flex-shrink: 0;
+                text-decoration: none;
+                transition: all 0.2s ease;
+            }
+            .nav-quick-link:hover,
+            .nav-quick-link:active {
+                background: rgba(139, 92, 246, 0.15);
+                border-color: var(--accent-purple);
+            }
+            .nav-quick-icon {
+                height: 18px;
+                width: 18px;
+                object-fit: contain;
+                border-radius: 3px;
+            }
+            .nav-quick-link .nganh-emoji-icon {
+                font-size: 1.05rem;
+                width: auto;
+            }
         }
 
         /* Menu Dropdown Style */
@@ -3024,6 +3141,10 @@
                     <img src="app_icon.png" alt="FA Pro" class="fa-pro-logo">
                     <span>FA Pro</span>
                 </a>
+                <a href="https://aic-chart-nganh.vercel.app/" target="_blank" rel="noopener" class="fa-pro-badge" title="Xem Biểu đồ Ngành">
+                    <span class="nganh-emoji-icon">🏭</span>
+                    <span>Ngành</span>
+                </a>
                 <div class="update-badge">
                     <div class="badge-row">
                         <span id="urlStatusDot" class="status-dot-indicator red" title="Trạng thái cURL Vietstock"></span>
@@ -3056,6 +3177,14 @@
                 <button class="menu-item" data-tab="aicpro-tab" onclick="selectMenuTab('aicpro-tab', '⚡', 'AIC Pro')">⚡ AIC Pro</button>
                 <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', 'ℹ️', 'Information')">ℹ️ Information</button>
             </div>
+        </div>
+        <div class="nav-quick-links">
+            <a href="https://aic-pro-fa.vercel.app/" target="_blank" rel="noopener" class="nav-quick-link" title="FA Pro">
+                <img src="app_icon.png" alt="FA Pro" class="nav-quick-icon">
+            </a>
+            <a href="https://aic-chart-nganh.vercel.app/" target="_blank" rel="noopener" class="nav-quick-link" title="Biểu đồ Ngành">
+                <span class="nganh-emoji-icon">🏭</span>
+            </a>
         </div>
     </nav>
 
@@ -5093,14 +5222,65 @@
         function selectMenuTab(tabId, icon, label) {
             const content = document.getElementById('menuContent');
             if (content) content.classList.remove('show');
-            
+
             const tabIcon = document.getElementById('currentTabIcon');
             const tabLabel = document.getElementById('currentTabLabel');
             if (tabIcon) tabIcon.innerText = icon;
             if (tabLabel) tabLabel.innerText = label;
-            
+
             switchTab(tabId);
         }
+
+        // Keep the sticky tab bar's offset in sync with the header's actual
+        // rendered height (it shrinks on mobile via .header-compact), so it
+        // always sits flush under the header instead of leaving a gap or
+        // overlapping it.
+        function updateHeaderOffset() {
+            const headerEl = document.querySelector('header');
+            const navEl = document.querySelector('.tab-navigation');
+            if (headerEl && navEl) {
+                navEl.style.top = headerEl.offsetHeight + 'px';
+            }
+        }
+
+        // On mobile, shrink the header while scrolling down so the sticky
+        // header + tab bar don't permanently cover too much of a short phone
+        // screen. FA Pro / Ngành stay reachable via the small icons next to
+        // the tab dropdown (.nav-quick-links), so hiding the header-right
+        // badges here doesn't remove access to them.
+        (function initHeaderScrollCompact() {
+            let lastToggleState = false;
+            let ticking = false;
+
+            function applyState() {
+                const isMobile = window.innerWidth < 768;
+                const shouldCompact = isMobile && window.scrollY > 40;
+                if (shouldCompact !== lastToggleState) {
+                    document.body.classList.toggle('header-compact', shouldCompact);
+                    lastToggleState = shouldCompact;
+                }
+                updateHeaderOffset();
+                ticking = false;
+            }
+
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(applyState);
+                    ticking = true;
+                }
+            }, { passive: true });
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768 && lastToggleState) {
+                    document.body.classList.remove('header-compact');
+                    lastToggleState = false;
+                }
+                updateHeaderOffset();
+            });
+
+            window.addEventListener('load', updateHeaderOffset);
+            document.addEventListener('DOMContentLoaded', updateHeaderOffset);
+        })();
 
         // Fetch analysis data from local Output folder
         async function loadData() {
