@@ -3495,8 +3495,18 @@ class TinvestApp:
                                 alloc = "15-30%"
                                 alloc_note = "Điều chỉnh bình thường -> giữ ít, chờ xem có giữ nền không"
                         elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START']:
-                            alloc = "0-10%"
-                            alloc_note = "Gãy xu hướng xác nhận -> BÁN SẠCH, RA NGOÀI"
+                            # Kiểm tra: FTD còn sống + regime đang RECOVERY → đây là nền MA giảm dài hạn,
+                            # không phải gãy trend mới. Chỉ bán sạch khi FTD đã bị hủy.
+                            _reg_now = res_regime.get('regime', 'UNKNOWN')
+                            if ftd_on and _reg_now in ['RECOVERY', 'WEAK_RECOVERY', 'STABLE_RECOVERY']:
+                                alloc = "30-50%"
+                                alloc_note = "Nền MA dài hạn còn giảm nhưng FTD đang kích hoạt + regime RECOVERY -> Thăm dò, KHÔNG bán sạch"
+                            elif ftd_on and _reg_now == 'MARKET_WEAKENING':
+                                alloc = "15-30%"
+                                alloc_note = "Gãy nền MA dài hạn nhưng FTD (yếu) vẫn còn hiệu lực -> Giữ tỷ trọng thấp, KHÔNG bán sạch, theo dõi sát MA20/Kijun"
+                            else:
+                                alloc = "0-10%"
+                                alloc_note = "Gãy xu hướng xác nhận (không có FTD bảo vệ) -> BÁN SẠCH, RA NGOÀI"
                         elif st_pri_raw == 'RECOVERY':
                             if ftd_on:
                                 alloc = "50-75%"
@@ -3523,8 +3533,14 @@ class TinvestApp:
                                 elif alloc == "50-75%": alloc = "40-60%"
                                 alloc_note = "⚠️ CẢNH BÁO: Thị trường quá nhiệt / MCDX phân phối -> Ưu tiên nắm giữ, hạn chế mua đuổi"
                             elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START', 'MARKET_WEAKENING']:
-                                alloc = "0-10%"
-                                alloc_note = "Bộ Lọc Rủi Ro đang BẬT -> CẤM MUA MỚI"
+                                _reg_now = res_regime.get('regime', 'UNKNOWN')
+                                if ftd_on and _reg_now in ['RECOVERY', 'WEAK_RECOVERY', 'STABLE_RECOVERY']:
+                                    pass  # FTD đang bảo vệ, giữ nguyên alloc đã tính ở trên
+                                elif ftd_on and _reg_now == 'MARKET_WEAKENING':
+                                    alloc_note = "⚠️ Bộ Lọc Rủi Ro BẬT, FTD (yếu) vẫn còn hiệu lực -> Hạn chế mua mới, KHÔNG bán sạch"
+                                else:
+                                    alloc = "0-10%"
+                                    alloc_note = "Bộ Lọc Rủi Ro đang BẬT + không có FTD -> CẤM MUA MỚI"
                             else:
                                 alloc = "10-20%"
                                 alloc_note = "Thị trường lưỡng lự, bộ lọc rủi ro đang bật -> Tỷ trọng thấp"
@@ -5304,6 +5320,9 @@ class TinvestApp:
                             if ftd_on and _reg_now in ['RECOVERY', 'WEAK_RECOVERY', 'STABLE_RECOVERY']:
                                 alloc = "30-50%"
                                 alloc_note = "Nền MA dài hạn còn giảm nhưng FTD đang kích hoạt + regime RECOVERY -> Thăm dò, KHÔNG bán sạch"
+                            elif ftd_on and _reg_now == 'MARKET_WEAKENING':
+                                alloc = "15-30%"
+                                alloc_note = "Gãy nền MA dài hạn nhưng FTD (yếu) vẫn còn hiệu lực -> Giữ tỷ trọng thấp, KHÔNG bán sạch, theo dõi sát MA20/Kijun"
                             else:
                                 alloc = "0-10%"
                                 alloc_note = "Gãy xu hướng xác nhận (không có FTD bảo vệ) -> BÁN SẠCH, RA NGOÀI"
@@ -5337,7 +5356,11 @@ class TinvestApp:
                             elif st_pri_raw in ['DOWNTREND', 'DOWNTREND_START', 'MARKET_WEAKENING']:
                                 # Chi ban sach neu khong co FTD bao ve; neu FTD con song trong RECOVERY thi giu nguyen alloc
                                 _reg_now = res.get('regime', 'UNKNOWN')
-                                if not (ftd_on and _reg_now in ['RECOVERY', 'WEAK_RECOVERY', 'STABLE_RECOVERY']):
+                                if ftd_on and _reg_now in ['RECOVERY', 'WEAK_RECOVERY', 'STABLE_RECOVERY']:
+                                    pass  # FTD đang bảo vệ, giữ nguyên alloc đã tính ở trên
+                                elif ftd_on and _reg_now == 'MARKET_WEAKENING':
+                                    alloc_note = "⚠️ Bộ Lọc Rủi Ro BẬT, FTD (yếu) vẫn còn hiệu lực -> Hạn chế mua mới, KHÔNG bán sạch"
+                                else:
                                     alloc = "0-10%"
                                     alloc_note = "Bộ Lọc Rủi Ro đang BẬT + không có FTD -> CẤM MUA MỚI"
                             elif st_pri_raw in ['RECOVERY', 'WEAK_DOWNTREND'] and ftd_on:
