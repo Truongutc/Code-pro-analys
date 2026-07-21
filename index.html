@@ -5630,6 +5630,10 @@
                         <h4>🎯 Chiến Lược AI & FTD</h4>
                         <div class="diag-row"><span>FTD (Bùng nổ theo đà)</span><strong class="${indexData.ftd_active ? 'bullish' : 'neutral'}">${indexData.ftd_active ? 'CÓ (' + indexData.ftd_date + ')' : 'CHƯA'}</strong></div>
                         <div class="diag-row"><span>Chất lượng FTD</span><strong>${indexData.ftd_quality || 'N/A'}</strong></div>
+                        ${indexData.ftd_peak_date ? `
+                        <div class="diag-row"><span>Đỉnh gần nhất (từ FTD)</span><strong>${indexData.ftd_peak_date} — ${formatPrice(indexData.ftd_peak_close, true)}</strong></div>
+                        <div class="diag-row"><span>Hiện tại giảm từ đỉnh</span><strong class="${(indexData.ftd_decline_from_peak_pct || 0) >= 8 ? 'bearish' : 'neutral'}">${indexData.ftd_decline_from_peak_pct != null ? indexData.ftd_decline_from_peak_pct + '%' : 'N/A'}</strong></div>
+                        ` : ''}
                         <div class="diag-row"><span>Phục hồi (RA) / Phân phối</span><strong>${indexData.ra_day || 0} ngày / <strong class="${indexData.distribution_count >= 4 ? 'bearish' : 'neutral'}">${indexData.distribution_count} ngày</strong></strong></div>
                         <div class="diag-row"><span>Tỷ trọng cổ phiếu tối đa</span><strong class="text-purple">${indexData.alloc || 'N/A'}</strong></div>
                         <div class="diag-row"><span>Hành động AI đề xuất</span><strong class="${getActionClass(indexData.action)}">${indexData.action || 'N/A'}</strong></div>
