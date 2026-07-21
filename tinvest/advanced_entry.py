@@ -183,9 +183,11 @@ def classify_entry(df: pd.DataFrame) -> dict:
             
             # KIỂM CHỨNG HIỆU LỰC (VALIDATION CỰC KỲ QUAN TRỌNG)
             # Nếu giá hiện tại đã rớt thủng sâu hơn giá của cái ngày báo tín hiệu Mua đó (qúa 1.5% độ nhiễu)
-            # -> Tín hiệu này đã GÃY (Invalidated), không được lấy nó làm mốc để phán đoán Hỗ trợ/Kháng cự nữa!
+            # -> Tín hiệu này đã GÃY (Invalidated). KHÔNG được lùi xa hơn tìm tín hiệu CŨ HƠN NỮA để
+            # thay thế — làm vậy sẽ bám vào một tín hiệu có thể đã lỗi thời hàng trăm phiên, không còn
+            # liên quan gì tới diễn biến giá gần đây. Đúng nghĩa: cổ phiếu hiện KHÔNG CÓ điểm mua.
             if current_price < signal_price * 0.985:
-                continue # Lờ đi tín hiệu xịt này, lùi về quá khứ tìm xem còn nền tảng nào vững hơn không
+                break
                 
             flags = []
             if i == 1:

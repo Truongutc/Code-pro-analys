@@ -4,7 +4,7 @@ import numpy as np
 def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
     """"Phân tích chuyên sâu hệ thống Ichimoku dựa theo 4 tầng giao dịch."""
     if len(df) < abs(idx) + 26:
-        return {"status": "Không đủ dữ liệu", "action": "N/A"}
+        return {"status": "Không đủ dữ liệu", "action": "N/A", "is_strong_downtrend": False, "is_reversal": False}
         
     last = df.iloc[idx]
     
@@ -46,21 +46,26 @@ def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
     
     status = []
     action = []
-    
+
+    # Cờ boolean cho các logic khác (VD: khuyến nghị tỷ trọng) tiêu thụ được,
+    # thay vì phải string-match vào `status`/`action`.
+    is_strong_downtrend = False
+    is_reversal = False
+
     # ============================================================
     # 🌟 4 TRẠNG THÁI THỊ TRƯỜNG THEO ICHIMOKU
     # ============================================================
-    
+
     # 🟢 1. STRONG TREND (KÈO NGON NHẤT)
     if above_cloud and tk_cross_up and is_kumo_rising and chikou_bullish:
         status.append("STRONG UPTREND (Xu hướng MẠNH NHẤT): Giá trên mây, Tenkan > Kijun, Chikou trống đường.")
         action.append("All-in mindset. Canh giá Pullback về Tenkan (nhanh) hoặc Kijun (an toàn) để BUY.")
-        
+
     # 🟡 2. WEAK TREND (NẰM TRÊN MÂY NHƯNG TK SUY YẾU)
     elif above_cloud and tk_cross_down:
         status.append("WEAK UPTREND: Giá trên mây nhưng động lượng yếu (Tenkan cắt xuống Kijun).")
         action.append("Trend yếu, dễ điều chỉnh. Giảm size lệnh và chờ xác nhận lại.")
-        
+
     # 🔴 4. REVERSAL (ĐẢO CHIỀU)
     elif inside_cloud and tk_cross_down and not chikou_bullish:
         # Nếu trước đó đang trên mây (check 5-10 phiên trước)
@@ -71,18 +76,20 @@ def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
         if past_price > past_cloud_top:
             status.append("REVERSAL (ĐẢO CHIỀU): Giá từ trên mây chui vào mây, Tenkan < Kijun, Chikou bị cản.")
             action.append("Trend đang CHẾT. Hạn chế mua mới, hạ tỷ trọng ngay lập tức.")
-            
+            is_reversal = True
+
     # ⚪ 3. SIDEWAY (DEATH ZONE)
     elif inside_cloud:
         status.append("SIDEWAY (DEATH ZONE): Giá kẹt trong vùng chiến tranh (Kumo).")
         action.append("Nhiễu tín hiệu. Đứng ngoài / CẤM TRADE.")
-        
+
     # ============================================================
     # KHÚC TRỪ TRỜI (DOWN TREND RÕ RÀNG)
     elif below_cloud:
         if tk_cross_down and not is_kumo_rising:
             status.append("STRONG DOWNTREND: Giá rớt dưới mây, Mây dốc xuống.")
             action.append("Chỉ canh SHORT / Tránh mua tuyệt đối.")
+            is_strong_downtrend = True
         elif tk_cross_up:
             status.append("BEAR MARKET RALLY: Sóng hồi kỹ thuật dưới đáy mây (Tenkan cắt lên Kijun dưới Kumo).")
             action.append("Sóng hồi yếu, chỉ đánh T+ ngắn tỷ trọng nhỏ hoặc chờ chốt.")
@@ -137,5 +144,7 @@ def evaluate_ichimoku(df: pd.DataFrame, idx: int = -1) -> dict:
 
     return {
         "status": status[0] if len(status) == 1 else "\n".join("- " + s for s in status),
-        "action": action[0] if len(action) == 1 else "\n".join("- " + a for a in action)
+        "action": action[0] if len(action) == 1 else "\n".join("- " + a for a in action),
+        "is_strong_downtrend": is_strong_downtrend,
+        "is_reversal": is_reversal,
     }
