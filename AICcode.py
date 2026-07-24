@@ -550,6 +550,28 @@ def check_octopus_green_cross(df):
     return crossed
 
 
+def check_octopus_red_to_green(df):
+    """
+    Octopus Đỏ -> Xanh trong 3 phiên gần đây:
+    - Phiên hiện tại đang Xanh ('#008000' hoặc '#00FF00').
+    - Trong 3 phiên gần nhất, có ít nhất 1 lần chuyển từ Đỏ ('#FF0000') sang Xanh.
+    """
+    if 'OCT_Color' not in df.columns or len(df) < 4:
+        return False
+
+    green_set = ('#008000', '#00FF00')
+    if df['OCT_Color'].iloc[-1] not in green_set:
+        return False
+
+    for i in range(0, 3):
+        idx_prev = -2 - i
+        if abs(idx_prev) > len(df):
+            break
+        if df['OCT_Color'].iloc[-1 - i] in green_set and df['OCT_Color'].iloc[idx_prev] == '#FF0000':
+            return True
+    return False
+
+
 def check_mcdx_banker_cross_5(df):
     if 'MCDX_Banker' not in df.columns or len(df) < 4:
         return False
@@ -733,6 +755,10 @@ CUSTOM_RULES = {
     "OCTOPUS_GREEN_CROSS": {
         "label": "Octopus Green Cross (Giao cắt & chuyển xanh loe rộng)",
         "func": check_octopus_green_cross
+    },
+    "OCTOPUS_RED_TO_GREEN": {
+        "label": "Octopus chuyển Đỏ sang Xanh (trong 3 phiên gần đây)",
+        "func": check_octopus_red_to_green
     },
     "PRICE_GT_10": {
         "label": "Thị giá > 10 (Giá > 10,000đ)",
