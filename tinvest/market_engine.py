@@ -122,6 +122,13 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
     ftd_date = "N/A"
 
+    # Đỉnh riêng theo Close kể từ phiên FTD (dùng cho điều kiện huỷ FTD #2 + hiển thị)
+    ftd_peak = float('inf')
+
+    ftd_peak_date = None
+
+    ftd_decline_pct = 0.0
+
     dist_days = []
 
 
@@ -230,13 +237,40 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
 
 
+        # Cập nhật đỉnh riêng theo Close kể từ phiên FTD (dùng cho điều kiện huỷ #2 + hiển thị)
+        if ftd_active and c > ftd_peak:
+            ftd_peak = c
+            ftd_peak_date = df['Date'].iloc[i]
+
+        ftd_decline_pct = (ftd_peak - c) / ftd_peak if ftd_active and ftd_peak != float('inf') else 0.0
+
         # 3. KIỂM TRA MẤT FTD (CÁC ĐIỀU KIỆN HUỶ)
 
         if ftd_active:
 
-            # Điều kiện 1: Giá thủng mức thấp nhất của phiên RA1 (Thay vì phiên FTD)
+            # Điều kiện 1: Giá thấp nhất (Low) hôm nay thủng mức thấp nhất của chính phiên FTD
 
-            if l < ra_low:
+            if l < ftd_low:
+
+                ftd_active = False
+
+                ftd_quality = None
+
+                ftd_date = "N/A"
+
+                ra_day = 0
+
+                ra_low = float('inf')
+
+                ftd_low = float('inf')
+
+                ftd_peak = float('inf')
+
+                ftd_peak_date = None
+
+            # Điều kiện 2: Giá đóng cửa giảm trên 10% từ đỉnh (theo Close) kể từ phiên FTD
+
+            elif ftd_decline_pct >= 0.10:
 
                 ftd_active = False
 
@@ -248,19 +282,11 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
                 ra_low = float('inf')
 
-            # Điều kiện 2: Thị trường giảm trên 10% từ đỉnh
+                ftd_low = float('inf')
 
-            elif decline_pct >= 0.10:
+                ftd_peak = float('inf')
 
-                ftd_active = False
-
-                ftd_quality = None
-
-                ftd_date = "N/A"
-
-                ra_day = 0
-
-                ra_low = float('inf')
+                ftd_peak_date = None
 
 
 
@@ -270,9 +296,9 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
         if ra_day > 0 and not ftd_active:
 
-            # Tiếp tục đếm RA nếu Close > Low(RA1)
+            # Tiếp tục đếm RA nếu Low hôm nay >= Low(RA1)
 
-            if c < ra_low:
+            if l < ra_low:
 
                 ra_day = 0
 
@@ -308,7 +334,15 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
                     rolling_peak = h
 
-                    
+                    # Khởi tạo mốc huỷ FTD: Low của chính phiên FTD, và đỉnh riêng theo Close
+
+                    ftd_low = l
+
+                    ftd_peak = c
+
+                    ftd_peak_date = df['Date'].iloc[i]
+
+
 
                     # Phân loại FTD mạnh/yếu
 
@@ -322,9 +356,9 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
                     
 
-                    # Xóa một phần phân phối cũ
+                    # Có FTD mới -> xóa sạch toàn bộ phiên phân phối cũ, đếm lại từ đầu
 
-                    dist_days = [d for d in dist_days if i - d['index'] <= 10]
+                    dist_days = []
 
 
 
@@ -332,9 +366,10 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
         if ra_day == 0 and decline_triggered_10:
 
-            # Điều kiện 1: Tạo đáy mới nhưng rút chân đóng cửa ở nửa trên thanh nến
+            # Điều kiện 1: Thân nến trên >50% biên độ, đóng cửa > mở cửa, đóng cửa nằm ở 1/3 nửa trên biên độ
+            close_pos = (c - l) / tr
 
-            candle_body_upper = (c - l) / tr > 0.5 and c > (h + l) / 2
+            candle_body_upper = (close_pos > 0.5) and (c > o) and (close_pos > 2 / 3)
 
             # Điều kiện 2: Phiên tăng điểm sau chuỗi giảm (Chỉ cần pct_change > 0)
 
@@ -530,6 +565,14 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
         "ra_day": ra_day,
 
         "ra_low": round(ra_low, 2) if ra_low != float('inf') else None,
+
+        "ftd_low": round(ftd_low, 2) if ftd_low != float('inf') else None,
+
+        "ftd_peak_date": ftd_peak_date.strftime("%Y-%m-%d") if ftd_peak_date is not None else None,
+
+        "ftd_peak_close": round(ftd_peak, 2) if ftd_peak != float('inf') else None,
+
+        "ftd_decline_from_peak_pct": round(ftd_decline_pct * 100, 2) if ftd_active else None,
 
         "distribution_count": dist_count,
 
