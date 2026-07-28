@@ -356,9 +356,9 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
                     
 
-                    # Xóa một phần phân phối cũ
+                    # Có FTD mới -> xóa sạch toàn bộ phiên phân phối cũ, đếm lại từ đầu
 
-                    dist_days = [d for d in dist_days if i - d['index'] <= 10]
+                    dist_days = []
 
 
 
