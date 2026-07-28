@@ -248,9 +248,9 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
         if ftd_active:
 
-            # Điều kiện 1: Giá đóng cửa thủng mức thấp nhất của chính phiên FTD
+            # Điều kiện 1: Giá thấp nhất (Low) hôm nay thủng mức thấp nhất của chính phiên FTD
 
-            if c < ftd_low:
+            if l < ftd_low:
 
                 ftd_active = False
 
@@ -296,9 +296,9 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
         if ra_day > 0 and not ftd_active:
 
-            # Tiếp tục đếm RA nếu Close > Low(RA1)
+            # Tiếp tục đếm RA nếu Low hôm nay >= Low(RA1)
 
-            if c < ra_low:
+            if l < ra_low:
 
                 ra_day = 0
 
@@ -366,9 +366,10 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
         if ra_day == 0 and decline_triggered_10:
 
-            # Điều kiện 1: Tạo đáy mới nhưng rút chân đóng cửa ở nửa trên thanh nến
+            # Điều kiện 1: Thân nến trên >50% biên độ, đóng cửa > mở cửa, đóng cửa nằm ở 1/3 nửa trên biên độ
+            close_pos = (c - l) / tr
 
-            candle_body_upper = (c - l) / tr > 0.5 and c > (h + l) / 2
+            candle_body_upper = (close_pos > 0.5) and (c > o) and (close_pos > 2 / 3)
 
             # Điều kiện 2: Phiên tăng điểm sau chuỗi giảm (Chỉ cần pct_change > 0)
 
