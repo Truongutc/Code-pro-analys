@@ -5197,25 +5197,30 @@
             return (v / 1000).toFixed(0) + "k";
         }
 
-        // Maps an RS14/RS52 value (0-100) to a color on a gray -> light green
-        // -> dark green -> light purple -> dark purple gradient for the TOPRS
-        // heatmap tables.
+        // Maps an RS14/RS52 value (0-100) to a color for the TOPRS heatmap
+        // tables: 3 gam màu theo khoảng - <70 gam xám, 70-90 gam xanh,
+        // 90-100 gam tím - độ đậm nhạt tăng dần liên tục theo RS trong
+        // từng gam (RS càng cao trong khoảng thì màu càng đậm).
         function rsToColor(v) {
             if (v === null || v === undefined || isNaN(v)) return '#3a3f4b';
             v = Math.max(0, Math.min(100, v));
-            const stops = [
-                { p: 0,   c: [148, 163, 184] }, // gray
-                { p: 25,  c: [134, 239, 172] }, // light green
-                { p: 50,  c: [16, 129, 87]   }, // dark green
-                { p: 75,  c: [196, 148, 250] }, // light purple
-                { p: 100, c: [88, 28, 135]   }  // dark purple
-            ];
-            let a = stops[0], b = stops[stops.length - 1];
-            for (let i = 0; i < stops.length - 1; i++) {
-                if (v >= stops[i].p && v <= stops[i + 1].p) { a = stops[i]; b = stops[i + 1]; break; }
+
+            let lo, hi, cLo, cHi;
+            if (v < 70) {
+                lo = 0;  hi = 70;
+                cLo = [203, 213, 225]; // xám nhạt
+                cHi = [51, 65, 85];    // xám đậm
+            } else if (v < 90) {
+                lo = 70; hi = 90;
+                cLo = [134, 239, 172]; // xanh nhạt
+                cHi = [21, 128, 61];   // xanh đậm
+            } else {
+                lo = 90; hi = 100;
+                cLo = [196, 148, 250]; // tím nhạt
+                cHi = [88, 28, 135];   // tím đậm
             }
-            const t = (b.p === a.p) ? 0 : (v - a.p) / (b.p - a.p);
-            const rgb = a.c.map((av, i) => Math.round(av + (b.c[i] - av) * t));
+            const t = (hi === lo) ? 0 : (v - lo) / (hi - lo);
+            const rgb = cLo.map((c, i) => Math.round(c + (cHi[i] - c) * t));
             return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
         }
 
