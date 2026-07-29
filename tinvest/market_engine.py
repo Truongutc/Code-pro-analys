@@ -248,9 +248,9 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
         if ftd_active:
 
-            # Điều kiện 1: Giá thấp nhất (Low) hôm nay thủng mức thấp nhất của chính phiên FTD
+            # Điều kiện 1: Giá đóng cửa (Close) hôm nay thủng mức thấp nhất của chính phiên FTD
 
-            if l < ftd_low:
+            if c < ftd_low:
 
                 ftd_active = False
 
@@ -267,6 +267,12 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
                 ftd_peak = float('inf')
 
                 ftd_peak_date = None
+
+                # FTD mất hiệu lực -> phải liên tục đi tìm FTD mới ngay, không chờ
+                # một cú giảm >10% MỚI tính từ rolling_peak (biến này có thể đã bị
+                # đẩy lên cao hơn bởi các đỉnh mới hình thành trong lúc FTD còn hiệu
+                # lực, khiến cổng mở RA1 ở dưới không bao giờ mở lại được nữa).
+                decline_triggered_10 = True
 
             # Điều kiện 2: Giá đóng cửa giảm trên 10% từ đỉnh (theo Close) kể từ phiên FTD
 
@@ -287,6 +293,8 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
                 ftd_peak = float('inf')
 
                 ftd_peak_date = None
+
+                decline_triggered_10 = True
 
 
 
