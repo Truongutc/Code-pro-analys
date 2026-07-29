@@ -2542,6 +2542,11 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
         }
+        .toprs-table-wrapper.toprs-fs-active {
+            max-height: none;
+            height: 100%;
+            width: 100%;
+        }
         .toprs-table {
             border-collapse: collapse;
             font-size: 0.72rem;
@@ -3578,13 +3583,19 @@
         <!-- Tab: TOPRS (RS14 / RS52 Heatmap) -->
         <div class="tab-content" id="toprs-tab">
             <section class="card">
-                <h3 class="card-title">🏆 Top 30 theo RS14 (AvgVol20 &gt; 800k)</h3>
+                <h3 class="card-title">
+                    <span>🏆 Top 30 theo RS14 (AvgVol20 &gt; 800k)</span>
+                    <button class="btn-sm" onclick="expandTopRSTable('rs14')">⛶ Mở rộng</button>
+                </h3>
                 <div class="toprs-table-wrapper">
                     <table class="toprs-table" id="toprs14Table"></table>
                 </div>
             </section>
             <section class="card">
-                <h3 class="card-title">🏆 Top 30 theo RS52 (AvgVol20 &gt; 800k)</h3>
+                <h3 class="card-title">
+                    <span>🏆 Top 30 theo RS52 (AvgVol20 &gt; 800k)</span>
+                    <button class="btn-sm" onclick="expandTopRSTable('rs52')">⛶ Mở rộng</button>
+                </h3>
                 <div class="toprs-table-wrapper">
                     <table class="toprs-table" id="toprs52Table"></table>
                 </div>
@@ -7247,6 +7258,8 @@
         const lwcInstances  = {};  // { mountId: [{chart,ro},...] }
         let   fsInstances   = [];  // chart instances inside fullscreen
         let   marketChartTicker = 'VNINDEX';
+        let   _toprsFsOriginalParent = null;      // where to put the TOPRS table wrapper back on close
+        let   _toprsFsOriginalNextSibling = null;
 
         // Labels for fullscreen title
         const CHART_LABELS = {
@@ -8331,11 +8344,57 @@
             fsInstances.forEach(it => { try{it.ro&&it.ro.disconnect();}catch(e){} try{it.chart&&it.chart.remove();}catch(e){} });
             fsInstances = [];
             breadthChartFsInstance = null;
-            document.getElementById('chartFsMount').innerHTML = '';
+
+            const fsMt = document.getElementById('chartFsMount');
+            // Nếu đang có bảng TOPRS được chuyển vào modal, trả nó về đúng vị trí cũ trước khi xoá nội dung modal
+            const movedWrapper = fsMt.querySelector('.toprs-table-wrapper.toprs-fs-active');
+            if (movedWrapper && _toprsFsOriginalParent) {
+                movedWrapper.classList.remove('toprs-fs-active');
+                if (_toprsFsOriginalNextSibling && _toprsFsOriginalNextSibling.parentElement === _toprsFsOriginalParent) {
+                    _toprsFsOriginalParent.insertBefore(movedWrapper, _toprsFsOriginalNextSibling);
+                } else {
+                    _toprsFsOriginalParent.appendChild(movedWrapper);
+                }
+                _toprsFsOriginalParent = null;
+                _toprsFsOriginalNextSibling = null;
+            }
+            fsMt.innerHTML = '';
         }
 
         // ESC to close
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closeChartFullscreen(); });
+
+        // Mở rộng bảng TOPRS (RS14/RS52) toàn màn hình bằng cách tái sử dụng modal fullscreen chung
+        function expandTopRSTable(kind) {
+            const modal = document.getElementById('chartFsModal');
+            const title = document.getElementById('chartFsTitle');
+            const fsMt  = document.getElementById('chartFsMount');
+            const fsControls = document.getElementById('chartFsControls');
+            if (!modal || !fsMt) return;
+
+            const tableId = kind === 'rs52' ? 'toprs52Table' : 'toprs14Table';
+            const table = document.getElementById(tableId);
+            const wrapper = table ? table.closest('.toprs-table-wrapper') : null;
+            if (!wrapper) return;
+
+            title.textContent = kind === 'rs52' ? '🏆 Top 30 theo RS52 (AvgVol20 > 800k)' : '🏆 Top 30 theo RS14 (AvgVol20 > 800k)';
+            if (fsControls) {
+                fsControls.style.display = 'none';
+                fsControls.innerHTML = '';
+            }
+
+            fsInstances.forEach(it => { try{it.ro&&it.ro.disconnect();}catch(e){} try{it.chart&&it.chart.remove();}catch(e){} });
+            fsInstances = [];
+            fsMt.innerHTML = '';
+
+            _toprsFsOriginalParent = wrapper.parentElement;
+            _toprsFsOriginalNextSibling = wrapper.nextElementSibling;
+
+            wrapper.classList.add('toprs-fs-active');
+            fsMt.appendChild(wrapper);
+
+            modal.classList.add('open');
+        }
 
         // ── Fullscreen variants (larger heights) ──
         function renderGPChartFs(mountId, rawDataInput, instances) {
