@@ -5198,29 +5198,29 @@
         }
 
         // Maps an RS14/RS52 value (0-100) to a color for the TOPRS heatmap
-        // tables: 3 gam màu theo khoảng - <70 gam xám, 70-90 gam xanh,
-        // 90-100 gam tím - độ đậm nhạt tăng dần liên tục theo RS trong
-        // từng gam (RS càng cao trong khoảng thì màu càng đậm).
+        // tables: 3 gam màu theo khoảng - <60 gam xám (đậm dần khi RS thấp
+        // -> nhạt dần khi tiến gần 60), 60-85 gam xanh (nhạt ở 60 -> đậm ở
+        // gần 85), 85-100 gam tím (nhạt ở 85 -> đậm nhất ở 100).
         function rsToColor(v) {
             if (v === null || v === undefined || isNaN(v)) return '#3a3f4b';
             v = Math.max(0, Math.min(100, v));
 
-            let lo, hi, cLo, cHi;
-            if (v < 70) {
-                lo = 0;  hi = 70;
-                cLo = [203, 213, 225]; // xám nhạt
-                cHi = [51, 65, 85];    // xám đậm
-            } else if (v < 90) {
-                lo = 70; hi = 90;
-                cLo = [134, 239, 172]; // xanh nhạt
-                cHi = [21, 128, 61];   // xanh đậm
+            let lo, hi, cAtLo, cAtHi;
+            if (v < 60) {
+                lo = 0;  hi = 60;
+                cAtLo = [51, 65, 85];    // xám đậm (RS thấp)
+                cAtHi = [203, 213, 225]; // xám nhạt (gần 60)
+            } else if (v < 85) {
+                lo = 60; hi = 85;
+                cAtLo = [134, 239, 172]; // xanh nhạt (ở 60)
+                cAtHi = [21, 128, 61];   // xanh đậm (gần 85)
             } else {
-                lo = 90; hi = 100;
-                cLo = [196, 148, 250]; // tím nhạt
-                cHi = [88, 28, 135];   // tím đậm
+                lo = 85; hi = 100;
+                cAtLo = [196, 148, 250]; // tím nhạt (ở 85)
+                cAtHi = [88, 28, 135];   // tím đậm (100)
             }
             const t = (hi === lo) ? 0 : (v - lo) / (hi - lo);
-            const rgb = cLo.map((c, i) => Math.round(c + (cHi[i] - c) * t));
+            const rgb = cAtLo.map((c, i) => Math.round(c + (cAtHi[i] - c) * t));
             return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
         }
 
