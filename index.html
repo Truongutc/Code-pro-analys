@@ -450,6 +450,7 @@
                 border: none !important;
                 box-shadow: none !important;
                 flex-direction: row !important;
+                flex-wrap: wrap !important;
                 justify-content: center !important;
                 gap: 8px !important;
                 margin-top: 0 !important;
@@ -465,6 +466,8 @@
                 text-align: center !important;
                 justify-content: center !important;
                 color: var(--text-secondary) !important;
+                white-space: nowrap !important;
+                line-height: 1.3 !important;
             }
             .menu-item:hover {
                 background: rgba(139, 92, 246, 0.15) !important;
@@ -3170,10 +3173,10 @@
             </button>
             <div id="menuContent" class="menu-content">
                 <button class="menu-item active" data-tab="market-tab" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)')">📊 Thị trường (VNINDEX)</button>
-                <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')">🔍 Tra cứu Cổ phiếu</button>
+                <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')">🔍 Tra cứu<br>Cổ phiếu</button>
                 <button class="menu-item" data-tab="whatif-tab" onclick="selectMenuTab('whatif-tab', '🔮', 'What-If')">🔮 What-If</button>
-                <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Lọc Cổ phiếu')">🎯 Lọc Cổ phiếu</button>
-                <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Đánh giá Danh mục')">💼 Đánh giá Danh mục</button>
+                <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Bộ lọc')">🎯 Bộ lọc</button>
+                <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Kiến nghị')">💼 Kiến nghị</button>
                 <button class="menu-item" data-tab="aicpro-tab" onclick="selectMenuTab('aicpro-tab', '⚡', 'AIC Pro')">⚡ AIC Pro</button>
                 <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', 'ℹ️', 'Information')">ℹ️ Information</button>
             </div>
