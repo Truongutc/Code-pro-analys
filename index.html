@@ -2533,7 +2533,50 @@
         .portfolio-table tbody tr:hover {
             background: rgba(255, 255, 255, 0.01);
         }
-        
+
+        /* TOPRS heatmap tables */
+        .toprs-table-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 640px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .toprs-table {
+            border-collapse: collapse;
+            font-size: 0.72rem;
+            white-space: nowrap;
+        }
+        .toprs-table th,
+        .toprs-table td {
+            padding: 5px 8px;
+            text-align: center;
+        }
+        .toprs-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--panel-bg);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .toprs-table tbody th {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: var(--panel-bg);
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .toprs-table thead th:first-child {
+            z-index: 3;
+            left: 0;
+        }
+        .toprs-table caption {
+            caption-side: top;
+        }
+
         /* Plaintext Report Pre */
         .portfolio-report-pre {
             padding: 16px;
@@ -3176,6 +3219,7 @@
                 <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')">🔍 Tra cứu<br>Cổ phiếu</button>
                 <button class="menu-item" data-tab="whatif-tab" onclick="selectMenuTab('whatif-tab', '🔮', 'What-If')">🔮 What-If</button>
                 <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Bộ lọc')">🎯 Bộ lọc</button>
+                <button class="menu-item" data-tab="toprs-tab" onclick="selectMenuTab('toprs-tab', '🏆', 'TOPRS')">🏆 TOPRS</button>
                 <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Kiến nghị')">💼 Kiến nghị</button>
                 <button class="menu-item" data-tab="aicpro-tab" onclick="selectMenuTab('aicpro-tab', '⚡', 'AIC Pro')">⚡ AIC Pro</button>
                 <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', 'ℹ️', 'Information')">ℹ️ Information</button>
@@ -3528,6 +3572,22 @@
                     <!-- Ticker cards dynamically loaded -->
                 </div>
                 <button class="load-more-btn" id="loadMoreBtn" style="display: none;" onclick="loadMore()">Xem thêm cổ phiếu</button>
+            </section>
+        </div>
+
+        <!-- Tab: TOPRS (RS14 / RS52 Heatmap) -->
+        <div class="tab-content" id="toprs-tab">
+            <section class="card">
+                <h3 class="card-title">🏆 Top 30 theo RS14 (AvgVol20 &gt; 800k)</h3>
+                <div class="toprs-table-wrapper">
+                    <table class="toprs-table" id="toprs14Table"></table>
+                </div>
+            </section>
+            <section class="card">
+                <h3 class="card-title">🏆 Top 30 theo RS52 (AvgVol20 &gt; 800k)</h3>
+                <div class="toprs-table-wrapper">
+                    <table class="toprs-table" id="toprs52Table"></table>
+                </div>
             </section>
         </div>
 
@@ -5126,6 +5186,57 @@
             return (v / 1000).toFixed(0) + "k";
         }
 
+        // Maps an RS14/RS52 value (0-100) to a color on a gray -> light green
+        // -> dark green -> light purple -> dark purple gradient for the TOPRS
+        // heatmap tables.
+        function rsToColor(v) {
+            if (v === null || v === undefined || isNaN(v)) return '#3a3f4b';
+            v = Math.max(0, Math.min(100, v));
+            const stops = [
+                { p: 0,   c: [148, 163, 184] }, // gray
+                { p: 25,  c: [134, 239, 172] }, // light green
+                { p: 50,  c: [16, 129, 87]   }, // dark green
+                { p: 75,  c: [196, 148, 250] }, // light purple
+                { p: 100, c: [88, 28, 135]   }  // dark purple
+            ];
+            let a = stops[0], b = stops[stops.length - 1];
+            for (let i = 0; i < stops.length - 1; i++) {
+                if (v >= stops[i].p && v <= stops[i + 1].p) { a = stops[i]; b = stops[i + 1]; break; }
+            }
+            const t = (b.p === a.p) ? 0 : (v - a.p) / (b.p - a.p);
+            const rgb = a.c.map((av, i) => Math.round(av + (b.c[i] - av) * t));
+            return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+        }
+
+        function renderTopRSTables() {
+            const tickerMap = new Map((rawData.tickers_analysis || []).map(t => [t.Ticker, t]));
+            const dates = rawData.top_rs_dates || [];
+
+            function buildTable(elId, tickerList, rsKey) {
+                const el = document.getElementById(elId);
+                if (!el) return;
+                if (!tickerList || !tickerList.length || !dates.length) {
+                    el.innerHTML = '<caption style="padding:12px;color:var(--text-secondary);">Chưa có dữ liệu xếp hạng.</caption>';
+                    return;
+                }
+                const thead = '<thead><tr><th>Mã</th>' +
+                    dates.map(d => `<th>${d.slice(5)}</th>`).join('') + '</tr></thead>';
+                const rows = tickerList.map(sym => {
+                    const rec = tickerMap.get(sym);
+                    const rsArr = (rec && rec.History && rec.History[rsKey]) || [];
+                    const cells = dates.map((_, i) => {
+                        const v = rsArr[i];
+                        return `<td style="background:${rsToColor(v)}" title="${sym} · ${dates[i]}: ${v ?? 'N/A'}">${v ?? ''}</td>`;
+                    }).join('');
+                    return `<tr><th>${sym}</th>${cells}</tr>`;
+                }).join('');
+                el.innerHTML = thead + '<tbody>' + rows + '</tbody>';
+            }
+
+            buildTable('toprs14Table', rawData.top_rs14_tickers, 'rs14');
+            buildTable('toprs52Table', rawData.top_rs52_tickers, 'rs52');
+        }
+
         function getActionClass(actionStr) {
             if (!actionStr) return 'wait';
             const s = actionStr.toUpperCase();
@@ -5358,6 +5469,9 @@
 
                 // Filter & Render Grid
                 applyCustomFilters();
+
+                // Render TOPRS heatmap tables
+                renderTopRSTables();
 
                 // Auto-select first ticker in Lookup view (Tab 2)
                 if (rawData.tickers_analysis && rawData.tickers_analysis.length > 0) {

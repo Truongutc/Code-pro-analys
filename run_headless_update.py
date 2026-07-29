@@ -510,6 +510,35 @@ def check_mark_minervini(df):
         return False
 
 
+MIN_AVG_VOLUME_FOR_RS = 800000
+
+_INDEX_TICKER_DENYLIST = {"VNINDEX", "HNXINDEX", "UPCOM", "VN30", "HNX30",
+                           "HAINDEX", "UPCOM-INDEX", "HNX-INDEX"}
+
+
+def build_top_rs_ranking(tickers_analysis, rs_key, min_avg_volume=MIN_AVG_VOLUME_FOR_RS, top_n=30, min_days=30):
+    """Top-N tickers by latest RS14/RS52, filtered to AvgVolume20 > min_avg_volume."""
+    candidates = []
+    for r in tickers_analysis:
+        ticker = r.get("Ticker", "")
+        if ticker in _INDEX_TICKER_DENYLIST:
+            continue
+        hist = r.get("History") or {}
+        rs_list = hist.get(rs_key) or []
+        dates_list = hist.get("dates") or []
+        if len(rs_list) < min_days or len(dates_list) < min_days:
+            continue
+        avg_vol = r.get("AvgVolume20")
+        if avg_vol is None or avg_vol <= min_avg_volume:
+            continue
+        latest_rs = rs_list[-1]
+        if latest_rs is None:
+            continue
+        candidates.append((ticker, latest_rs))
+    candidates.sort(key=lambda x: (-x[1], x[0]))  # descending RS, ticker asc as tiebreaker
+    return [t for t, _ in candidates[:top_n]]
+
+
 def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=None):
     # Rule 2: Kiểm tra hủy niêm yết (10 phiên không giao dịch) và cập nhật registry
     current_reg = storage.get_active_registry()
@@ -859,7 +888,9 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         history = {
             "dates": [pd.to_datetime(d).strftime("%Y-%m-%d") if not pd.isna(d) else "N/A" for d in recent_df['Date']],
             "closes": [float(c) * 1000 for c in recent_df['Close']],
-            "volumes": [int(v) for v in recent_df['Volume']]
+            "volumes": [int(v) for v in recent_df['Volume']],
+            "rs14": recent_df['RS14'].round(1).tolist() if 'RS14' in recent_df.columns else [],
+            "rs52": recent_df['RS52'].round(1).tolist() if 'RS52' in recent_df.columns else []
         }
 
         # Generate detailed text report
@@ -949,6 +980,7 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             "Price": safe_int(current_p),
             "Volume": safe_int(current_vol),
             "AvgVolume10": safe_int(avg_vol_raw),
+            "AvgVolume20": safe_int(vol_avg),
             "Entry": int(ep * 1000) if ep > 0 else None,
             "Target": int(tp * 1000) if tp > 0 else None,
             "Target2": int(tp2 * 1000) if tp2 > 0 else None,
@@ -1036,7 +1068,20 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         1 if x.get("Action") == "BUY" else (2 if x.get("Action") == "WAIT" else 3),
         x.get("Ticker", "")
     ))
-    
+
+    # Canonical trading-day axis for the TOPRS heatmap column headers — sourced
+    # from VNINDEX's own last-30 trading dates (always present, always trades
+    # every session) so all ranked tickers' RS values render in the same date
+    # columns positionally, instead of relying on each ticker's own (possibly
+    # gap-shifted, e.g. after a trading halt) date array lining up.
+    top_rs_dates = []
+    if df_vn is not None and not df_vn.empty and 'Date' in df_vn.columns:
+        recent_vn = df_vn.tail(30)
+        top_rs_dates = [pd.to_datetime(d).strftime("%Y-%m-%d") for d in recent_vn['Date']]
+
+    top_rs14_tickers = build_top_rs_ranking(tickers_analysis, "rs14")
+    top_rs52_tickers = build_top_rs_ranking(tickers_analysis, "rs52")
+
     # Rebuild pre-compiled categories/rules lists
     filtered_results = {cat: [] for cat in categories_meta.keys()}
     for rule_key in rules_meta.keys():
@@ -1313,7 +1358,10 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         "categories_meta": categories_meta,
         "rules_meta": rules_meta,
         "tickers_analysis": tickers_analysis,
-        "filtered_results": filtered_results
+        "filtered_results": filtered_results,
+        "top_rs_dates": top_rs_dates,
+        "top_rs14_tickers": top_rs14_tickers,
+        "top_rs52_tickers": top_rs52_tickers
     }
     
     def clean_nans(obj):
