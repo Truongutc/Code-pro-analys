@@ -248,9 +248,9 @@ def analyze_market_index(df_index: pd.DataFrame, breadth_pct_ma20: float = 50.0,
 
         if ftd_active:
 
-            # Điều kiện 1: Giá thấp nhất (Low) hôm nay thủng mức thấp nhất của chính phiên FTD
+            # Điều kiện 1: Giá đóng cửa (Close) hôm nay thủng mức thấp nhất của chính phiên FTD
 
-            if l < ftd_low:
+            if c < ftd_low:
 
                 ftd_active = False
 
