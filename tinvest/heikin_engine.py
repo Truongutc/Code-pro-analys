@@ -123,9 +123,10 @@ def analyze_2trend(df: pd.DataFrame) -> pd.DataFrame:
     scores = np.zeros(len(out))
     sma_vals = sma.values
     c_vals = c.values
-    for i in range(window_len + ma_len, len(out)):
+    # Pine: compares close vs sma[1..window_len]; bars with na history count as 0
+    for i in range(1, len(out)):
         curr_c = c_vals[i]
-        window_smas = sma_vals[i-window_len:i]
+        window_smas = sma_vals[max(0, i-window_len):i]
         scores[i] = np.sum(np.where(curr_c > window_smas, 1, np.where(curr_c < window_smas, -1, 0)))
     
     out['T2_SMA_Score'] = scores
@@ -149,7 +150,14 @@ def analyze_2trend(df: pd.DataFrame) -> pd.DataFrame:
         (out['High'] - out['Close'].shift(1)).abs(),
         (out['Low'] - out['Close'].shift(1)).abs()
     ], axis=1).max(axis=1)
-    atr = tr.rolling(atr_len).mean()
+    # Pine ta.atr = RMA of true range, seeded with the SMA of the first atr_len values
+    tr_vals = tr.values
+    atr_vals = np.full(len(out), np.nan)
+    if len(out) >= atr_len:
+        atr_vals[atr_len-1] = tr_vals[:atr_len].mean()
+        for i in range(atr_len, len(out)):
+            atr_vals[i] = (atr_vals[i-1] * (atr_len - 1) + tr_vals[i]) / atr_len
+    atr = pd.Series(atr_vals, index=out.index)
     
     sma_atr = c.rolling(atr_len).mean()
     upper = sma_atr + atr * atr_mult
@@ -160,10 +168,10 @@ def analyze_2trend(df: pd.DataFrame) -> pd.DataFrame:
     scores2 = np.zeros(len(out))
     upper_vals = upper.values
     lower_vals = lower.values
-    for i in range(window_len + atr_len, len(out)):
+    for i in range(1, len(out)):
         curr_c = c_vals[i]
-        w_upper = upper_vals[i-window_len:i]
-        w_lower = lower_vals[i-window_len:i]
+        w_upper = upper_vals[max(0, i-window_len):i]
+        w_lower = lower_vals[max(0, i-window_len):i]
         scores2[i] = np.sum(np.where(curr_c > w_upper, 1, np.where(curr_c < w_lower, -1, 0)))
     
     out['T2_ST_Score'] = scores2

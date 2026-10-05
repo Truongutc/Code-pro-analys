@@ -7515,6 +7515,103 @@
             }
         }
 
+        // ── AIC-2trend (Pine port) ──
+        // Part 1: SMA20 colored by T2_SMA_Trend, 𝑳/𝑺 on crossover/crossunder of the state through 0.
+        // Part 2: SMA±ATR band — only the active side is plotted (lower when trend=1, upper when -1),
+        //         filled toward the candle body middle, 𝑳/𝑺 on the band when the state flips.
+        const T2_UP = '#00ffaa', T2_DOWN = '#ff0000';
+        const t2Num = v => (v === null || v === undefined || Number.isNaN(v)) ? null : v;
+        const t2Cross = (arr, i) => {
+            const p = t2Num(arr[i-1]), c = t2Num(arr[i]);
+            if (p === null || c === null) return 0;
+            return (p <= 0 && c > 0) ? 1 : (p >= 0 && c < 0) ? -1 : 0;
+        };
+
+        // LWC 4.2 draws straight across whitespace, so each contiguous run (plot.style_linebr) gets its own series
+        function t2Runs(n, pointAt) {
+            const runs = [];
+            let cur = null;
+            for (let i = 0; i < n; i++) {
+                const p = pointAt(i);
+                if (p === null) { cur = null; continue; }
+                if (!cur) { cur = []; runs.push(cur); }
+                cur.push(p);
+            }
+            return runs;
+        }
+
+        // Active band per bar: lower band while trend = 1, upper band while trend = -1
+        function t2Band(data, i, dir) {
+            if (data.T2_ST_Trend[i] !== dir) return null;
+            return t2Num(dir === 1 ? data.T2_ST_Lower[i] : data.T2_ST_Upper[i]);
+        }
+
+        // Fill between body middle and the active band. Must be added before the candles,
+        // since each black mask series hides everything drawn underneath it.
+        function add2TrendFill(chart, data) {
+            if (!data.T2_ST_Trend || !data.T2_ST_Upper || !data.T2_ST_Lower) return;
+            const opts = {lineWidth: 1, lineVisible: false, lineColor: 'rgba(0,0,0,0)', priceLineVisible: false,
+                          lastValueVisible: false, crosshairMarkerVisible: false, title: '', autoscaleInfoProvider: () => null};
+            [[1, 'rgba(0,255,170,0.3)'], [-1, 'rgba(255,0,0,0.3)']].forEach(([dir, color]) => {
+                const runs = t2Runs(data.dates.length, i => {
+                    const band = t2Band(data, i, dir), o = data.opens[i], c = data.closes[i];
+                    if (band === null || !o || !c) return null;
+                    const mid = (o + c) / 2;
+                    return {time: d2ts(data.dates[i]), top: Math.max(mid, band), bot: Math.min(mid, band)};
+                });
+                runs.forEach(run => {
+                    chart.addAreaSeries({...opts, topColor: color, bottomColor: color})
+                         .setData(run.map(p => ({time: p.time, value: p.top})));
+                    chart.addAreaSeries({...opts, topColor: '#000000', bottomColor: '#000000'})
+                         .setData(run.map(p => ({time: p.time, value: p.bot})));
+                });
+            });
+        }
+
+        function add2TrendLines(chart, data, candleSeries) {
+            // Part 1: SMA line + small 𝑳/𝑺 on the candles
+            if (data.T2_SMA) {
+                const st = data.T2_SMA_Trend || [];
+                const sma = [];
+                for (let i = 0; i < data.dates.length; i++) {
+                    const v = t2Num(data.T2_SMA[i]);
+                    if (v === null) continue;
+                    sma.push({time: d2ts(data.dates[i]), value: v, color: st[i] === 1 ? T2_UP : T2_DOWN});
+                }
+                chart.addLineSeries({lineWidth: 3, title: '', priceLineVisible: false, lastValueVisible: false}).setData(sma);
+            }
+            if (data.T2_SMA_Trend && candleSeries) {
+                const m = [];
+                for (let i = 1; i < data.dates.length; i++) {
+                    const x = t2Cross(data.T2_SMA_Trend, i);
+                    if (x > 0) m.push({time: d2ts(data.dates[i]), position: 'belowBar', color: T2_UP, shape: 'arrowUp', text: '𝑳'});
+                    if (x < 0) m.push({time: d2ts(data.dates[i]), position: 'aboveBar', color: T2_DOWN, shape: 'arrowDown', text: '𝑺'});
+                }
+                candleSeries.setMarkers(m);
+            }
+
+            // Part 2: active band lines + larger 𝑳/𝑺 on the band where the trend flips
+            if (data.T2_ST_Trend && data.T2_ST_Upper && data.T2_ST_Lower) {
+                const lineOpts = {lineWidth: 3, title: '', priceLineVisible: false, lastValueVisible: false};
+                [[1, T2_UP], [-1, T2_DOWN]].forEach(([dir, color]) => {
+                    const runs = t2Runs(data.dates.length, i => {
+                        const v = t2Band(data, i, dir);
+                        return v === null ? null : {time: d2ts(data.dates[i]), value: v, i};
+                    });
+                    runs.forEach(run => {
+                        const series = chart.addLineSeries({...lineOpts, color});
+                        series.setData(run.map(p => ({time: p.time, value: p.value})));
+                        const first = run[0];
+                        if (first.i > 0 && t2Cross(data.T2_ST_Trend, first.i) === dir) {
+                            series.setMarkers([dir === 1
+                                ? {time: first.time, position: 'belowBar', color, shape: 'arrowUp', text: 'L', size: 2}
+                                : {time: first.time, position: 'aboveBar', color, shape: 'arrowDown', text: 'S', size: 2}]);
+                        }
+                    });
+                });
+            }
+        }
+
         // ================================================================
         //  renderGPChart  — in a cell body div (mountId), returns primary chart
         // ================================================================
@@ -7746,6 +7843,7 @@
             // Pane 2: Normal candles + 2Trend SMA (colored by trend state) + signals
             const {chart: c2, ro: ro2} = mkChart(d2, h2, null, { crosshair: { horzLine: { visible: false, labelVisible: false } } });
             instances.push({chart:c2,ro:ro2});
+            add2TrendFill(c2, data);
             const cs2 = c2.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
@@ -7753,43 +7851,7 @@
                 priceLineVisible: false, lastValueVisible: false
             });
             cs2.setData(ohlcv(data));
-
-            // 2Trend SMA with color per-bar based on trend state
-            if (data.T2_SMA && data.T2_SMA_Trend) {
-                const smaColorData = [];
-                const sc2 = priceScale(data);
-                for (let i = 0; i < data.dates.length; i++) {
-                    const v = data.T2_SMA[i], s = data.T2_SMA_Trend[i];
-                    if (v === null || v === undefined) continue;
-                    smaColorData.push({time: d2ts(data.dates[i]), value: v * sc2,
-                        color: s > 0 ? '#00ffaa' : s < 0 ? '#ff3b3b' : '#888888'});
-                }
-                c2.addLineSeries({lineWidth:2.5, title: '', priceLineVisible:false, lastValueVisible:false}).setData(smaColorData);
-            } else if (data.T2_SMA) {
-                c2.addLineSeries({color:'#00ffaa',lineWidth:3,title: '',priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'T2_SMA'));
-            }
-            if (data.T2_ST_Lower) c2.addLineSeries({color:'rgba(0,255,170,0.4)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'T2_ST_Lower'));
-            if (data.T2_ST_Upper) c2.addLineSeries({color:'rgba(255,59,59,0.4)',lineWidth:1,lineStyle:2,priceLineVisible:false,lastValueVisible:false}).setData(lineData(data,'T2_ST_Upper'));
-
-            // 2Trend Buy/Sell signal markers (crossover of trend_state through 0)
-            if (data.T2_SMA_Trend && data.T2_SMA) {
-                const t2Markers = [];
-                const sc2m = priceScale(data);
-                for (let i = 1; i < data.dates.length; i++) {
-                    const prev = data.T2_SMA_Trend[i-1], curr = data.T2_SMA_Trend[i];
-                    const smaV = data.T2_SMA[i];
-                    if (prev === null || curr === null || smaV === null) continue;
-                    // crossover: -1 or 0 → 1 = Buy
-                    if (prev <= 0 && curr > 0) {
-                        t2Markers.push({time: d2ts(data.dates[i]), position:'belowBar', color:'#00ffaa', shape:'triangleUp', text:'𝑳'});
-                    }
-                    // crossunder: 1 or 0 → -1 = Sell
-                    if (prev >= 0 && curr < 0) {
-                        t2Markers.push({time: d2ts(data.dates[i]), position:'aboveBar', color:'#ff3b3b', shape:'triangleDown', text:'𝑺'});
-                    }
-                }
-                if (t2Markers.length) cs2.setMarkers(t2Markers.sort((a,b)=>a.time-b.time));
-            }
+            add2TrendLines(c2, data, cs2);
 
             syncCharts([c1,c2]);
             applyDefaultChartRange(c1, data.dates, 90);
@@ -7849,20 +7911,16 @@
             // Pane 2: Normal candles (reference)
             const {chart: c2, ro: ro2} = mkChart(d2, h2);
             instances.push({chart:c2,ro:ro2});
-            c2.addCandlestickSeries({
+            // Overlay AIC-2trend (SMA dynamic score + ATR band) with Long/Short markers
+            add2TrendFill(c2, data);
+            const hmCs2 = c2.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
                 priceLineVisible: false
-            }).setData(ohlcv(data));
-
-            // Overlay L&L Trend System (TrendColor)
-            if (data.TC_Trend) {
-                addColoredLineSegments(c2, data.dates, data.TC_Trend, data.TC_TrendColor || [], 1, 2);
-            }
-            if (data.TC_StopLine) {
-                addColoredLineSegments(c2, data.dates, data.TC_StopLine, data.TC_StopColor || [], 1, 2);
-            }
+            });
+            hmCs2.setData(ohlcv(data));
+            add2TrendLines(c2, data, hmCs2);
 
             syncCharts([c1,c2]);
             applyDefaultChartRange(c1, data.dates, 90);
@@ -8598,20 +8656,16 @@
                 fcs.setData(arr);
             }
             const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
-            c2.addCandlestickSeries({
+            // Overlay AIC-2trend (SMA dynamic score + ATR band) with Long/Short markers
+            add2TrendFill(c2, data);
+            const hmCs2 = c2.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
                 priceLineVisible: false
-            }).setData(ohlcv(data));
-
-            // Overlay L&L Trend System (TrendColor)
-            if (data.TC_Trend) {
-                addColoredLineSegments(c2, data.dates, data.TC_Trend, data.TC_TrendColor || [], 1, 2);
-            }
-            if (data.TC_StopLine) {
-                addColoredLineSegments(c2, data.dates, data.TC_StopLine, data.TC_StopColor || [], 1, 2);
-            }
+            });
+            hmCs2.setData(ohlcv(data));
+            add2TrendLines(c2, data, hmCs2);
 
             syncCharts([c1,c2]); applyDefaultChartRange(c1, data.dates, 90);
         }
