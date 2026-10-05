@@ -572,6 +572,22 @@ def check_octopus_red_to_green(df):
     return False
 
 
+def check_2trend_long_3(df):
+    """
+    2Trend có tín hiệu L trong 3 phiên gần nhất:
+    - L của SMA (T2_SMA_Trend cắt lên 0) hoặc L của dải ATR (T2_ST_Trend cắt lên 0),
+      giống ta.crossover(trend, 0) trong AIC-2trend.
+    """
+    for col in ('T2_SMA_Trend', 'T2_ST_Trend'):
+        if col not in df.columns or len(df) < 4:
+            continue
+        s = df[col]
+        for i in range(1, 4):
+            if s.iloc[-i] > 0 and s.iloc[-i-1] <= 0:
+                return True
+    return False
+
+
 def check_mcdx_banker_cross_5(df):
     if 'MCDX_Banker' not in df.columns or len(df) < 4:
         return False
@@ -759,6 +775,10 @@ CUSTOM_RULES = {
     "OCTOPUS_RED_TO_GREEN": {
         "label": "Octopus chuyển Đỏ sang Xanh (trong 3 phiên gần đây)",
         "func": check_octopus_red_to_green
+    },
+    "TREND2_LONG_3": {
+        "label": "2Trend có tín hiệu L (trong 3 phiên gần đây)",
+        "func": check_2trend_long_3
     },
     "PRICE_GT_10": {
         "label": "Thị giá > 10 (Giá > 10,000đ)",
