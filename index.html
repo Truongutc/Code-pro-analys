@@ -7911,16 +7911,20 @@
             // Pane 2: Normal candles (reference)
             const {chart: c2, ro: ro2} = mkChart(d2, h2);
             instances.push({chart:c2,ro:ro2});
-            // Overlay AIC-2trend (SMA dynamic score + ATR band) with Long/Short markers
-            add2TrendFill(c2, data);
-            const hmCs2 = c2.addCandlestickSeries({
+            c2.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
                 priceLineVisible: false
-            });
-            hmCs2.setData(ohlcv(data));
-            add2TrendLines(c2, data, hmCs2);
+            }).setData(ohlcv(data));
+
+            // Overlay L&L Trend System (TrendColor)
+            if (data.TC_Trend) {
+                addColoredLineSegments(c2, data.dates, data.TC_Trend, data.TC_TrendColor || [], 1, 2);
+            }
+            if (data.TC_StopLine) {
+                addColoredLineSegments(c2, data.dates, data.TC_StopLine, data.TC_StopColor || [], 1, 2);
+            }
 
             syncCharts([c1,c2]);
             applyDefaultChartRange(c1, data.dates, 90);
@@ -8656,16 +8660,20 @@
                 fcs.setData(arr);
             }
             const {chart:c2,ro:r2}=mkChart(d2,h2); instances.push({chart:c2,ro:r2});
-            // Overlay AIC-2trend (SMA dynamic score + ATR band) with Long/Short markers
-            add2TrendFill(c2, data);
-            const hmCs2 = c2.addCandlestickSeries({
+            c2.addCandlestickSeries({
                 upColor:'#00ff6a',downColor:'#ff3b3b',
                 borderUpColor:'#00ff6a',borderDownColor:'#ff3b3b',
                 wickUpColor:'#00ff6a',wickDownColor:'#ff3b3b',
                 priceLineVisible: false
-            });
-            hmCs2.setData(ohlcv(data));
-            add2TrendLines(c2, data, hmCs2);
+            }).setData(ohlcv(data));
+
+            // Overlay L&L Trend System (TrendColor)
+            if (data.TC_Trend) {
+                addColoredLineSegments(c2, data.dates, data.TC_Trend, data.TC_TrendColor || [], 1, 2);
+            }
+            if (data.TC_StopLine) {
+                addColoredLineSegments(c2, data.dates, data.TC_StopLine, data.TC_StopColor || [], 1, 2);
+            }
 
             syncCharts([c1,c2]); applyDefaultChartRange(c1, data.dates, 90);
         }
