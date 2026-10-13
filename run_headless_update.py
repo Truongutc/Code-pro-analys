@@ -32,6 +32,7 @@ from tinvest.vietstock_client import VietstockClient
 from tinvest.data_loader import enrich_dataframe
 from tinvest.analyzer import format_report, evaluate_heatmap
 from tinvest.chart_exporter import export_ticker_history_json
+from tinvest.super_strategy import evaluate_super
 from AICcode import (
     analyze_ticker_worker,
     analyze_batch_worker,
@@ -1047,7 +1048,16 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             # History for Chart.js
             "History": history
         }
-        
+
+        # Super strategy: only stored when a signal fired within the last 30 sessions (latest signal only)
+        if not ticker.upper().endswith("INDEX"):
+            try:
+                super_rec = evaluate_super(df)
+                if super_rec:
+                    ticker_record["Super"] = super_rec
+            except Exception as e_super:
+                logger.warning(f"Super strategy error for {ticker}: {e_super}")
+
         tickers_analysis.append(ticker_record)
 
     # Merge existing and newly analyzed

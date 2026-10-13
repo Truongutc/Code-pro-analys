@@ -1,0 +1,29 @@
+name: action đổi pass super
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_password:
+        description: 'Nhập mật khẩu Super mới'
+        required: true
+        type: string
+
+jobs:
+  update-password:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Update password in index.html
+        run: |
+          sed -i "s/if (pwd === '.*') { \/\/ SYS_PWD_SUPER/if (pwd === '${{ github.event.inputs.new_password }}') { \/\/ SYS_PWD_SUPER/" index.html
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add index.html
+          git commit -m "Update Super Password"
+          git push

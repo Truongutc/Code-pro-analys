@@ -744,6 +744,16 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
                         series_rounded = series.round(6)
                         record[col] = clean_nan_list(series_rounded)
             
+            # Super strategy trade history (A = buy signal, Z = sell) for the GP chart markers
+            if "INDEX" not in t.upper():
+                try:
+                    from tinvest.super_strategy import super_trades
+                    trades = super_trades(df_extended)
+                    if trades:
+                        record["super_trades"] = trades
+                except Exception:
+                    pass
+
             # Run What-If analysis (Only for core indices or stocks with AvgVolume10 >= 100k to avoid CPU/Memory overload)
             CORE_INDICES = {"VNINDEX", "HNX-INDEX", "UPCOM-INDEX", "VN30", "HNX30"}
             
