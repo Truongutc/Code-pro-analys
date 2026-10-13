@@ -1049,7 +1049,7 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             "History": history
         }
 
-        # Super strategy: only stored when a signal fired within the last 30 sessions (latest signal only)
+        # Super strategy: latest buy signal of the ticker (only stored if the ticker ever had one)
         if not ticker.upper().endswith("INDEX"):
             try:
                 super_rec = evaluate_super(df)

@@ -5407,11 +5407,12 @@
             const t = (rawData.tickers_analysis || []).find(x => x.Ticker === sym);
             if (!t) { box.innerHTML = `<div class="super-advice">Không tìm thấy mã <strong>${sym}</strong> trong dữ liệu.</div>`; return; }
             const s = t.Super;
-            const ago = s ? superSessionsAgo(s) : null;
-            if (!s || ago === null) {
-                box.innerHTML = `<div class="super-advice"><strong>${sym}</strong>: không có tín hiệu mua Super trong 30 phiên gần nhất.</div>`;
+            if (!s) {
+                box.innerHTML = `<div class="super-advice"><strong>${sym}</strong>: chưa từng có tín hiệu mua Super.</div>`;
                 return;
             }
+            // Recent signals are counted on VNINDEX days; older ones fall back to the count saved at the last recalculation
+            const ago = superSessionsAgo(s) ?? s.sessions_since_signal;
             box.innerHTML = `<div class="portfolio-table-container"><table class="portfolio-table super-table">${SUPER_HEAD}<tbody>${superRows([{t, s}])}</tbody></table></div>
                 <div class="super-advice">
                     <div><strong>Tín hiệu cách đây ${ago} phiên</strong> · giá hiện tại ${fmtSuperPrice(s.last_price)} (${s.last_date})${s.peak_price ? ` · đỉnh từ lúc mua ${fmtSuperPrice(s.peak_price)}` : ''}</div>
@@ -7816,23 +7817,72 @@
         // ================================================================
         //  renderGPChart  — in a cell body div (mountId), returns primary chart
         // ================================================================
-        // Super strategy markers on the GP chart: A = buy signal (green, below bar), Z = sell (red, above bar, actual sell session)
+        // Super strategy markers on the GP chart: A = buy signal (white, below bar), Z = sell (dark blue, above bar, actual sell session).
+        // Drawn with a series primitive so the letters can be 1.5x the chart font without enlarging the axis labels.
+        const SUPER_MK = {buy: '#ffffff', sell: '#1d4ed8', arrowW: 15, arrowH: 21, headH: 10, shaftW: 5, gap: 4, font: 18};
+        class SuperMarkerPrimitive {
+            constructor(items) { this._items = items; this._chart = null; this._series = null; }
+            attached({chart, series}) { this._chart = chart; this._series = series; }
+            detached() { this._chart = null; this._series = null; }
+            updateAllViews() {}
+            paneViews() {
+                const self = this;
+                return [{
+                    zOrder: () => 'top',
+                    renderer: () => ({
+                        draw(target) {
+                            if (!self._chart || !self._series) return;
+                            const ts = self._chart.timeScale();
+                            target.useBitmapCoordinateSpace(({context: ctx, horizontalPixelRatio: hr, verticalPixelRatio: vr}) => {
+                                const M = SUPER_MK;
+                                ctx.font = `bold ${Math.round(M.font * vr)}px -apple-system, Segoe UI, Roboto, sans-serif`;
+                                ctx.textAlign = 'center';
+                                for (const it of self._items) {
+                                    const x = ts.timeToCoordinate(it.time);
+                                    const y = self._series.priceToCoordinate(it.price);
+                                    if (x === null || y === null) continue;
+                                    const up = it.type === 'buy';
+                                    const dir = up ? 1 : -1;                      // buy: drawn downward from below the low
+                                    const tipY = y + dir * M.gap;
+                                    const baseY = tipY + dir * M.headH;
+                                    const endY = tipY + dir * M.arrowH;
+                                    const X = v => v * hr, Y = v => v * vr;
+                                    ctx.fillStyle = up ? M.buy : M.sell;
+                                    ctx.beginPath();
+                                    ctx.moveTo(X(x), Y(tipY));
+                                    ctx.lineTo(X(x + M.arrowW / 2), Y(baseY));
+                                    ctx.lineTo(X(x + M.shaftW / 2), Y(baseY));
+                                    ctx.lineTo(X(x + M.shaftW / 2), Y(endY));
+                                    ctx.lineTo(X(x - M.shaftW / 2), Y(endY));
+                                    ctx.lineTo(X(x - M.shaftW / 2), Y(baseY));
+                                    ctx.lineTo(X(x - M.arrowW / 2), Y(baseY));
+                                    ctx.closePath();
+                                    ctx.fill();
+                                    ctx.textBaseline = up ? 'top' : 'bottom';
+                                    ctx.fillText(up ? 'A' : 'Z', X(x), Y(endY + dir * 3));
+                                }
+                            });
+                        }
+                    })
+                }];
+            }
+        }
+
         function setSuperMarkers(series, data) {
             const trades = data.super_trades || [];
-            if (!trades.length) return;
-            const shown = new Set(data.dates);
-            const seen = new Set(), markers = [];
-            const add = (date, m) => {
-                if (!date || !shown.has(date) || seen.has(m.text + date)) return;
-                seen.add(m.text + date);
-                markers.push({time: d2ts(date), size: 2, ...m});
+            if (!trades.length || typeof series.attachPrimitive !== 'function') return;
+            const idx = new Map(data.dates.map((d, i) => [d, i]));
+            const seen = new Set(), items = [];
+            const add = (date, type) => {
+                const i = idx.get(date);
+                if (i === undefined || seen.has(type + date)) return;
+                const price = type === 'buy' ? data.lows[i] : data.highs[i];
+                if (price === null || price === undefined) return;
+                seen.add(type + date);
+                items.push({time: d2ts(date), price: price * priceScale(data), type});
             };
-            trades.forEach(tr => {
-                add(tr.sd, {position: 'belowBar', color: '#00e676', shape: 'arrowUp', text: 'A'});
-                add(tr.xd, {position: 'aboveBar', color: '#ff1744', shape: 'arrowDown', text: 'Z'});
-            });
-            markers.sort((a, b) => a.time - b.time);
-            series.setMarkers(markers);
+            trades.forEach(tr => { add(tr.sd, 'buy'); if (tr.xd) add(tr.xd, 'sell'); });
+            if (items.length) series.attachPrimitive(new SuperMarkerPrimitive(items));
         }
 
         function renderGPChart(mountId, rawDataInput, instances) {

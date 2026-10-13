@@ -14,7 +14,7 @@ Backtest 2006-2026 (526 mã): thắng 69,7%, lãi TB lệnh thắng +12,7%, lỗ
 import numpy as np
 import pandas as pd
 
-LOOKBACK = 30            # chỉ lưu nếu có tín hiệu trong 30 phiên gần nhất
+LOOKBACK = None          # None = lấy tín hiệu mua gần nhất trong toàn bộ lịch sử
 MIN_VOL_MA10 = 500_000
 CUTLOSS = 0.07
 PROTECT_TRIGGER = 0.05
@@ -119,13 +119,14 @@ def super_trades(df: pd.DataFrame) -> list:
 
 
 def evaluate_super(df: pd.DataFrame, price_scale: float = 1000.0) -> "dict | None":
-    """Return the latest Super signal within the last LOOKBACK sessions and the state of its trade, or None."""
+    """Return the latest Super signal (whole history unless LOOKBACK is set) and the state of its trade, or None."""
     if df is None or len(df) < 60:
         return None
     df = _prepare(df)
     sig = _signal_mask(df)
     n = len(df)
-    recent = np.flatnonzero(sig[max(0, n - LOOKBACK):]) + max(0, n - LOOKBACK)
+    start = 0 if LOOKBACK is None else max(0, n - LOOKBACK)
+    recent = np.flatnonzero(sig[start:]) + start
     if len(recent) == 0:
         return None
     t = int(recent[-1])
