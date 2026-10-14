@@ -2543,6 +2543,7 @@
         }
         .super-rules strong { color: var(--text-primary); }
         .super-stats { margin-top: 4px; color: var(--accent-green); }
+        .super-setup { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: rgba(59,130,246,0.18); color: #93c5fd; }
         .super-table td, .super-table th { white-space: nowrap; }
         .super-table td.super-combo { white-space: normal; min-width: 260px; font-size: 0.74rem; color: var(--text-secondary); }
         .super-badge {
@@ -3652,15 +3653,20 @@
             </section>
         </div>
 
-        <!-- Tab: Super (chiến lược A) -->
+        <!-- Tab: Super strategy -->
         <div class="tab-content" id="super-tab">
             <section class="card">
                 <h3 class="card-title"><span>🚀 Super — Tín hiệu mua 3 phiên gần nhất</span></h3>
                 <div class="super-rules">
-                    <div><strong>Lọc cổ phiếu mạnh:</strong> ADX xanh/trắng + DI+ &gt; DI− + RS14 &gt; 70 + Heikin xu hướng tăng + mây Ichimoku xanh + MA Vol10 &gt; 500.000 cp</div>
-                    <div><strong>Điểm mua:</strong> 2Trend L (SMA) → mua giá mở cửa phiên liền sau (không mua nếu mở cửa tăng &gt; 6,5%)</div>
-                    <div><strong>Bán (từ T+3):</strong> Cutloss −7% · Chặn lãi: giá từng chạm +5% thì giữ tối thiểu +1% · Chốt lãi khi Heikin chuyển giảm (bán giá mở cửa phiên sau) · Tín hiệu bán trước T+3 → bán giá mở cửa T+3</div>
-                    <div class="super-stats">Backtest 2006–2026 (526 mã): thắng 69,7% · lãi TB lệnh thắng +12,7% · lỗ TB lệnh thua −6,8% · lãi ròng TB +6,8%/lệnh</div>
+                    <div><strong>Điều kiện chung:</strong> MA Vol10 &gt; 200.000 cp · mua giá mở cửa phiên liền sau tín hiệu (không mua nếu mở cửa tăng &gt; 6,5%) · cùng mã không mở lệnh mới trong 5 phiên · trùng phiên ưu tiên A &gt; B &gt; C &gt; D</div>
+                    <div><strong>A · Super gốc:</strong> 2Trend L (SMA) + ADX xanh/trắng + DI+ &gt; DI− + RS14 &gt; 70 + Heikin xu hướng tăng + mây Ichimoku xanh → <em>bán LAI</em></div>
+                    <div><strong>B · Nhánh Octopus:</strong> Octopus xanh đậm → xanh nhạt + (MCDX &gt; 0 hoặc 2Trend L) + RS14 &gt; 70 + Heikin tăng + mây xanh → <em>bán LAI</em></div>
+                    <div><strong>C · Chạm Bollinger dưới:</strong> cổ phiếu mạnh (RS14 &gt; 70, RS52 &gt; 70, MA50 đi lên) + phiên trước đóng cửa dưới dải BB dưới, phiên này đóng cửa quay lại trong dải → <em>bán CŨ</em></div>
+                    <div><strong>D · Two-Pole quá bán sâu:</strong> cổ phiếu mạnh (RS14 &amp; RS52 &gt; 70 hoặc RS rating &gt; 80; MA50 đi lên) + Two-Pole cắt lên khi dưới −1 → <em>bán CŨ</em></div>
+                    <div><strong>Bán LAI (từ T+3):</strong> Cutloss −7% · giá từng chạm +7% → chặn lãi +3% · trước khi chạm +10%: bán khi Heikin chuyển giảm · đã chạm +10%: bỏ Heikin, bám sóng (bán khi giá về dưới giá đóng cửa cao nhất − 3×ATR22)</div>
+                    <div><strong>Bán CŨ (từ T+3):</strong> Cutloss −7% · giá từng chạm +5% → chặn lãi +1% · bán khi Heikin chuyển giảm (giá mở cửa phiên sau)</div>
+                    <div><strong>T+3:</strong> tín hiệu bán / đóng cửa dưới mức dừng xảy ra trước T+3 → bán giá mở cửa phiên T+3</div>
+                    <div class="super-stats">Backtest giá điều chỉnh 2006–10/2026: ~99 lệnh/năm (2022–2026) · thắng 58,9% · lệnh thắng TB +12,6% · lệnh thua TB −7,1% · lãi ròng TB +4,5%/lệnh (đã trừ phí)</div>
                 </div>
                 <div class="portfolio-table-container">
                     <table class="portfolio-table super-table" id="superSignalTable"></table>
@@ -5328,7 +5334,7 @@
             buildTable('toprs52Table', rawData.top_rs52_tickers, 'rs52');
         }
 
-        // ── Super tab (chiến lược A) ──
+        // ── Super tab (Super strategy) ──
         const fmtSuperPrice = v => (v === null || v === undefined) ? '—' : Number(v).toLocaleString('vi-VN', {maximumFractionDigits: 0});
         const fmtSuperPct = v => (v === null || v === undefined) ? '' :
             `<span class="${v >= 0 ? 'super-up' : 'super-down'}">${v >= 0 ? '+' : ''}${Number(v).toFixed(1)}%</span>`;
@@ -5347,7 +5353,13 @@
 
         function superTakeProfitCell(s) {
             if (s.status === 'ĐÃ BÁN') return `Đã bán ${fmtSuperPrice(s.sell_price)} <span class="super-note">(${s.sell_reason}, ${s.sell_date})</span>`;
-            return '<span class="super-note">Khi Heikin chuyển giảm</span>';
+            if (s.exit_kind !== 'hybrid') return '<span class="super-note">Khi Heikin chuyển giảm</span>';
+            if (s.trailing) return `Bám sóng: bán dưới ${fmtSuperPrice(s.current_stop)}`;
+            return '<span class="super-note">Heikin chuyển giảm (trước +10%), chạm +10% thì bám sóng</span>';
+        }
+
+        function superSetupTag(s) {
+            return s.setup ? ` <span class="super-setup" title="${s.setup_name || ''}">${s.setup}</span>` : '';
         }
 
         function superProtectCell(s) {
@@ -5361,7 +5373,7 @@
                 const pnl = s.pnl_pct !== undefined ? fmtSuperPct(s.pnl_pct) : '';
                 const note = s.status_note ? `<div class="super-note">${s.status_note}</div>` : '';
                 return `<tr>
-                    <td><strong>${t.Ticker}</strong></td>
+                    <td><strong>${t.Ticker}</strong>${superSetupTag(s)}</td>
                     <td>${s.signal_date}</td>
                     <td>${s.buy_date || '<span class="super-note">phiên tới</span>'}</td>
                     <td>${s.buy_price ? fmtSuperPrice(s.buy_price) : `<span class="super-note">~${fmtSuperPrice(s.signal_close)}</span>`}</td>
@@ -5395,7 +5407,10 @@
             if (s.status === 'BỎ QUA') return 'Phiên mua mở cửa tăng quá 6,5% nên chiến lược không mua đuổi. Chờ tín hiệu mới.';
             if (s.status === 'ĐÃ BÁN') return `Lệnh đã đóng ngày ${s.sell_date} (${s.sell_reason}) ở giá ${fmtSuperPrice(s.sell_price)}, kết quả ${s.pnl_pct >= 0 ? '+' : ''}${s.pnl_pct}%. Không mua mới — chờ tín hiệu Super tiếp theo.`;
             const gap = (s.last_price / s.buy_price - 1) * 100;
-            const hold = `Nếu đang nắm giữ từ giá ${fmtSuperPrice(s.buy_price)}: cutloss ${fmtSuperPrice(s.cutloss)}, chặn lãi ${fmtSuperPrice(s.protect_stop)} ${s.protect_active ? '(đã kích hoạt)' : `(kích hoạt khi chạm ${fmtSuperPrice(s.protect_trigger)})`}, chốt lãi khi Heikin chuyển giảm.`;
+            const exitTxt = s.exit_kind === 'hybrid'
+                ? (s.trailing ? `đang bám sóng: bán nếu giá về dưới ${fmtSuperPrice(s.current_stop)}` : `chốt lãi khi Heikin chuyển giảm; khi giá chạm ${fmtSuperPrice(s.buy_price * 1.1)} (+10%) thì bỏ Heikin, bám sóng theo giá đóng cửa cao nhất − 3×ATR22`)
+                : 'chốt lãi khi Heikin chuyển giảm';
+            const hold = `Nếu đang nắm giữ từ giá ${fmtSuperPrice(s.buy_price)}: cutloss ${fmtSuperPrice(s.cutloss)}, chặn lãi ${fmtSuperPrice(s.protect_stop)} ${s.protect_active ? '(đã kích hoạt)' : `(kích hoạt khi chạm ${fmtSuperPrice(s.protect_trigger)})`}, ${exitTxt}.`;
             if (gap <= 3) return `Giá hiện tại ${fmtSuperPrice(s.last_price)} còn cách giá mua ${gap.toFixed(1)}% (≤ 3%): có thể mua theo, đặt cutloss/chặn lãi theo giá bạn mua (dùng ô tính bên dưới). ${hold}`;
             return `Giá hiện tại ${fmtSuperPrice(s.last_price)} đã cao hơn giá mua ${gap.toFixed(1)}% — đã rời vùng mua của chiến lược, không khuyến nghị mua đuổi. ${hold}`;
         }
@@ -5413,9 +5428,10 @@
             }
             // Recent signals are counted on VNINDEX days; older ones fall back to the count saved at the last recalculation
             const ago = superSessionsAgo(s) ?? s.sessions_since_signal;
+            superLastRec = s;
             box.innerHTML = `<div class="portfolio-table-container"><table class="portfolio-table super-table">${SUPER_HEAD}<tbody>${superRows([{t, s}])}</tbody></table></div>
                 <div class="super-advice">
-                    <div><strong>Tín hiệu cách đây ${ago} phiên</strong> · giá hiện tại ${fmtSuperPrice(s.last_price)} (${s.last_date})${s.peak_price ? ` · đỉnh từ lúc mua ${fmtSuperPrice(s.peak_price)}` : ''}</div>
+                    <div><strong>Tín hiệu ${s.setup ? `${s.setup} · ${s.setup_name}` : ''} cách đây ${ago} phiên</strong> · giá hiện tại ${fmtSuperPrice(s.last_price)} (${s.last_date})${s.peak_price ? ` · đỉnh từ lúc mua ${fmtSuperPrice(s.peak_price)}` : ''}</div>
                     <div style="margin-top:6px;">${superAdvice(s)}</div>
                     <div class="super-calc">
                         <span>Giá bạn mua:</span><input type="number" id="superMyPrice" placeholder="VD: 22500" oninput="calcSuperLevels()">
@@ -5425,12 +5441,16 @@
                 </div>`;
         }
 
+        let superLastRec = null;
         function calcSuperLevels() {
             const p = parseFloat(document.getElementById('superMyPrice').value);
             const out = document.getElementById('superMyLevels');
             if (!out) return;
             if (!(p > 0)) { out.innerHTML = ''; return; }
-            out.innerHTML = `Cutloss ${fmtSuperPrice(p * 0.93)} · chặn lãi ${fmtSuperPrice(p * 1.01)} khi giá chạm ${fmtSuperPrice(p * 1.05)} · chốt lãi khi Heikin chuyển giảm (chỉ bán từ T+3)`;
+            const hybrid = superLastRec && superLastRec.exit_kind === 'hybrid';
+            const trig = hybrid ? 1.07 : 1.05, lock = hybrid ? 1.03 : 1.01;
+            const tail = hybrid ? `chốt lãi khi Heikin chuyển giảm; giá chạm ${fmtSuperPrice(p * 1.1)} (+10%) thì bám sóng (giá đóng cửa cao nhất − 3×ATR22)` : 'chốt lãi khi Heikin chuyển giảm';
+            out.innerHTML = `Cutloss ${fmtSuperPrice(p * 0.93)} · chặn lãi ${fmtSuperPrice(p * lock)} khi giá chạm ${fmtSuperPrice(p * trig)} · ${tail} (chỉ bán từ T+3)`;
         }
 
         function getActionClass(actionStr) {

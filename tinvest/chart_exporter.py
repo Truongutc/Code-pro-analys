@@ -626,7 +626,7 @@ def export_tech_report_chart(ticker, df_full, save_path):
         traceback.print_exc()
 
 
-def export_ticker_history_json(data_dict, analysis_cache, output_dir):
+def export_ticker_history_json(data_dict, analysis_cache, output_dir, rs_rating=None):
     """
     Export full OHLCV + computed indicators for each ticker to individual JSON files.
     These files are lazy-loaded by the web frontend to render interactive charts
@@ -747,8 +747,8 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir):
             # Super strategy trade history (A = buy signal, Z = sell) for the GP chart markers
             if "INDEX" not in t.upper():
                 try:
-                    from tinvest.super_strategy import super_trades
-                    trades = super_trades(df_extended)
+                    from tinvest.super_strategy import super_trades, attach_rs_rating
+                    trades = super_trades(attach_rs_rating(df_extended.copy(), (rs_rating or {}).get(t)))
                     if trades:
                         record["super_trades"] = trades
                 except Exception:
