@@ -2544,8 +2544,15 @@
         .super-rules strong { color: var(--text-primary); }
         .super-stats { margin-top: 4px; color: var(--accent-green); }
         .super-setup { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; background: rgba(59,130,246,0.18); color: #93c5fd; }
-        .super-table td, .super-table th { white-space: nowrap; }
-        .super-table td.super-combo { white-space: normal; min-width: 260px; font-size: 0.74rem; color: var(--text-secondary); }
+        .super-table { font-size: 0.95rem; }
+        .super-table th { font-size: 0.85rem; padding: 12px 14px; white-space: nowrap; }
+        .super-table td { padding: 12px 14px; white-space: nowrap; vertical-align: top; line-height: 1.55; }
+        .super-table td.super-combo { white-space: normal; min-width: 280px; font-size: 0.85rem; color: var(--text-secondary); }
+        .super-table .super-note { font-size: 0.82rem; }
+        .super-table .super-tk { font-size: 1.05rem; }
+        .super-price { font-weight: 700; }
+        .super-hit { color: var(--accent-green); font-weight: 600; }
+        .super-hit-down { color: var(--accent-orange); font-weight: 600; }
         .super-badge {
             display: inline-block;
             padding: 2px 8px;
@@ -5351,43 +5358,81 @@
             return `<span class="super-badge ${cls}">${s.status}</span>`;
         }
 
-        function superTakeProfitCell(s) {
-            if (s.status === 'ĐÃ BÁN') return `Đã bán ${fmtSuperPrice(s.sell_price)} <span class="super-note">(${s.sell_reason}, ${s.sell_date})</span>`;
-            if (s.exit_kind !== 'hybrid') return '<span class="super-note">Khi Heikin chuyển giảm</span>';
-            if (s.trailing) return `Bám sóng: bán dưới ${fmtSuperPrice(s.current_stop)}`;
-            return '<span class="super-note">Heikin chuyển giảm (trước +10%), chạm +10% thì bám sóng</span>';
+        // Price with % vs buy price; '~' marks levels estimated from the signal close (not bought yet)
+        function superLvl(price, s, cls) {
+            if (price === null || price === undefined) return '—';
+            const ref = s.buy_price || s.signal_close;
+            const pct = ref ? (price / ref - 1) * 100 : null;
+            const pctTxt = pct === null ? '' : ` <span class="super-note">(${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%)</span>`;
+            return `<span class="super-price ${cls || ''}">${s.buy_price ? '' : '~'}${fmtSuperPrice(price)}</span>${pctTxt}`;
+        }
+
+        // Shown in the column of the rule that closed the trade
+        function superSoldBy(s, reason) {
+            return s.status === 'ĐÃ BÁN' && s.sell_reason === reason
+                ? `<div class="super-hit-down">Đã bán ${fmtSuperPrice(s.sell_price)} · ${s.sell_date}</div>` : '';
+        }
+
+        function superCutlossCell(s) {
+            if (s.cutloss === undefined) return '—';
+            return superLvl(s.cutloss, s, 'super-down') + superSoldBy(s, 'Cắt lỗ');
+        }
+
+        function superProtectCell(s) {
+            if (s.protect_stop === undefined) return '—';
+            const state = s.protect_active
+                ? '<div class="super-hit">✓ đã kích hoạt</div>'
+                : `<div class="super-note">khi giá chạm ${superLvl(s.protect_trigger, s)}</div>`;
+            return `Bán ở ${superLvl(s.protect_stop, s)}${state}${superSoldBy(s, 'Chặn lãi')}`;
+        }
+
+        function superTrailCell(s) {
+            if (s.exit_kind !== 'hybrid') return '<span class="super-note">Không áp dụng (bán kiểu cũ)</span>';
+            if (s.trailing) {
+                if (s.status === 'ĐÃ BÁN') return '<div class="super-hit">✓ đã bám sóng</div>' + superSoldBy(s, 'Bám sóng (Chandelier)');
+                return `<div class="super-hit">✓ đang bám sóng</div><div>Bán nếu giá về ${superLvl(s.current_stop, s, 'super-down')}</div>`;
+            }
+            if (s.trail_trigger === undefined || s.trail_trigger === null) return '—';
+            return `<div class="super-note">Khi giá chạm ${superLvl(s.trail_trigger, s)}</div><div class="super-note">→ bán dưới giá ĐC cao nhất − 3×ATR22</div>`;
+        }
+
+        function superHeikinCell(s) {
+            if (s.pending_sell === 'Heikin chuyển giảm')
+                return `<div class="super-hit-down">Heikin đã giảm ${s.pending_date}</div><div>→ bán giá mở cửa ${s.pending_exec}</div>`;
+            if (s.status === 'ĐÃ BÁN' && s.sell_reason === 'Heikin chuyển giảm') return superSoldBy(s, 'Heikin chuyển giảm');
+            if (s.exit_kind === 'hybrid' && s.trailing) return '<span class="super-note">Bỏ qua (đã chạm +10%)</span>';
+            return `<span class="super-note">Khi Heikin chuyển giảm${s.exit_kind === 'hybrid' ? ' (trước khi chạm +10%)' : ''}</span>`;
+        }
+
+        function superResultCell(s) {
+            const pnl = s.pnl_pct !== undefined ? fmtSuperPct(s.pnl_pct) : '';
+            let detail = '';
+            if (s.status === 'ĐÃ BÁN') detail = `<div>Bán <span class="super-price">${fmtSuperPrice(s.sell_price)}</span> · ${s.sell_date}</div><div class="super-note">${s.sell_reason}</div>`;
+            else if (s.status_note) detail = `<div class="super-note">${s.status_note}</div>`;
+            return `${superStatusBadge(s)} ${pnl}${detail}`;
         }
 
         function superSetupTag(s) {
             return s.setup ? ` <span class="super-setup" title="${s.setup_name || ''}">${s.setup}</span>` : '';
         }
 
-        function superProtectCell(s) {
-            if (s.protect_stop === undefined) return '—';
-            const state = s.protect_active ? '<span class="super-up">đã kích hoạt</span>' : `chạm ${fmtSuperPrice(s.protect_trigger)}`;
-            return `${fmtSuperPrice(s.protect_stop)} <span class="super-note">(${state})</span>`;
-        }
-
         function superRows(list) {
-            return list.map(({t, s}) => {
-                const pnl = s.pnl_pct !== undefined ? fmtSuperPct(s.pnl_pct) : '';
-                const note = s.status_note ? `<div class="super-note">${s.status_note}</div>` : '';
-                return `<tr>
-                    <td><strong>${t.Ticker}</strong>${superSetupTag(s)}</td>
+            return list.map(({t, s}) => `<tr>
+                    <td><strong class="super-tk">${t.Ticker}</strong>${superSetupTag(s)}</td>
                     <td>${s.signal_date}</td>
                     <td>${s.buy_date || '<span class="super-note">phiên tới</span>'}</td>
-                    <td>${s.buy_price ? fmtSuperPrice(s.buy_price) : `<span class="super-note">~${fmtSuperPrice(s.signal_close)}</span>`}</td>
-                    <td>${superTakeProfitCell(s)}</td>
+                    <td>${s.buy_price ? `<span class="super-price">${fmtSuperPrice(s.buy_price)}</span>` : `<span class="super-note">~${fmtSuperPrice(s.signal_close)}</span>`}</td>
+                    <td>${superCutlossCell(s)}</td>
                     <td>${superProtectCell(s)}</td>
-                    <td class="super-down">${fmtSuperPrice(s.cutloss)}</td>
-                    <td>${superStatusBadge(s)} ${pnl}${note}</td>
+                    <td>${superTrailCell(s)}</td>
+                    <td>${superHeikinCell(s)}</td>
+                    <td>${superResultCell(s)}</td>
                     <td class="super-combo">${s.combo}</td>
-                </tr>`;
-            }).join('');
+                </tr>`).join('');
         }
 
-        const SUPER_HEAD = `<thead><tr><th>Mã</th><th>Ngày tín hiệu</th><th>Ngày mua</th><th>Giá mua</th><th>Chốt lãi</th>
-            <th>Chặn lãi</th><th>Cutloss</th><th title="Lãi/lỗ chưa trừ phí giao dịch">Trạng thái</th><th>Tổ hợp tín hiệu mua</th></tr></thead>`;
+        const SUPER_HEAD = `<thead><tr><th>Mã</th><th>Ngày tín hiệu</th><th>Ngày mua</th><th>Giá mua</th><th>Cutloss −7%</th>
+            <th>Chặn lãi</th><th>Bám sóng (+10%)</th><th>Heikin giảm</th><th title="Lãi/lỗ chưa trừ phí giao dịch">Trạng thái / Kết quả</th><th>Tổ hợp tín hiệu mua</th></tr></thead>`;
 
         function renderSuperTab() {
             const el = document.getElementById('superSignalTable');

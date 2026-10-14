@@ -134,6 +134,7 @@ def _simulate(arrs, t: int, exit_kind: str) -> dict:
     stop = px * (1 - CUTLOSS)
     lock = px * (1 + rule['protect_lock'])
     pend = None              # sell reason queued for the next allowed open
+    pend_k = None            # bar where the queued sell was triggered
     hc = peak = px
     protect_active = trailing = False
 
@@ -152,7 +153,7 @@ def _simulate(arrs, t: int, exit_kind: str) -> dict:
                 return dict(state="SOLD", b=b, px=px, k=k, sp=min(o[k], stop), why=reason(), protect_active=protect_active,
                             trailing=trailing, peak=peak, stop=stop)
         elif c[k] <= stop and not pend:
-            pend = reason()
+            pend, pend_k = reason(), k
         hc = max(hc, c[k])
         peak = max(peak, h[k])
         if h[k] >= px * (1 + rule['protect_trigger']):
@@ -164,8 +165,8 @@ def _simulate(arrs, t: int, exit_kind: str) -> dict:
             if trailing and not np.isnan(atr22[k]):
                 stop = max(stop, hc - rule['chandelier'] * atr22[k])
         if hk_down_evt[k] and not pend and not trailing:
-            pend = "Heikin chuyển giảm"
-    return dict(state="HOLD", b=b, px=px, pend=pend, protect_active=protect_active, trailing=trailing, peak=peak, stop=stop)
+            pend, pend_k = "Heikin chuyển giảm", k
+    return dict(state="HOLD", b=b, px=px, pend=pend, pend_k=pend_k, protect_active=protect_active, trailing=trailing, peak=peak, stop=stop)
 
 
 def _fmt_date(d) -> str:
@@ -251,6 +252,7 @@ def evaluate_super(df: pd.DataFrame, price_scale: float = 1000.0) -> "dict | Non
                    cutloss=round(ref * (1 - CUTLOSS) * price_scale, 2),
                    protect_trigger=round(ref * (1 + rule['protect_trigger']) * price_scale, 2),
                    protect_stop=round(ref * (1 + rule['protect_lock']) * price_scale, 2),
+                   trail_trigger=None if rule['trail_from'] is None else round(ref * (1 + rule['trail_from']) * price_scale, 2),
                    protect_active=False, trailing=False, levels_ref="Giá đóng cửa phiên tín hiệu (tạm tính)")
         return rec
     b, px = r["b"], r["px"]
@@ -266,6 +268,7 @@ def evaluate_super(df: pd.DataFrame, price_scale: float = 1000.0) -> "dict | Non
         cutloss=round(px * (1 - CUTLOSS) * price_scale, 2),
         protect_trigger=round(px * (1 + rule['protect_trigger']) * price_scale, 2),
         protect_stop=round(px * (1 + rule['protect_lock']) * price_scale, 2),
+        trail_trigger=None if rule['trail_from'] is None else round(px * (1 + rule['trail_from']) * price_scale, 2),
         protect_active=r["protect_active"],
         trailing=r["trailing"],
         current_stop=round(r["stop"] * price_scale, 2),
@@ -280,8 +283,9 @@ def evaluate_super(df: pd.DataFrame, price_scale: float = 1000.0) -> "dict | Non
         pend = r["pend"]
         rec.update(status="ĐANG NẮM GIỮ", pnl_pct=round((c[-1] / px - 1) * 100, 2))
         if pend:
-            rec["status_note"] = (f"{pend}: bán ở giá mở cửa phiên tới" if n - 1 - b >= MIN_HOLD - 1
-                                  else f"{pend}: bán ở giá mở cửa phiên T+3 ({rec['t3_date'] or 'chưa tới'})")
+            rec.update(pending_sell=pend, pending_date=_fmt_date(df['Date'].iloc[r["pend_k"]]),
+                       pending_exec="phiên tới" if n - 1 - b >= MIN_HOLD - 1 else f"phiên T+3 ({rec['t3_date'] or 'chưa tới'})")
+            rec["status_note"] = f"{pend}: bán ở giá mở cửa {rec['pending_exec']}"
         elif n - 1 - b < MIN_HOLD:
             rec["status_note"] = "Chưa về hàng (chưa tới T+3)"
         elif r["trailing"]:
