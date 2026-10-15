@@ -32,7 +32,6 @@ from tinvest.vietstock_client import VietstockClient
 from tinvest.data_loader import enrich_dataframe
 from tinvest.analyzer import format_report, evaluate_heatmap
 from tinvest.chart_exporter import export_ticker_history_json
-from tinvest.super_strategy import evaluate_super, compute_rs_rating, attach_rs_rating
 from tinvest.superS_strategy import evaluate_superS, evaluate_superS_alert
 from AICcode import (
     analyze_ticker_worker,
@@ -727,21 +726,6 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
         logger.info("📊 Dữ liệu đầu vào bị lỗi/thiếu. Giữ nguyên dữ liệu Độ rộng Thị trường cũ để tránh sai sót.")
         market_breadth_data = existing_market_breadth
 
-    # 7b. RS rating (cross-sectional percentile of 3-12 month returns) for Super setup D
-    super_rs_rating = {}
-    try:
-        if is_failed_data:
-            full_data_dict = data_dict.copy()
-            missing_rs = [t for t in current_reg if t not in full_data_dict]
-            with ThreadPoolExecutor(max_workers=16) as executor:
-                for t, df_rs in zip(missing_rs, executor.map(storage.load_ticker_data, missing_rs)):
-                    if df_rs is not None:
-                        full_data_dict[t] = df_rs
-        super_rs_rating = compute_rs_rating(full_data_dict)
-        logger.info(f"📈 RS rating cho Super: {len(super_rs_rating)} mã")
-    except Exception as e_rsr:
-        logger.warning(f"RS rating error: {e_rsr}")
-    
     # 8. Filter Tickers & Build Output Structure
     logger.info("🔍 Đang tổng hợp các bộ lọc và luật tùy chỉnh...")
     tickers_analysis = []
@@ -1065,14 +1049,8 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
             "History": history
         }
 
-        # Super strategy: latest buy signal of the ticker (only stored if the ticker ever had one)
+        # SuperS strategy: latest trade of the main book and of the BN alert book (only stored if the ticker ever signalled)
         if not ticker.upper().endswith("INDEX"):
-            try:
-                super_rec = evaluate_super(attach_rs_rating(df.copy(), super_rs_rating.get(ticker)))
-                if super_rec:
-                    ticker_record["Super"] = super_rec
-            except Exception as e_super:
-                logger.warning(f"Super strategy error for {ticker}: {e_super}")
             try:
                 supers_rec = evaluate_superS(df, df_vn)
                 if supers_rec:
@@ -1087,6 +1065,9 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
 
     # Merge existing and newly analyzed
     merged_tickers_analysis = existing_tickers_analysis.copy()
+    for record in merged_tickers_analysis.values():
+        if isinstance(record, dict):
+            record.pop("Super", None)          # old Super strategy (removed)
     for record in tickers_analysis:
         merged_tickers_analysis[record["Ticker"]] = record
         
@@ -1441,7 +1422,7 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
     
     # 10. Export History JSON for each ticker (used by web charts — replaces PNG exports)
     logger.info("📊 Đang xuất dữ liệu lịch sử JSON cho Web Dashboard (thay thế xuất ảnh PNG)...")
-    export_ticker_history_json(data_dict, analysis_cache, output_dir, rs_rating=super_rs_rating)
+    export_ticker_history_json(data_dict, analysis_cache, output_dir)
     
     logger.info("==================================================")
 

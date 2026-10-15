@@ -3279,7 +3279,6 @@
                 <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Bộ lọc')">🎯 Bộ lọc</button>
                 <button class="menu-item" data-tab="toprs-tab" onclick="selectMenuTab('toprs-tab', '🏆', 'TOPRS')">🏆 TOPRS</button>
                 <button class="menu-item" data-tab="super-tab" onclick="selectMenuTab('super-tab', '🚀', 'Super')">🚀 Super</button>
-                <button class="menu-item" data-tab="supers-tab" onclick="selectMenuTab('supers-tab', '⭐', 'SuperS')">⭐ SuperS</button>
                 <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Kiến nghị')">💼 Kiến nghị</button>
                 <button class="menu-item" data-tab="aicpro-tab" onclick="selectMenuTab('aicpro-tab', '⚡', 'AIC Pro')">⚡ AIC Pro</button>
                 <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', 'ℹ️', 'Information')">ℹ️ Information</button>
@@ -3661,38 +3660,8 @@
             </section>
         </div>
 
-        <!-- Tab: Super strategy -->
+        <!-- Tab: Super (SuperS strategy) -->
         <div class="tab-content" id="super-tab">
-            <section class="card">
-                <h3 class="card-title"><span>🚀 Super — Tín hiệu mua 3 phiên gần nhất</span></h3>
-                <div class="super-rules">
-                    <div><strong>Điều kiện chung:</strong> MA Vol10 &gt; 200.000 cp · mua giá mở cửa phiên liền sau tín hiệu (không mua nếu mở cửa tăng &gt; 6,5%) · cùng mã không mở lệnh mới trong 5 phiên · trùng phiên ưu tiên A &gt; B &gt; C &gt; D</div>
-                    <div><strong>A · Super gốc:</strong> 2Trend L (SMA) + ADX xanh/trắng + DI+ &gt; DI− + RS14 &gt; 70 + Heikin xu hướng tăng + mây Ichimoku xanh → <em>bán LAI</em></div>
-                    <div><strong>B · Nhánh Octopus:</strong> Octopus xanh đậm → xanh nhạt + (MCDX &gt; 0 hoặc 2Trend L) + RS14 &gt; 70 + Heikin tăng + mây xanh → <em>bán LAI</em></div>
-                    <div><strong>C · Chạm Bollinger dưới:</strong> cổ phiếu mạnh (RS14 &gt; 70, RS52 &gt; 70, MA50 đi lên) + phiên trước đóng cửa dưới dải BB dưới, phiên này đóng cửa quay lại trong dải → <em>bán CŨ</em></div>
-                    <div><strong>D · Two-Pole quá bán sâu:</strong> cổ phiếu mạnh (RS14 &amp; RS52 &gt; 70 hoặc RS rating &gt; 80; MA50 đi lên) + Two-Pole cắt lên khi dưới −1 → <em>bán CŨ</em></div>
-                    <div><strong>Bán LAI (từ T+3):</strong> Cutloss −7% · giá từng chạm +7% → chặn lãi +3% · trước khi chạm +10%: bán khi Heikin chuyển giảm · đã chạm +10%: bỏ Heikin, bám sóng (bán khi giá về dưới giá đóng cửa cao nhất − 3×ATR22)</div>
-                    <div><strong>Bán CŨ (từ T+3):</strong> Cutloss −7% · giá từng chạm +5% → chặn lãi +1% · bán khi Heikin chuyển giảm (giá mở cửa phiên sau)</div>
-                    <div><strong>T+3:</strong> tín hiệu bán / đóng cửa dưới mức dừng xảy ra trước T+3 → bán giá mở cửa phiên T+3</div>
-                    <div class="super-stats">Backtest giá điều chỉnh 2006–10/2026: ~99 lệnh/năm (2022–2026) · thắng 58,9% · lệnh thắng TB +12,6% · lệnh thua TB −7,1% · lãi ròng TB +4,5%/lệnh (đã trừ phí)</div>
-                </div>
-                <div class="portfolio-table-container">
-                    <table class="portfolio-table super-table" id="superSignalTable"></table>
-                </div>
-            </section>
-            <section class="card">
-                <h3 class="card-title"><span>🔍 Tra cứu khuyến nghị Super theo mã</span></h3>
-                <div class="search-bar" style="margin-bottom: 12px;">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="superSearchInput" class="search-input" placeholder="Nhập mã cổ phiếu (VD: VND, SSI...) rồi nhấn Enter"
-                           onkeypress="if(event.key === 'Enter') searchSuper()">
-                </div>
-                <div id="superSearchResult"></div>
-            </section>
-        </div>
-
-        <!-- Tab: SuperS strategy -->
-        <div class="tab-content" id="supers-tab">
             <section class="card">
                 <h3 class="card-title"><span>⭐ SuperS — Tín hiệu mua chính 3 phiên gần nhất</span></h3>
                 <div class="super-rules">
@@ -5382,7 +5351,7 @@
             buildTable('toprs52Table', rawData.top_rs52_tickers, 'rs52');
         }
 
-        // ── Super tab (Super strategy) ──
+        // ── Super tab (SuperS strategy): shared helpers ──
         const fmtSuperPrice = v => (v === null || v === undefined) ? '—' : Number(v).toLocaleString('vi-VN', {maximumFractionDigits: 0});
         const fmtSuperPct = v => (v === null || v === undefined) ? '' :
             `<span class="${v >= 0 ? 'super-up' : 'super-down'}">${v >= 0 ? '+' : ''}${Number(v).toFixed(1)}%</span>`;
@@ -5414,37 +5383,6 @@
                 ? `<div class="super-hit-down">Đã bán ${fmtSuperPrice(s.sell_price)} · ${s.sell_date}</div>` : '';
         }
 
-        function superCutlossCell(s) {
-            if (s.cutloss === undefined) return '—';
-            return superLvl(s.cutloss, s, 'super-down') + superSoldBy(s, 'Cắt lỗ');
-        }
-
-        function superProtectCell(s) {
-            if (s.protect_stop === undefined) return '—';
-            const state = s.protect_active
-                ? '<div class="super-hit">✓ đã kích hoạt</div>'
-                : `<div class="super-note">khi giá chạm ${superLvl(s.protect_trigger, s)}</div>`;
-            return `Bán ở ${superLvl(s.protect_stop, s)}${state}${superSoldBy(s, 'Chặn lãi')}`;
-        }
-
-        function superTrailCell(s) {
-            if (s.exit_kind !== 'hybrid') return '<span class="super-note">Không áp dụng (bán kiểu cũ)</span>';
-            if (s.trailing) {
-                if (s.status === 'ĐÃ BÁN') return '<div class="super-hit">✓ đã bám sóng</div>' + superSoldBy(s, 'Bám sóng (Chandelier)');
-                return `<div class="super-hit">✓ đang bám sóng</div><div>Bán nếu giá về ${superLvl(s.current_stop, s, 'super-down')}</div>`;
-            }
-            if (s.trail_trigger === undefined || s.trail_trigger === null) return '—';
-            return `<div class="super-note">Khi giá chạm ${superLvl(s.trail_trigger, s)}</div><div class="super-note">→ bán dưới giá ĐC cao nhất − 3×ATR22</div>`;
-        }
-
-        function superHeikinCell(s) {
-            if (s.pending_sell === 'Heikin chuyển giảm')
-                return `<div class="super-hit-down">Heikin đã giảm ${s.pending_date}</div><div>→ bán giá mở cửa ${s.pending_exec}</div>`;
-            if (s.status === 'ĐÃ BÁN' && s.sell_reason === 'Heikin chuyển giảm') return superSoldBy(s, 'Heikin chuyển giảm');
-            if (s.exit_kind === 'hybrid' && s.trailing) return '<span class="super-note">Bỏ qua (đã chạm +10%)</span>';
-            return `<span class="super-note">Khi Heikin chuyển giảm${s.exit_kind === 'hybrid' ? ' (trước khi chạm +10%)' : ''}</span>`;
-        }
-
         function superResultCell(s) {
             const pnl = s.pnl_pct !== undefined ? fmtSuperPct(s.pnl_pct) : '';
             let detail = '';
@@ -5453,82 +5391,7 @@
             return `${superStatusBadge(s)} ${pnl}${detail}`;
         }
 
-        function superSetupTag(s) {
-            return s.setup ? ` <span class="super-setup" title="${s.setup_name || ''}">${s.setup}</span>` : '';
-        }
-
-        function superRows(list) {
-            return list.map(({t, s}) => `<tr>
-                    <td><strong class="super-tk">${t.Ticker}</strong>${superSetupTag(s)}</td>
-                    <td>${s.signal_date}</td>
-                    <td>${s.buy_date || '<span class="super-note">phiên tới</span>'}</td>
-                    <td>${s.buy_price ? `<span class="super-price">${fmtSuperPrice(s.buy_price)}</span>` : `<span class="super-note">~${fmtSuperPrice(s.signal_close)}</span>`}</td>
-                    <td>${superCutlossCell(s)}</td>
-                    <td>${superProtectCell(s)}</td>
-                    <td>${superTrailCell(s)}</td>
-                    <td>${superHeikinCell(s)}</td>
-                    <td>${superResultCell(s)}</td>
-                    <td class="super-combo">${s.combo}</td>
-                </tr>`).join('');
-        }
-
-        const SUPER_HEAD = `<thead><tr><th>Mã</th><th>Ngày tín hiệu</th><th>Ngày mua</th><th>Giá mua</th><th>Cutloss −7%</th>
-            <th>Chặn lãi</th><th>Bám sóng (+10%)</th><th>Heikin giảm</th><th title="Lãi/lỗ chưa trừ phí giao dịch">Trạng thái / Kết quả</th><th>Tổ hợp tín hiệu mua</th></tr></thead>`;
-
-        function renderSuperTab() {
-            const el = document.getElementById('superSignalTable');
-            if (!el || !rawData) return;
-            const list = (rawData.tickers_analysis || [])
-                .filter(t => t.Super)
-                .map(t => ({t, s: t.Super, ago: superSessionsAgo(t.Super)}))
-                .filter(x => x.ago !== null && x.ago <= 2)
-                .sort((a, b) => a.ago - b.ago || a.t.Ticker.localeCompare(b.t.Ticker));
-            el.innerHTML = list.length
-                ? SUPER_HEAD + '<tbody>' + superRows(list) + '</tbody>'
-                : '<caption style="padding:12px;color:var(--text-secondary);">Không có tín hiệu mua Super trong 3 phiên gần nhất.</caption>';
-        }
-
-        function superAdvice(s) {
-            if (s.status === 'CHỜ MUA') return 'Tín hiệu vừa xuất hiện: mua ở giá mở cửa phiên tới. Nếu phiên tới mở cửa tăng quá 6,5% thì bỏ qua lệnh.';
-            if (s.status === 'BỎ QUA') return 'Phiên mua mở cửa tăng quá 6,5% nên chiến lược không mua đuổi. Chờ tín hiệu mới.';
-            if (s.status === 'ĐÃ BÁN') return `Lệnh đã đóng ngày ${s.sell_date} (${s.sell_reason}) ở giá ${fmtSuperPrice(s.sell_price)}, kết quả ${s.pnl_pct >= 0 ? '+' : ''}${s.pnl_pct}%. Không mua mới — chờ tín hiệu Super tiếp theo.`;
-            const gap = (s.last_price / s.buy_price - 1) * 100;
-            const exitTxt = s.exit_kind === 'hybrid'
-                ? (s.trailing ? `đang bám sóng: bán nếu giá về dưới ${fmtSuperPrice(s.current_stop)}` : `chốt lãi khi Heikin chuyển giảm; khi giá chạm ${fmtSuperPrice(s.buy_price * 1.1)} (+10%) thì bỏ Heikin, bám sóng theo giá đóng cửa cao nhất − 3×ATR22`)
-                : 'chốt lãi khi Heikin chuyển giảm';
-            const hold = `Nếu đang nắm giữ từ giá ${fmtSuperPrice(s.buy_price)}: cutloss ${fmtSuperPrice(s.cutloss)}, chặn lãi ${fmtSuperPrice(s.protect_stop)} ${s.protect_active ? '(đã kích hoạt)' : `(kích hoạt khi chạm ${fmtSuperPrice(s.protect_trigger)})`}, ${exitTxt}.`;
-            if (gap <= 3) return `Giá hiện tại ${fmtSuperPrice(s.last_price)} còn cách giá mua ${gap.toFixed(1)}% (≤ 3%): có thể mua theo, đặt cutloss/chặn lãi theo giá bạn mua (dùng ô tính bên dưới). ${hold}`;
-            return `Giá hiện tại ${fmtSuperPrice(s.last_price)} đã cao hơn giá mua ${gap.toFixed(1)}% — đã rời vùng mua của chiến lược, không khuyến nghị mua đuổi. ${hold}`;
-        }
-
-        function searchSuper() {
-            const box = document.getElementById('superSearchResult');
-            const sym = (document.getElementById('superSearchInput').value || '').trim().toUpperCase();
-            if (!box || !sym || !rawData) return;
-            const t = (rawData.tickers_analysis || []).find(x => x.Ticker === sym);
-            if (!t) { box.innerHTML = `<div class="super-advice">Không tìm thấy mã <strong>${sym}</strong> trong dữ liệu.</div>`; return; }
-            const s = t.Super;
-            if (!s) {
-                box.innerHTML = `<div class="super-advice"><strong>${sym}</strong>: chưa từng có tín hiệu mua Super.</div>`;
-                return;
-            }
-            // Recent signals are counted on VNINDEX days; older ones fall back to the count saved at the last recalculation
-            const ago = superSessionsAgo(s) ?? s.sessions_since_signal;
-            superLastRec = s;
-            box.innerHTML = `<div class="portfolio-table-container"><table class="portfolio-table super-table">${SUPER_HEAD}<tbody>${superRows([{t, s}])}</tbody></table></div>
-                <div class="super-advice">
-                    <div><strong>Tín hiệu ${s.setup ? `${s.setup} · ${s.setup_name}` : ''} cách đây ${ago} phiên</strong> · giá hiện tại ${fmtSuperPrice(s.last_price)} (${s.last_date})${s.peak_price ? ` · đỉnh từ lúc mua ${fmtSuperPrice(s.peak_price)}` : ''}</div>
-                    <div style="margin-top:6px;">${superAdvice(s)}</div>
-                    <div class="super-calc">
-                        <span>Giá bạn mua:</span><input type="number" id="superMyPrice" placeholder="VD: 22500" oninput="calcSuperLevels()">
-                        <span id="superMyLevels" class="super-note"></span>
-                    </div>
-                    <div class="super-note" style="margin-top:6px;">Khuyến nghị mua theo/mua đuổi chỉ mang tính tham khảo — backtest chỉ đo các lệnh mua đúng phiên sau tín hiệu.</div>
-                </div>`;
-        }
-
-
-        // ── SuperS tab (SuperS strategy) ──
+        // ── Super tab (SuperS strategy): tables, search ──
         function superSStopCell(s) {
             if (s.cutloss === undefined) return '—';
             const cut = superLvl(s.cutloss, s, 'super-down') + superSoldBy(s, 'Cắt lỗ');
@@ -5623,18 +5486,6 @@
                 </div>` + s3Html;
         }
 
-        let superLastRec = null;
-        function calcSuperLevels() {
-            const p = parseFloat(document.getElementById('superMyPrice').value);
-            const out = document.getElementById('superMyLevels');
-            if (!out) return;
-            if (!(p > 0)) { out.innerHTML = ''; return; }
-            const hybrid = superLastRec && superLastRec.exit_kind === 'hybrid';
-            const trig = hybrid ? 1.07 : 1.05, lock = hybrid ? 1.03 : 1.01;
-            const tail = hybrid ? `chốt lãi khi Heikin chuyển giảm; giá chạm ${fmtSuperPrice(p * 1.1)} (+10%) thì bám sóng (giá đóng cửa cao nhất − 3×ATR22)` : 'chốt lãi khi Heikin chuyển giảm';
-            out.innerHTML = `Cutloss ${fmtSuperPrice(p * 0.93)} · chặn lãi ${fmtSuperPrice(p * lock)} khi giá chạm ${fmtSuperPrice(p * trig)} · ${tail} (chỉ bán từ T+3)`;
-        }
-
         function getActionClass(actionStr) {
             if (!actionStr) return 'wait';
             const s = actionStr.toUpperCase();
@@ -5668,7 +5519,7 @@
             const pwd = document.getElementById('sysPasswordInput').value;
 
             // Super tab has its own password (changed via the "action đổi pass super" workflow)
-            if (pendingTabId === 'super-tab' || pendingTabId === 'supers-tab') {
+            if (pendingTabId === 'super-tab') {
                 if (pwd === '222222') { // SYS_PWD_SUPER
                     superAuth = true;
                     document.getElementById('passwordModal').style.display = 'none';
@@ -5719,7 +5570,7 @@
             if (tabId === 'lookup-tab') requiredLevel = 1;
             else if (tabId === 'filter-tab' || tabId === 'portfolio-tab' || tabId === 'whatif-tab') requiredLevel = 2;
 
-            if ((tabId === 'super-tab' || tabId === 'supers-tab') && !superAuth && !skipAuth) {
+            if (tabId === 'super-tab' && !superAuth && !skipAuth) {
                 showPasswordModal(tabId);
                 return;
             }
@@ -5891,7 +5742,6 @@
 
                 // Render TOPRS heatmap tables
                 renderTopRSTables();
-                renderSuperTab();
                 renderSuperSTab();
 
                 // Auto-select first ticker in Lookup view (Tab 2)
@@ -8071,7 +7921,7 @@
             }
         }
 
-        // SuperS markers (preferred when present): gold S1/S2 arrow under the actual buy session, orange X over the sell session.
+        // SuperS markers: gold arrow (S1/S2/N2/N3) or purple (BN alert) under the actual buy session, orange X over the sell session.
         function setSuperMarkers(series, data) {
             if (data.superS_trades && data.superS_trades.length && typeof series.attachPrimitive === 'function') {
                 const idx = new Map(data.dates.map((d, i) => [d, i]));
@@ -8088,22 +7938,7 @@
                     if (tr.xd) add(tr.xd, 'sell', 'X', '#f97316');
                 });
                 if (items.length) series.attachPrimitive(new SuperMarkerPrimitive(items));
-                return;
             }
-            const trades = data.super_trades || [];
-            if (!trades.length || typeof series.attachPrimitive !== 'function') return;
-            const idx = new Map(data.dates.map((d, i) => [d, i]));
-            const seen = new Set(), items = [];
-            const add = (date, type) => {
-                const i = idx.get(date);
-                if (i === undefined || seen.has(type + date)) return;
-                const price = type === 'buy' ? data.lows[i] : data.highs[i];
-                if (price === null || price === undefined) return;
-                seen.add(type + date);
-                items.push({time: d2ts(date), price: price * priceScale(data), type});
-            };
-            trades.forEach(tr => { add(tr.sd, 'buy'); if (tr.xd) add(tr.xd, 'sell'); });
-            if (items.length) series.attachPrimitive(new SuperMarkerPrimitive(items));
         }
 
         function renderGPChart(mountId, rawDataInput, instances) {
