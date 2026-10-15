@@ -33,6 +33,7 @@ from tinvest.data_loader import enrich_dataframe
 from tinvest.analyzer import format_report, evaluate_heatmap
 from tinvest.chart_exporter import export_ticker_history_json
 from tinvest.super_strategy import evaluate_super, compute_rs_rating, attach_rs_rating
+from tinvest.superS_strategy import evaluate_superS, evaluate_superS_alert
 from AICcode import (
     analyze_ticker_worker,
     analyze_batch_worker,
@@ -1072,6 +1073,15 @@ def compute_and_export_dashboard(storage, affected_tickers, vietstock_status=Non
                     ticker_record["Super"] = super_rec
             except Exception as e_super:
                 logger.warning(f"Super strategy error for {ticker}: {e_super}")
+            try:
+                supers_rec = evaluate_superS(df, df_vn)
+                if supers_rec:
+                    ticker_record["SuperS"] = supers_rec
+                alert_rec = evaluate_superS_alert(df, df_vn)
+                if alert_rec:
+                    ticker_record["SuperSAlert"] = alert_rec
+            except Exception as e_supers:
+                logger.warning(f"SuperS strategy error for {ticker}: {e_supers}")
 
         tickers_analysis.append(ticker_record)
 

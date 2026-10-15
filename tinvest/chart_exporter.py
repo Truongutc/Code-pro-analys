@@ -753,6 +753,14 @@ def export_ticker_history_json(data_dict, analysis_cache, output_dir, rs_rating=
                         record["super_trades"] = trades
                 except Exception:
                     pass
+                # SuperS trade history (S1/S2 = buy session, X = sell session) for the GP chart markers
+                try:
+                    from tinvest.superS_strategy import superS_trades
+                    trades_s = superS_trades(df_extended, df_vn)
+                    if trades_s:
+                        record["superS_trades"] = trades_s
+                except Exception:
+                    pass
 
             # Run What-If analysis (Only for core indices or stocks with AvgVolume10 >= 100k to avoid CPU/Memory overload)
             CORE_INDICES = {"VNINDEX", "HNX-INDEX", "UPCOM-INDEX", "VN30", "HNX30"}

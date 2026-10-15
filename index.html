@@ -3279,6 +3279,7 @@
                 <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Bộ lọc')">🎯 Bộ lọc</button>
                 <button class="menu-item" data-tab="toprs-tab" onclick="selectMenuTab('toprs-tab', '🏆', 'TOPRS')">🏆 TOPRS</button>
                 <button class="menu-item" data-tab="super-tab" onclick="selectMenuTab('super-tab', '🚀', 'Super')">🚀 Super</button>
+                <button class="menu-item" data-tab="supers-tab" onclick="selectMenuTab('supers-tab', '⭐', 'SuperS')">⭐ SuperS</button>
                 <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Kiến nghị')">💼 Kiến nghị</button>
                 <button class="menu-item" data-tab="aicpro-tab" onclick="selectMenuTab('aicpro-tab', '⚡', 'AIC Pro')">⚡ AIC Pro</button>
                 <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', 'ℹ️', 'Information')">ℹ️ Information</button>
@@ -3687,6 +3688,46 @@
                            onkeypress="if(event.key === 'Enter') searchSuper()">
                 </div>
                 <div id="superSearchResult"></div>
+            </section>
+        </div>
+
+        <!-- Tab: SuperS strategy -->
+        <div class="tab-content" id="supers-tab">
+            <section class="card">
+                <h3 class="card-title"><span>⭐ SuperS — Tín hiệu mua chính 3 phiên gần nhất</span></h3>
+                <div class="super-rules">
+                    <div><strong>Điều kiện chung:</strong> MA Vol10 &gt; 200.000 cp · mua giá mở cửa phiên liền sau tín hiệu (không mua nếu mở cửa tăng &gt; 6,5%) · <strong>đang giữ mã thì không mua thêm</strong> · trùng phiên ưu tiên S1 &gt; N3 &gt; N2 &gt; S2</div>
+                    <div><strong>S1 · Sóng mạnh:</strong> 2Trend SMA vừa chuyển L + ADX xanh/trắng + DI+ &gt; DI− + RS14 &gt; 70 + Heikin trên đường NW + mây Ichimoku xanh + giá đóng cửa trên mây + Octopus xanh (đậm/nhạt)</div>
+                    <div><strong>S2 · Thị trường quay lại + nền chặt:</strong> VNINDEX vừa vào xu hướng tăng trong 3 phiên gần nhất (đóng cửa &gt; MA50 và MA20 &gt; MA50) + 2Trend SuperTrend L + Bollinger thắt chặt (độ rộng BB20 thuộc 20% thấp nhất 120 phiên) + RS14 &gt; 50</div>
+                    <div><strong>N2 · Bứt phá nền chặt:</strong> ADX vừa vượt 25 + MACD &gt; Signal + khối lượng &gt; 1,5× TB20 + Bollinger thắt chặt</div>
+                    <div><strong>N3 · Thị trường quay lại + bùng khối lượng:</strong> VNINDEX vào xu hướng tăng đúng phiên này + 2Trend SuperTrend L + khối lượng &gt; 1,5× TB20 + Bollinger thắt chặt</div>
+                    <div><strong>Bán GIỮ LÃI (từ T+3):</strong> Cutloss −7% · giá từng chạm +7% → chặn lãi +2% · khi giá đóng cửa cao nhất đã lãi ≥ +10% → không để trả lại quá 50% phần lãi cao nhất · luôn kèm bám sóng (giá đóng cửa cao nhất − 4×ATR22) · bán khi giá chạm mức dừng cao nhất trong các mức trên</div>
+                    <div><strong>T+3:</strong> đóng cửa dưới mức dừng trước T+3 → bán giá mở cửa phiên T+3 · Trên chart GP: mũi tên vàng S1/S2/N2/N3 (tím BN) = phiên mua thực tế, mũi tên cam X = phiên bán</div>
+                    <div class="super-stats">Backtest giá điều chỉnh 2006–10/2026 (đã trừ phí): 1.183 lệnh · thắng 59,9% · lệnh thắng TB +11,2% · lệnh thua TB −6,8% · +4,0%/lệnh. Riêng 2022–2026: ~119 lệnh/năm · thắng 59,6% · thắng TB +8,7% · thua TB −6,7% · +2,5%/lệnh (N2: thắng 60%, thắng TB +14,3%; N3: thắng 58%, thắng TB +13,0%)</div>
+                </div>
+                <div class="portfolio-table-container">
+                    <table class="portfolio-table super-table" id="superSSignalTable"></table>
+                </div>
+            </section>
+            <section class="card">
+                <h3 class="card-title"><span>⚠️ BN · Cảnh báo pha bùng nổ — 3 phiên gần nhất (tỷ lệ thắng thấp)</span></h3>
+                <div class="super-rules">
+                    <div><strong>BN · Bùng nổ:</strong> Heikin vừa chuyển nến xanh sáng + giá trị giao dịch TB 10 phiên &gt; 10 tỷ → <em>bán GIỮ LÃI</em> (như trên)</div>
+                    <div>Có mặt ở ~57% các sóng tăng ≥40% (ví dụ GVR 01/2026 +24,5%, GAS 12/2025 +54,9%, VHM 03/2026 +31,7%, VPB 06/2025 +71,4%, VPB 08/2026 +19,7%) nhưng báo sai nhiều. Theo dõi lệnh riêng, không tính vào thống kê bộ chính. Dùng để tự xem chart, chọn mã đẹp mới tham gia.</div>
+                    <div class="super-stats" style="color: var(--accent-orange);">Backtest 2022–2026: ~1.400 cảnh báo/năm · thắng ~46% · lệnh thắng TB +6,6% · lệnh thua TB −7,5% · ≈ −0,9%/lệnh nếu mua máy móc</div>
+                </div>
+                <div class="portfolio-table-container">
+                    <table class="portfolio-table super-table" id="superSAlertTable"></table>
+                </div>
+            </section>
+            <section class="card">
+                <h3 class="card-title"><span>🔍 Tra cứu SuperS theo mã</span></h3>
+                <div class="search-bar" style="margin-bottom: 12px;">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="superSSearchInput" class="search-input" placeholder="Nhập mã cổ phiếu (VD: VND, SSI...) rồi nhấn Enter"
+                           onkeypress="if(event.key === 'Enter') searchSuperS()">
+                </div>
+                <div id="superSSearchResult"></div>
             </section>
         </div>
 
@@ -5486,6 +5527,102 @@
                 </div>`;
         }
 
+
+        // ── SuperS tab (SuperS strategy) ──
+        function superSStopCell(s) {
+            if (s.cutloss === undefined) return '—';
+            const cut = superLvl(s.cutloss, s, 'super-down') + superSoldBy(s, 'Cắt lỗ');
+            if (!s.buy_price || s.status === 'BỎ QUA' || s.current_stop === undefined) return cut;
+            return cut + `<div class="super-note">Mức dừng hiện tại: ${superLvl(s.current_stop, s, s.current_stop >= s.buy_price ? 'super-up' : 'super-down')}</div>`;
+        }
+
+        function superSProtectCell(s) {
+            if (s.protect_stop === undefined) return '—';
+            const state = s.protect_active ? '<div class="super-hit">✓ đã kích hoạt</div>'
+                : `<div class="super-note">khi giá chạm ${superLvl(s.protect_trigger, s)}</div>`;
+            return `Bán ở ${superLvl(s.protect_stop, s)}${state}${superSoldBy(s, 'Chặn lãi')}`;
+        }
+
+        function superSKeepCell(s) {
+            if (s.keep_trigger === undefined) return '—';
+            if (s.keep_active) {
+                const lvl = `<div class="super-hit">✓ đã kích hoạt</div><div>Giữ ≥ ${superLvl(s.keep_stop, s, 'super-up')}</div>`;
+                return lvl + `<div class="super-note">(đóng cửa cao nhất ${fmtSuperPrice(s.best_close)})</div>` + superSoldBy(s, 'Giữ 50% lãi');
+            }
+            return `<div class="super-note">khi giá đóng cửa ≥ ${superLvl(s.keep_trigger, s)}</div><div class="super-note">→ không trả lại quá 50% lãi</div>`;
+        }
+
+        function superSTrailCell(s) {
+            if (s.status === 'ĐÃ BÁN' && s.sell_reason === 'Bám sóng (Chandelier)') return superSoldBy(s, 'Bám sóng (Chandelier)');
+            if (s.chandelier_stop) return `<div>${superLvl(s.chandelier_stop, s, s.chandelier_stop >= s.buy_price ? 'super-up' : 'super-down')}</div><div class="super-note">giá ĐC cao nhất − 4×ATR22</div>`;
+            return '<span class="super-note">giá ĐC cao nhất − 4×ATR22</span>';
+        }
+
+        function superSRows(list) {
+            return list.map(({t, s}) => `<tr>
+                    <td><strong class="super-tk">${t.Ticker}</strong> <span class="super-setup" title="${s.setup_name}">${s.setup}</span><div class="super-note">${s.setup_name}</div></td>
+                    <td>${s.signal_date}</td>
+                    <td>${s.buy_date || '<span class="super-note">phiên tới</span>'}</td>
+                    <td>${s.buy_price ? `<span class="super-price">${fmtSuperPrice(s.buy_price)}</span>` : `<span class="super-note">~${fmtSuperPrice(s.signal_close)}</span>`}</td>
+                    <td>${superSStopCell(s)}</td>
+                    <td>${superSProtectCell(s)}</td>
+                    <td>${superSKeepCell(s)}</td>
+                    <td>${superSTrailCell(s)}</td>
+                    <td>${superResultCell(s)}</td>
+                    <td class="super-combo">${s.combo}</td>
+                </tr>`).join('');
+        }
+
+        const SUPERS_HEAD = `<thead><tr><th>Mã</th><th>Ngày tín hiệu</th><th>Ngày mua</th><th>Giá mua</th><th>Cutloss −7% / mức dừng</th>
+            <th>Chặn lãi (+7% → +2%)</th><th>Giữ 50% lãi (từ +10%)</th><th>Bám sóng 4×ATR</th><th title="Lãi/lỗ chưa trừ phí giao dịch">Trạng thái / Kết quả</th><th>Tổ hợp tín hiệu mua</th></tr></thead>`;
+
+        function renderSuperSTab() {
+            if (!rawData) return;
+            [['superSSignalTable', 'SuperS', 'Không có tín hiệu mua SuperS trong 3 phiên gần nhất.'],
+             ['superSAlertTable', 'SuperSAlert', 'Không có cảnh báo bùng nổ (BN) trong 3 phiên gần nhất.']].forEach(([id, key, empty]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const list = (rawData.tickers_analysis || [])
+                    .filter(t => t[key])
+                    .map(t => ({t, s: t[key], ago: superSessionsAgo(t[key])}))
+                    .filter(x => x.ago !== null && x.ago <= 2)
+                    .sort((a, b) => a.ago - b.ago || a.s.setup.localeCompare(b.s.setup) || a.t.Ticker.localeCompare(b.t.Ticker));
+                el.innerHTML = list.length
+                    ? SUPERS_HEAD + '<tbody>' + superSRows(list) + '</tbody>'
+                    : `<caption style="padding:12px;color:var(--text-secondary);">${empty}</caption>`;
+            });
+        }
+
+        function searchSuperS() {
+            const box = document.getElementById('superSSearchResult');
+            const sym = (document.getElementById('superSSearchInput').value || '').trim().toUpperCase();
+            if (!box || !sym || !rawData) return;
+            const t = (rawData.tickers_analysis || []).find(x => x.Ticker === sym);
+            if (!t) { box.innerHTML = `<div class="super-advice">Không tìm thấy mã <strong>${sym}</strong> trong dữ liệu.</div>`; return; }
+            const s = t.SuperS;
+            const s3 = t.SuperSAlert;
+            const s3Html = s3 ? `<div class="super-note" style="margin:10px 0 4px;">⚠️ Cảnh báo bùng nổ (BN) gần nhất — tỷ lệ thắng thấp, theo dõi riêng:</div>
+                <div class="portfolio-table-container"><table class="portfolio-table super-table">${SUPERS_HEAD}<tbody>${superSRows([{t, s: s3}])}</tbody></table></div>` : '';
+            if (!s) { box.innerHTML = `<div class="super-advice"><strong>${sym}</strong>: chưa từng có tín hiệu mua SuperS.</div>` + s3Html; return; }
+            const ago = superSessionsAgo(s) ?? s.sessions_since_signal;
+            let advice;
+            if (s.status === 'CHỜ MUA') advice = 'Tín hiệu vừa xuất hiện: mua ở giá mở cửa phiên tới. Nếu phiên tới mở cửa tăng quá 6,5% thì bỏ qua lệnh.';
+            else if (s.status === 'BỎ QUA') advice = 'Phiên mua mở cửa tăng quá 6,5% nên chiến lược không mua đuổi. Chờ tín hiệu mới.';
+            else if (s.status === 'ĐÃ BÁN') advice = `Lệnh đã đóng ngày ${s.sell_date} (${s.sell_reason}) ở giá ${fmtSuperPrice(s.sell_price)}, kết quả ${s.pnl_pct >= 0 ? '+' : ''}${s.pnl_pct}%. Chờ tín hiệu SuperS tiếp theo.`;
+            else {
+                const gap = (s.last_price / s.buy_price - 1) * 100;
+                const hold = `Đang giữ từ giá ${fmtSuperPrice(s.buy_price)} (đỉnh ${fmtSuperPrice(s.peak_price)}): bán nếu giá chạm mức dừng ${fmtSuperPrice(s.current_stop)}.`;
+                advice = gap <= 3 ? `Giá hiện tại ${fmtSuperPrice(s.last_price)} còn cách giá mua ${gap.toFixed(1)}% (≤ 3%): có thể mua theo. ${hold}`
+                                  : `Giá hiện tại ${fmtSuperPrice(s.last_price)} đã cao hơn giá mua ${gap.toFixed(1)}% — không khuyến nghị mua đuổi. ${hold}`;
+            }
+            box.innerHTML = `<div class="portfolio-table-container"><table class="portfolio-table super-table">${SUPERS_HEAD}<tbody>${superSRows([{t, s}])}</tbody></table></div>
+                <div class="super-advice">
+                    <div><strong>Tín hiệu ${s.setup} · ${s.setup_name} cách đây ${ago} phiên</strong> · bán kiểu Giữ lãi · giá hiện tại ${fmtSuperPrice(s.last_price)} (${s.last_date})</div>
+                    <div style="margin-top:6px;">${advice}</div>
+                    <div class="super-note" style="margin-top:6px;">Khuyến nghị mua theo chỉ mang tính tham khảo — backtest chỉ đo các lệnh mua đúng phiên sau tín hiệu.</div>
+                </div>` + s3Html;
+        }
+
         let superLastRec = null;
         function calcSuperLevels() {
             const p = parseFloat(document.getElementById('superMyPrice').value);
@@ -5531,11 +5668,11 @@
             const pwd = document.getElementById('sysPasswordInput').value;
 
             // Super tab has its own password (changed via the "action đổi pass super" workflow)
-            if (pendingTabId === 'super-tab') {
+            if (pendingTabId === 'super-tab' || pendingTabId === 'supers-tab') {
                 if (pwd === '222222') { // SYS_PWD_SUPER
                     superAuth = true;
                     document.getElementById('passwordModal').style.display = 'none';
-                    switchTab('super-tab', true);
+                    switchTab(pendingTabId, true);
                     pendingTabId = null;
                 } else {
                     document.getElementById('passwordErrorMsg').innerText = 'Mật khẩu Super không chính xác!';
@@ -5582,7 +5719,7 @@
             if (tabId === 'lookup-tab') requiredLevel = 1;
             else if (tabId === 'filter-tab' || tabId === 'portfolio-tab' || tabId === 'whatif-tab') requiredLevel = 2;
 
-            if (tabId === 'super-tab' && !superAuth && !skipAuth) {
+            if ((tabId === 'super-tab' || tabId === 'supers-tab') && !superAuth && !skipAuth) {
                 showPasswordModal(tabId);
                 return;
             }
@@ -5755,6 +5892,7 @@
                 // Render TOPRS heatmap tables
                 renderTopRSTables();
                 renderSuperTab();
+                renderSuperSTab();
 
                 // Auto-select first ticker in Lookup view (Tab 2)
                 if (rawData.tickers_analysis && rawData.tickers_analysis.length > 0) {
@@ -7912,7 +8050,7 @@
                                     const baseY = tipY + dir * M.headH;
                                     const endY = tipY + dir * M.arrowH;
                                     const X = v => v * hr, Y = v => v * vr;
-                                    ctx.fillStyle = up ? M.buy : M.sell;
+                                    ctx.fillStyle = it.color || (up ? M.buy : M.sell);
                                     ctx.beginPath();
                                     ctx.moveTo(X(x), Y(tipY));
                                     ctx.lineTo(X(x + M.arrowW / 2), Y(baseY));
@@ -7924,7 +8062,7 @@
                                     ctx.closePath();
                                     ctx.fill();
                                     ctx.textBaseline = up ? 'top' : 'bottom';
-                                    ctx.fillText(up ? 'A' : 'Z', X(x), Y(endY + dir * 3));
+                                    ctx.fillText(it.label || (up ? 'A' : 'Z'), X(x), Y(endY + dir * 3));
                                 }
                             });
                         }
@@ -7933,7 +8071,25 @@
             }
         }
 
+        // SuperS markers (preferred when present): gold S1/S2 arrow under the actual buy session, orange X over the sell session.
         function setSuperMarkers(series, data) {
+            if (data.superS_trades && data.superS_trades.length && typeof series.attachPrimitive === 'function') {
+                const idx = new Map(data.dates.map((d, i) => [d, i]));
+                const items = [];
+                const add = (date, type, label, color) => {
+                    const i = idx.get(date);
+                    if (i === undefined) return;
+                    const price = type === 'buy' ? data.lows[i] : data.highs[i];
+                    if (price === null || price === undefined) return;
+                    items.push({time: d2ts(date), price: price * priceScale(data), type, label, color});
+                };
+                data.superS_trades.forEach(tr => {
+                    if (tr.bd) add(tr.bd, 'buy', tr.s, tr.s === 'BN' ? '#a78bfa' : '#facc15');
+                    if (tr.xd) add(tr.xd, 'sell', 'X', '#f97316');
+                });
+                if (items.length) series.attachPrimitive(new SuperMarkerPrimitive(items));
+                return;
+            }
             const trades = data.super_trades || [];
             if (!trades.length || typeof series.attachPrimitive !== 'function') return;
             const idx = new Map(data.dates.map((d, i) => [d, i]));
