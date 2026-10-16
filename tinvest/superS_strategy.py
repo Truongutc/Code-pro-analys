@@ -17,11 +17,7 @@ Bán GIỮ LÃI: cắt lỗ -7%; giá từng chạm +7% -> chặn lãi +2%; khi 
      trả lại quá 50% phần lãi cao nhất đó; luôn kèm bám sóng Chandelier (giá đóng cửa cao nhất - 4 x ATR22).
      Mức dừng = mức cao nhất trong các mức trên; giá thấp nhất phiên chạm mức dừng -> bán.
 
-Tầng CẢNH BÁO "Bùng nổ" (theo dõi lệnh riêng, KHÔNG tính vào thống kê bộ chính, tỷ lệ thắng thấp):
-BN · Heikin vừa chuyển nến xanh sáng + giá trị giao dịch TB 10 phiên > 10 tỷ đồng -> bán GIỮ LÃI.
-     Có mặt ở phần lớn các sóng tăng mạnh nhưng báo sai nhiều; dùng để tự xem chart.
-
-Backtest giá điều chỉnh (CafeF, 2006-10/2026, phí mua 0,15%, bán 0,25%): xem SUPERS_STATS / ALERT_STATS.
+Backtest giá điều chỉnh (CafeF, 2006-10/2026, phí mua 0,15%, bán 0,25%): ~119 lệnh/năm (2022–2026), thắng ~60%.
 """
 import numpy as np
 import pandas as pd
@@ -33,14 +29,12 @@ MIN_HOLD = 3                     # chỉ bán từ phiên T+3
 VN_TURN_WINDOW = 3               # S2: VNINDEX vừa vào xu hướng tăng trong N phiên gần nhất
 BB_SQUEEZE_PCT = 0.20            # độ rộng BB thuộc 20% thấp nhất của 120 phiên
 VOL_SURGE = 1.5                  # khối lượng > 1,5 x TB20
-ALERT_MIN_VALUE = 10e9           # BN: giá trị giao dịch TB 10 phiên > 10 tỷ đồng
 
 SETUPS = {
     'S1': 'Sóng mạnh',
     'N3': 'Thị trường quay lại + bùng khối lượng',
     'N2': 'Bứt phá nền chặt',
     'S2': 'Thị trường quay lại + nền chặt',
-    'BN': 'Bùng nổ (cảnh báo)',
 }
 PRIORITY = ['S2', 'N2', 'N3', 'S1']          # later overrides earlier: S1 wins
 EXIT = dict(protect_trigger=0.07, protect_lock=0.02, giveback_from=0.10, giveback=0.50, chandelier=4.0)
@@ -74,13 +68,12 @@ def vn_uptrend(vn_df: "pd.DataFrame | None") -> "pd.DataFrame | None":
     return pd.DataFrame({'on': on.to_numpy(), 'recent': recent.to_numpy()}, index=d['Date'])
 
 
-def _signals(df: pd.DataFrame, vn: "pd.DataFrame | None", price_scale: float = 1000.0) -> tuple:
-    """(main setups, alert setups): arrays with the setup code on each signal bar, '' elsewhere."""
+def _signals(df: pd.DataFrame, vn: "pd.DataFrame | None") -> np.ndarray:
+    """Setup code on each signal bar, '' elsewhere (before the no-overlap rule)."""
     n = len(df)
     main = np.array([''] * n, dtype=object)
-    alert = np.array([''] * n, dtype=object)
     if n < 60:
-        return main, alert
+        return main
     c, v = _num(df, 'Close'), _num(df, 'Volume')
     vs = pd.Series(v)
     volma10 = vs.rolling(10).mean().to_numpy()
@@ -112,10 +105,7 @@ def _signals(df: pd.DataFrame, vn: "pd.DataFrame | None", price_scale: float = 1
         n3 = vn_on & st_l & vol_surge & squeeze
     for code, sig in zip(PRIORITY, (s2, n2, n3, s1)):
         main[np.asarray(sig, bool) & liq] = code
-    # BN · Bùng nổ (cảnh báo)
-    bright = (df['HK_BarColor'].astype(str).to_numpy() == 'brightGreen') if 'HK_BarColor' in df.columns else np.zeros(n, bool)
-    alert[_onset(bright) & liq & (c * price_scale * volma10 > ALERT_MIN_VALUE)] = 'BN'
-    return main, alert
+    return main
 
 
 def _arrays(df: pd.DataFrame):
@@ -170,11 +160,9 @@ def _simulate(arrs, t: int) -> dict:
     return result("HOLD", pend=pend, pend_k=pend_k)
 
 
-def _walk(df: pd.DataFrame, vn_df, tier: str = 'main') -> list:
-    """All trades of one book in order, with the no-overlap rule: (bar t, setup, simulation result).
-    tier 'main' = S1/N3/N2/S2, 'alert' = the separate BN book (own positions)."""
-    main, alert = _signals(df, vn_uptrend(vn_df))
-    setup = main if tier == 'main' else alert
+def _walk(df: pd.DataFrame, vn_df) -> list:
+    """All trades in order, with the no-overlap rule: (bar t, setup, simulation result)."""
+    setup = _signals(df, vn_uptrend(vn_df))
     arrs = _arrays(df)
     out, busy_until = [], -1
     for t in np.flatnonzero(setup != ''):
@@ -194,14 +182,14 @@ def _fmt_date(d) -> str:
 
 
 def superS_trades(df: pd.DataFrame, vn_df=None) -> list:
-    """Every SuperS trade (main book and BN alerts) for chart markers. Raw price units.
+    """Every SuperS trade for chart markers. Raw price units.
     Keys: s=setup, sd=signal date, bd/bp=buy date/price, xd/xp=sell date/price, why=sell reason."""
     if df is None or len(df) < 60:
         return []
     df = df.reset_index(drop=True)
     dates = pd.to_datetime(df['Date']).dt.strftime("%Y-%m-%d").tolist()
     out = []
-    for t, code, r in sorted(_walk(df, vn_df) + _walk(df, vn_df, 'alert'), key=lambda x: x[0]):
+    for t, code, r in _walk(df, vn_df):
         if r["state"] == "SKIP":
             continue
         tr = {"s": code, "sd": dates[t]}
@@ -222,22 +210,15 @@ def _combo_text(df: pd.DataFrame, t: int, code: str) -> str:
         return f"S2 · VNINDEX vừa quay lại xu hướng tăng · 2Trend SuperTrend L · Bollinger thắt chặt · RS14 {g('RS14'):.0f}"
     if code == 'N2':
         return f"N2 · ADX vừa vượt 25 ({g('ADX'):.0f}) · MACD > Signal · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
-    if code == 'N3':
-        return "N3 · VNINDEX vào xu hướng tăng phiên này · 2Trend SuperTrend L · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
-    return "BN · Heikin vừa chuyển nến xanh sáng · GTGD TB10 > 10 tỷ (cảnh báo, tỷ lệ thắng thấp)"
+    return "N3 · VNINDEX vào xu hướng tăng phiên này · 2Trend SuperTrend L · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
 
 
-def evaluate_superS_alert(df: pd.DataFrame, vn_df=None, price_scale: float = 1000.0) -> "dict | None":
-    """Latest BN alert trade of the ticker and its state, or None."""
-    return evaluate_superS(df, vn_df, price_scale, tier='alert')
-
-
-def evaluate_superS(df: pd.DataFrame, vn_df=None, price_scale: float = 1000.0, tier: str = 'main') -> "dict | None":
+def evaluate_superS(df: pd.DataFrame, vn_df=None, price_scale: float = 1000.0) -> "dict | None":
     """Latest SuperS trade of the ticker (whole history) and its state, or None if it never signalled."""
     if df is None or len(df) < 60:
         return None
     df = df.reset_index(drop=True)
-    trades = _walk(df, vn_df, tier)
+    trades = _walk(df, vn_df)
     if not trades:
         return None
     t, code, r = trades[-1]

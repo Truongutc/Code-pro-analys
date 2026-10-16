@@ -3671,22 +3671,11 @@
                     <div><strong>N2 · Bứt phá nền chặt:</strong> ADX vừa vượt 25 + MACD &gt; Signal + khối lượng &gt; 1,5× TB20 + Bollinger thắt chặt</div>
                     <div><strong>N3 · Thị trường quay lại + bùng khối lượng:</strong> VNINDEX vào xu hướng tăng đúng phiên này + 2Trend SuperTrend L + khối lượng &gt; 1,5× TB20 + Bollinger thắt chặt</div>
                     <div><strong>Bán GIỮ LÃI (từ T+3):</strong> Cutloss −7% · giá từng chạm +7% → chặn lãi +2% · khi giá đóng cửa cao nhất đã lãi ≥ +10% → không để trả lại quá 50% phần lãi cao nhất · luôn kèm bám sóng (giá đóng cửa cao nhất − 4×ATR22) · bán khi giá chạm mức dừng cao nhất trong các mức trên</div>
-                    <div><strong>T+3:</strong> đóng cửa dưới mức dừng trước T+3 → bán giá mở cửa phiên T+3 · Trên chart GP: mũi tên vàng S1/S2/N2/N3 (tím BN) = phiên mua thực tế, mũi tên cam X = phiên bán</div>
+                    <div><strong>T+3:</strong> đóng cửa dưới mức dừng trước T+3 → bán giá mở cửa phiên T+3 · Trên chart GP: mũi tên vàng S1/S2/N2/N3 = phiên mua thực tế, mũi tên cam X = phiên bán</div>
                     <div class="super-stats">Backtest giá điều chỉnh 2006–10/2026 (đã trừ phí): 1.183 lệnh · thắng 59,9% · lệnh thắng TB +11,2% · lệnh thua TB −6,8% · +4,0%/lệnh. Riêng 2022–2026: ~119 lệnh/năm · thắng 59,6% · thắng TB +8,7% · thua TB −6,7% · +2,5%/lệnh (N2: thắng 60%, thắng TB +14,3%; N3: thắng 58%, thắng TB +13,0%)</div>
                 </div>
                 <div class="portfolio-table-container">
                     <table class="portfolio-table super-table" id="superSSignalTable"></table>
-                </div>
-            </section>
-            <section class="card">
-                <h3 class="card-title"><span>⚠️ BN · Cảnh báo pha bùng nổ — 3 phiên gần nhất (tỷ lệ thắng thấp)</span></h3>
-                <div class="super-rules">
-                    <div><strong>BN · Bùng nổ:</strong> Heikin vừa chuyển nến xanh sáng + giá trị giao dịch TB 10 phiên &gt; 10 tỷ → <em>bán GIỮ LÃI</em> (như trên)</div>
-                    <div>Có mặt ở ~57% các sóng tăng ≥40% (ví dụ GVR 01/2026 +24,5%, GAS 12/2025 +54,9%, VHM 03/2026 +31,7%, VPB 06/2025 +71,4%, VPB 08/2026 +19,7%) nhưng báo sai nhiều. Theo dõi lệnh riêng, không tính vào thống kê bộ chính. Dùng để tự xem chart, chọn mã đẹp mới tham gia.</div>
-                    <div class="super-stats" style="color: var(--accent-orange);">Backtest 2022–2026: ~1.400 cảnh báo/năm · thắng ~46% · lệnh thắng TB +6,6% · lệnh thua TB −7,5% · ≈ −0,9%/lệnh nếu mua máy móc</div>
-                </div>
-                <div class="portfolio-table-container">
-                    <table class="portfolio-table super-table" id="superSAlertTable"></table>
                 </div>
             </section>
             <section class="card">
@@ -5441,8 +5430,7 @@
 
         function renderSuperSTab() {
             if (!rawData) return;
-            [['superSSignalTable', 'SuperS', 'Không có tín hiệu mua SuperS trong 3 phiên gần nhất.'],
-             ['superSAlertTable', 'SuperSAlert', 'Không có cảnh báo bùng nổ (BN) trong 3 phiên gần nhất.']].forEach(([id, key, empty]) => {
+            [['superSSignalTable', 'SuperS', 'Không có tín hiệu mua SuperS trong 3 phiên gần nhất.']].forEach(([id, key, empty]) => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 const list = (rawData.tickers_analysis || [])
@@ -5463,10 +5451,7 @@
             const t = (rawData.tickers_analysis || []).find(x => x.Ticker === sym);
             if (!t) { box.innerHTML = `<div class="super-advice">Không tìm thấy mã <strong>${sym}</strong> trong dữ liệu.</div>`; return; }
             const s = t.SuperS;
-            const s3 = t.SuperSAlert;
-            const s3Html = s3 ? `<div class="super-note" style="margin:10px 0 4px;">⚠️ Cảnh báo bùng nổ (BN) gần nhất — tỷ lệ thắng thấp, theo dõi riêng:</div>
-                <div class="portfolio-table-container"><table class="portfolio-table super-table">${SUPERS_HEAD}<tbody>${superSRows([{t, s: s3}])}</tbody></table></div>` : '';
-            if (!s) { box.innerHTML = `<div class="super-advice"><strong>${sym}</strong>: chưa từng có tín hiệu mua SuperS.</div>` + s3Html; return; }
+            if (!s) { box.innerHTML = `<div class="super-advice"><strong>${sym}</strong>: chưa từng có tín hiệu mua SuperS.</div>`; return; }
             const ago = superSessionsAgo(s) ?? s.sessions_since_signal;
             let advice;
             if (s.status === 'CHỜ MUA') advice = 'Tín hiệu vừa xuất hiện: mua ở giá mở cửa phiên tới. Nếu phiên tới mở cửa tăng quá 6,5% thì bỏ qua lệnh.';
@@ -5483,7 +5468,7 @@
                     <div><strong>Tín hiệu ${s.setup} · ${s.setup_name} cách đây ${ago} phiên</strong> · bán kiểu Giữ lãi · giá hiện tại ${fmtSuperPrice(s.last_price)} (${s.last_date})</div>
                     <div style="margin-top:6px;">${advice}</div>
                     <div class="super-note" style="margin-top:6px;">Khuyến nghị mua theo chỉ mang tính tham khảo — backtest chỉ đo các lệnh mua đúng phiên sau tín hiệu.</div>
-                </div>` + s3Html;
+                </div>`;
         }
 
         function getActionClass(actionStr) {
@@ -7921,7 +7906,7 @@
             }
         }
 
-        // SuperS markers: gold arrow (S1/S2/N2/N3) or purple (BN alert) under the actual buy session, orange X over the sell session.
+        // SuperS markers: gold arrow (S1/S2/N2/N3) under the actual buy session, orange X over the sell session.
         function setSuperMarkers(series, data) {
             if (data.superS_trades && data.superS_trades.length && typeof series.attachPrimitive === 'function') {
                 const idx = new Map(data.dates.map((d, i) => [d, i]));
@@ -7934,7 +7919,7 @@
                     items.push({time: d2ts(date), price: price * priceScale(data), type, label, color});
                 };
                 data.superS_trades.forEach(tr => {
-                    if (tr.bd) add(tr.bd, 'buy', tr.s, tr.s === 'BN' ? '#a78bfa' : '#facc15');
+                    if (tr.bd) add(tr.bd, 'buy', tr.s, '#facc15');
                     if (tr.xd) add(tr.xd, 'sell', 'X', '#f97316');
                 });
                 if (items.length) series.attachPrimitive(new SuperMarkerPrimitive(items));
