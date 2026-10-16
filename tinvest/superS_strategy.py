@@ -13,17 +13,21 @@ N2 · Bứt phá nền chặt: ADX vừa vượt 25 + MACD > Signal + khối lư
 N3 · Thị trường quay lại + bùng khối lượng: VNINDEX vào xu hướng tăng ĐÚNG phiên này + 2Trend SuperTrend L
      + khối lượng > 1,5 x TB20 + Bollinger thắt chặt
 
-Bán GIỮ LÃI: cắt lỗ -7%; giá từng chạm +7% -> chặn lãi +2%; khi giá đóng cửa cao nhất đã lãi >= +10% -> không để
-     trả lại quá 50% phần lãi cao nhất đó; luôn kèm bám sóng Chandelier (giá đóng cửa cao nhất - 4 x ATR22).
-     Mức dừng = mức cao nhất trong các mức trên; giá thấp nhất phiên chạm mức dừng -> bán.
+Bán (cắt lỗ -10%):
+  - Bình thường: giá từng chạm +7% -> chặn lãi +2%; khi giá đóng cửa cao nhất đã lãi >= +10% -> không để trả lại quá
+    50% phần lãi cao nhất đó; kèm bám sóng Chandelier (giá đóng cửa cao nhất - 4 x ATR22).
+    Mức dừng = mức cao nhất trong các mức trên; giá thấp nhất phiên chạm mức dừng -> bán.
+  - IF ÔM SÓNG: khi giá đóng cửa cao nhất đã lãi >= +10% VÀ MA20 đang đi lên (cao hơn 5 phiên trước) VÀ giá đóng cửa
+    > MA20 -> khóa sàn lãi +5%, ngừng nâng mức "giữ 50% lãi"/Chandelier, chỉ bán khi giá đóng cửa < MA50
+    (bán giá mở cửa phiên sau) hoặc khi giá chạm mức dừng đã có.
 
-Backtest giá điều chỉnh (CafeF, 2006-10/2026, phí mua 0,15%, bán 0,25%): ~119 lệnh/năm (2022–2026), thắng ~60%.
+Backtest giá điều chỉnh (CafeF, 2006-10/2026, phí mua 0,15%, bán 0,25%): xem tab Super.
 """
 import numpy as np
 import pandas as pd
 
 MIN_VOL_MA10 = 200_000
-CUTLOSS = 0.07
+CUTLOSS = 0.10
 MAX_GAP_UP = 0.065
 MIN_HOLD = 3                     # chỉ bán từ phiên T+3
 VN_TURN_WINDOW = 3               # S2: VNINDEX vừa vào xu hướng tăng trong N phiên gần nhất
@@ -37,7 +41,8 @@ SETUPS = {
     'S2': 'Thị trường quay lại + nền chặt',
 }
 PRIORITY = ['S2', 'N2', 'N3', 'S1']          # later overrides earlier: S1 wins
-EXIT = dict(protect_trigger=0.07, protect_lock=0.02, giveback_from=0.10, giveback=0.50, chandelier=4.0)
+EXIT = dict(protect_trigger=0.07, protect_lock=0.02, giveback_from=0.10, giveback=0.50, chandelier=4.0,
+            ride_from=0.10, ride_floor=0.05)          # IF ôm sóng: lãi >= 10% & MA20 lên & giá > MA20 -> sàn +5%, bán khi < MA50
 
 
 def _num(df, col):
@@ -113,12 +118,15 @@ def _arrays(df: pd.DataFrame):
     pc = _shift(c)
     tr = np.fmax(h - l, np.fmax(np.abs(h - pc), np.abs(l - pc)))
     atr22 = pd.Series(tr).rolling(22).mean().to_numpy()
-    return o, h, l, c, atr22
+    cs = pd.Series(c)
+    ma20, ma50 = cs.rolling(20).mean().to_numpy(), cs.rolling(50).mean().to_numpy()
+    ma20_up = ma20 > _shift(ma20, 5)
+    return o, h, l, c, atr22, ma20, ma20_up, ma50
 
 
 def _simulate(arrs, t: int) -> dict:
-    """Simulate the trade opened by the signal at bar t with the GIỮ LÃI exit (raw price units)."""
-    o, h, l, c, atr22 = arrs
+    """Simulate the trade opened by the signal at bar t (raw price units)."""
+    o, h, l, c, atr22, ma20, ma20_up, ma50 = arrs
     n = len(c)
     b = t + 1
     if b >= n:
@@ -127,18 +135,23 @@ def _simulate(arrs, t: int) -> dict:
     if not px > 0 or px / c[t] - 1 > MAX_GAP_UP:
         return {"state": "SKIP", "b": b, "px": px}
     stop = px * (1 - CUTLOSS)
-    protect = keep = chand = 0.0
+    protect = keep = chand = floor = 0.0
+    riding = False
+    ride_k = None
     pend = pend_k = None
     hc = peak = px
 
     def reason():
         if stop < px:
             return "Cắt lỗ"
-        best = max(protect, keep, chand)
+        best = max(protect, keep, chand, floor)
+        if best == floor:
+            return "Ôm sóng (sàn +5%)"
         return "Bám sóng (Chandelier)" if best == chand else ("Giữ 50% lãi" if best == keep else "Chặn lãi")
 
     def result(state, **kw):
-        return dict(state=state, b=b, px=px, peak=peak, best_close=hc, stop=stop, protect=protect, keep=keep, chand=chand, **kw)
+        return dict(state=state, b=b, px=px, peak=peak, best_close=hc, stop=stop, protect=protect, keep=keep, chand=chand,
+                    riding=riding, ride_k=ride_k, floor=floor, **kw)
 
     for k in range(b, n):
         if k - b >= MIN_HOLD:
@@ -152,11 +165,18 @@ def _simulate(arrs, t: int) -> dict:
         peak = max(peak, h[k])
         if h[k] >= px * (1 + EXIT['protect_trigger']):
             protect = px * (1 + EXIT['protect_lock'])
-        if hc >= px * (1 + EXIT['giveback_from']):
-            keep = max(keep, px * (1 + (1 - EXIT['giveback']) * (hc / px - 1)))
-        if h[k] >= px and not np.isnan(atr22[k]):
-            chand = max(chand, hc - EXIT['chandelier'] * atr22[k])
-        stop = max(stop, protect, keep, chand)
+        if not riding:
+            if hc >= px * (1 + EXIT['giveback_from']):
+                keep = max(keep, px * (1 + (1 - EXIT['giveback']) * (hc / px - 1)))
+            if h[k] >= px and not np.isnan(atr22[k]):
+                chand = max(chand, hc - EXIT['chandelier'] * atr22[k])
+            if hc >= px * (1 + EXIT['ride_from']) and ma20_up[k] and c[k] > ma20[k]:
+                riding, ride_k = True, k
+        if riding:
+            floor = px * (1 + EXIT['ride_floor'])
+            if c[k] < ma50[k] and not pend:
+                pend, pend_k = "Ôm sóng: đóng cửa < MA50", k
+        stop = max(stop, protect, keep, chand, floor)
     return result("HOLD", pend=pend, pend_k=pend_k)
 
 
@@ -222,6 +242,7 @@ def evaluate_superS(df: pd.DataFrame, vn_df=None, price_scale: float = 1000.0) -
     if not trades:
         return None
     t, code, r = trades[-1]
+    arrs = _arrays(df)
     c = _num(df, 'Close')
     n = len(df)
     P = lambda v: None if v is None else round(float(v) * price_scale, 2)
@@ -237,10 +258,11 @@ def evaluate_superS(df: pd.DataFrame, vn_df=None, price_scale: float = 1000.0) -
     }
     ref = c[t] if r["state"] == "WAIT" else r["px"]
     rec.update(cutloss=P(ref * (1 - CUTLOSS)), protect_trigger=P(ref * (1 + EXIT['protect_trigger'])),
-               protect_stop=P(ref * (1 + EXIT['protect_lock'])), keep_trigger=P(ref * (1 + EXIT['giveback_from'])))
+               protect_stop=P(ref * (1 + EXIT['protect_lock'])), keep_trigger=P(ref * (1 + EXIT['giveback_from'])),
+               ride_floor=P(ref * (1 + EXIT['ride_floor'])))
     if r["state"] == "WAIT":
         rec.update(status="CHỜ MUA", status_note="Mua ở giá mở cửa phiên tới (bỏ qua nếu mở cửa tăng > 6,5%)",
-                   buy_date=None, buy_price=None, protect_active=False, keep_active=False)
+                   buy_date=None, buy_price=None, protect_active=False, keep_active=False, riding=False)
         return rec
     b, px = r["b"], r["px"]
     if r["state"] == "SKIP":
@@ -253,6 +275,8 @@ def evaluate_superS(df: pd.DataFrame, vn_df=None, price_scale: float = 1000.0) -
         protect_active=bool(r["protect"] > 0), keep_active=bool(r["keep"] > 0),
         keep_stop=P(r["keep"]) if r["keep"] > 0 else None, chandelier_stop=P(r["chand"]) if r["chand"] > 0 else None,
         best_close=P(r["best_close"]), current_stop=P(r["stop"]), peak_price=P(r["peak"]),
+        riding=bool(r["riding"]), ride_date=_fmt_date(df['Date'].iloc[r["ride_k"]]) if r["ride_k"] is not None else None,
+        ma50_last=P(arrs[7][-1]) if not np.isnan(arrs[7][-1]) else None,
         t3_date=_fmt_date(df['Date'].iloc[t3]) if t3 < n else None,
     )
     if r["state"] == "SOLD":
@@ -267,6 +291,9 @@ def evaluate_superS(df: pd.DataFrame, vn_df=None, price_scale: float = 1000.0) -
         rec["status_note"] = f"{r['pend']}: bán ở giá mở cửa {rec['pending_exec']}"
     elif n - 1 - b < MIN_HOLD:
         rec["status_note"] = f"Chưa về hàng (chưa tới T+3) · mức dừng hiện tại {rec['current_stop']:,.0f}"
+    elif r["riding"]:
+        rec["status_note"] = (f"Đang ôm sóng: bán khi giá đóng cửa < MA50 ({rec['ma50_last']:,.0f}) "
+                              f"hoặc giá chạm {rec['current_stop']:,.0f}") if rec.get('ma50_last') else f"Đang ôm sóng: bán nếu giá chạm {rec['current_stop']:,.0f}"
     else:
         rec["status_note"] = f"Bán nếu giá chạm {rec['current_stop']:,.0f}"
     return rec

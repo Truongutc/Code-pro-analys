@@ -3670,9 +3670,10 @@
                     <div><strong>S2 · Thị trường quay lại + nền chặt:</strong> VNINDEX vừa vào xu hướng tăng trong 3 phiên gần nhất (đóng cửa &gt; MA50 và MA20 &gt; MA50) + 2Trend SuperTrend L + Bollinger thắt chặt (độ rộng BB20 thuộc 20% thấp nhất 120 phiên) + RS14 &gt; 50</div>
                     <div><strong>N2 · Bứt phá nền chặt:</strong> ADX vừa vượt 25 + MACD &gt; Signal + khối lượng &gt; 1,5× TB20 + Bollinger thắt chặt</div>
                     <div><strong>N3 · Thị trường quay lại + bùng khối lượng:</strong> VNINDEX vào xu hướng tăng đúng phiên này + 2Trend SuperTrend L + khối lượng &gt; 1,5× TB20 + Bollinger thắt chặt</div>
-                    <div><strong>Bán GIỮ LÃI (từ T+3):</strong> Cutloss −7% · giá từng chạm +7% → chặn lãi +2% · khi giá đóng cửa cao nhất đã lãi ≥ +10% → không để trả lại quá 50% phần lãi cao nhất · luôn kèm bám sóng (giá đóng cửa cao nhất − 4×ATR22) · bán khi giá chạm mức dừng cao nhất trong các mức trên</div>
+                    <div><strong>Bán (từ T+3):</strong> Cutloss −10% · giá từng chạm +7% → chặn lãi +2% · khi giá đóng cửa cao nhất đã lãi ≥ +10% → không để trả lại quá 50% phần lãi cao nhất · kèm bám sóng (giá đóng cửa cao nhất − 4×ATR22) · bán khi giá chạm mức dừng cao nhất trong các mức trên</div>
+                    <div><strong>IF ôm sóng:</strong> khi giá đóng cửa cao nhất đã lãi ≥ +10% <strong>và</strong> MA20 đang đi lên <strong>và</strong> giá đóng cửa &gt; MA20 → khóa sàn lãi +5%, thôi nâng mức "giữ 50% lãi"/bám sóng, chỉ bán khi giá đóng cửa &lt; MA50 (bán giá mở cửa phiên sau) hoặc giá chạm mức dừng đã có</div>
                     <div><strong>T+3:</strong> đóng cửa dưới mức dừng trước T+3 → bán giá mở cửa phiên T+3 · Trên chart GP: mũi tên vàng S1/S2/N2/N3 = phiên mua thực tế, mũi tên cam X = phiên bán</div>
-                    <div class="super-stats">Backtest giá điều chỉnh 2006–10/2026 (đã trừ phí): 1.183 lệnh · thắng 59,9% · lệnh thắng TB +11,2% · lệnh thua TB −6,8% · +4,0%/lệnh. Riêng 2022–2026: ~119 lệnh/năm · thắng 59,6% · thắng TB +8,7% · thua TB −6,7% · +2,5%/lệnh (N2: thắng 60%, thắng TB +14,3%; N3: thắng 58%, thắng TB +13,0%)</div>
+                    <div class="super-stats">Backtest giá điều chỉnh 2006–10/2026 (đã trừ phí): 1.139 lệnh · thắng 64,4% · lệnh thắng TB +13,1% · lệnh thua TB −8,0% · +5,6%/lệnh. Riêng 2022–2026: ~114 lệnh/năm · thắng 65,1% · thắng TB +10,6% · thua TB −7,8% · +4,2%/lệnh (192 lệnh ôm sóng bán dưới MA50: TB +40%)</div>
                 </div>
                 <div class="portfolio-table-container">
                     <table class="portfolio-table super-table" id="superSSignalTable"></table>
@@ -5406,8 +5407,14 @@
 
         function superSTrailCell(s) {
             if (s.status === 'ĐÃ BÁN' && s.sell_reason === 'Bám sóng (Chandelier)') return superSoldBy(s, 'Bám sóng (Chandelier)');
-            if (s.chandelier_stop) return `<div>${superLvl(s.chandelier_stop, s, s.chandelier_stop >= s.buy_price ? 'super-up' : 'super-down')}</div><div class="super-note">giá ĐC cao nhất − 4×ATR22</div>`;
-            return '<span class="super-note">giá ĐC cao nhất − 4×ATR22</span>';
+            if (s.riding) {
+                const sold = s.status === 'ĐÃ BÁN' && s.sell_reason && s.sell_reason.startsWith('Ôm sóng')
+                    ? `<div class="super-hit-down">Đã bán ${fmtSuperPrice(s.sell_price)} · ${s.sell_date}</div><div class="super-note">${s.sell_reason}</div>` : '';
+                const ma = s.status !== 'ĐÃ BÁN' && s.ma50_last ? `<div>Bán khi đóng cửa &lt; MA50 (${fmtSuperPrice(s.ma50_last)})</div>` : '';
+                return `<div class="super-hit">✓ ôm sóng từ ${s.ride_date}</div><div class="super-note">sàn lãi ${superLvl(s.ride_floor, s, 'super-up')}</div>${ma}${sold}`;
+            }
+            const ch = s.chandelier_stop ? `<div>${superLvl(s.chandelier_stop, s, s.chandelier_stop >= s.buy_price ? 'super-up' : 'super-down')}</div>` : '';
+            return `${ch}<div class="super-note">bám sóng: giá ĐC cao nhất − 4×ATR22</div><div class="super-note">ôm sóng khi lãi ≥ ${superLvl(s.keep_trigger, s)} &amp; MA20 lên &amp; giá &gt; MA20</div>`;
         }
 
         function superSRows(list) {
@@ -5425,8 +5432,8 @@
                 </tr>`).join('');
         }
 
-        const SUPERS_HEAD = `<thead><tr><th>Mã</th><th>Ngày tín hiệu</th><th>Ngày mua</th><th>Giá mua</th><th>Cutloss −7% / mức dừng</th>
-            <th>Chặn lãi (+7% → +2%)</th><th>Giữ 50% lãi (từ +10%)</th><th>Bám sóng 4×ATR</th><th title="Lãi/lỗ chưa trừ phí giao dịch">Trạng thái / Kết quả</th><th>Tổ hợp tín hiệu mua</th></tr></thead>`;
+        const SUPERS_HEAD = `<thead><tr><th>Mã</th><th>Ngày tín hiệu</th><th>Ngày mua</th><th>Giá mua</th><th>Cutloss −10% / mức dừng</th>
+            <th>Chặn lãi (+7% → +2%)</th><th>Giữ 50% lãi (từ +10%)</th><th>Bám sóng / Ôm sóng (IF)</th><th title="Lãi/lỗ chưa trừ phí giao dịch">Trạng thái / Kết quả</th><th>Tổ hợp tín hiệu mua</th></tr></thead>`;
 
         function renderSuperSTab() {
             if (!rawData) return;
