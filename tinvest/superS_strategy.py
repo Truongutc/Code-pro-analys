@@ -1,17 +1,18 @@
 """
 SuperS strategy (MA khối lượng 10 phiên > 200.000 cp)
 =====================================================
-Bộ chính có 4 điểm mua, cùng một kiểu bán GIỮ LÃI. Cùng mã không mua thêm khi đang giữ lệnh.
-Mua giá mở cửa phiên liền sau tín hiệu (bỏ qua nếu mở cửa tăng > 6,5%). Chỉ bán từ T+3; tín hiệu bán /
-đóng cửa dưới mức dừng trước T+3 -> bán giá mở cửa phiên T+3. Trùng phiên: ưu tiên S1 > N3 > N2 > S2.
+Bộ chính có 4 điểm mua, đánh số theo hiệu quả (lãi/lệnh) và thứ tự ưu tiên S1 > S2 > S3 > S4 khi trùng phiên.
+Cùng mã không mua thêm khi đang giữ lệnh. Mua giá mở cửa phiên liền sau tín hiệu (bỏ qua nếu mở cửa tăng > 6,5%).
+Chỉ bán từ T+3; tín hiệu bán / đóng cửa dưới mức dừng trước T+3 -> bán giá mở cửa phiên T+3.
 
-S1 · Sóng mạnh: 2Trend SMA vừa chuyển L + ADX xanh/trắng + DI+ > DI- + RS14 > 70 + Heikin trên đường NW
+S1 · Bứt phá nền chặt: ADX vừa vượt 25 + MACD > Signal + khối lượng > 1,5 x TB20 + Bollinger thắt chặt
+     (độ rộng BB20 thuộc 20% thấp nhất 120 phiên)
+S2 · Thị trường quay lại + bùng khối lượng: VNINDEX vào xu hướng tăng ĐÚNG phiên này (đóng cửa > MA50 và MA20 > MA50)
+     + 2Trend SuperTrend L + khối lượng > 1,5 x TB20 + Bollinger thắt chặt
+S3 · Thị trường quay lại + nền chặt: VNINDEX vừa vào xu hướng tăng trong 3 phiên gần nhất + 2Trend SuperTrend L
+     + Bollinger thắt chặt + RS14 > 50
+S4 · Sóng mạnh: 2Trend SMA vừa chuyển L + ADX xanh/trắng + DI+ > DI- + RS14 > 70 + Heikin trên đường NW
      + mây Ichimoku xanh + giá đóng cửa trên mây + Octopus xanh (đậm hoặc nhạt)
-S2 · Thị trường quay lại + nền chặt: VNINDEX vừa vào xu hướng tăng trong 3 phiên gần nhất (đóng cửa > MA50 và
-     MA20 > MA50) + 2Trend SuperTrend L + Bollinger thắt chặt (độ rộng BB20 thuộc 20% thấp nhất 120 phiên) + RS14 > 50
-N2 · Bứt phá nền chặt: ADX vừa vượt 25 + MACD > Signal + khối lượng > 1,5 x TB20 + Bollinger thắt chặt
-N3 · Thị trường quay lại + bùng khối lượng: VNINDEX vào xu hướng tăng ĐÚNG phiên này + 2Trend SuperTrend L
-     + khối lượng > 1,5 x TB20 + Bollinger thắt chặt
 
 Bán (cắt lỗ -10%):
   - Bình thường: giá từng chạm +7% -> chặn lãi +2%; khi giá đóng cửa cao nhất đã lãi >= +10% -> không để trả lại quá
@@ -35,12 +36,12 @@ BB_SQUEEZE_PCT = 0.20            # độ rộng BB thuộc 20% thấp nhất c�
 VOL_SURGE = 1.5                  # khối lượng > 1,5 x TB20
 
 SETUPS = {
-    'S1': 'Sóng mạnh',
-    'N3': 'Thị trường quay lại + bùng khối lượng',
-    'N2': 'Bứt phá nền chặt',
-    'S2': 'Thị trường quay lại + nền chặt',
+    'S1': 'Bứt phá nền chặt',
+    'S2': 'Thị trường quay lại + bùng khối lượng',
+    'S3': 'Thị trường quay lại + nền chặt',
+    'S4': 'Sóng mạnh',
 }
-PRIORITY = ['S2', 'N2', 'N3', 'S1']          # later overrides earlier: S1 wins
+PRIORITY = ['S4', 'S3', 'S2', 'S1']          # later overrides earlier: S1 wins
 EXIT = dict(protect_trigger=0.07, protect_lock=0.02, giveback_from=0.10, giveback=0.50, chandelier=4.0,
             ride_from=0.10, ride_floor=0.05)          # IF ôm sóng: lãi >= 10% & MA20 lên & giá > MA20 -> sàn +5%, bán khi < MA50
 
@@ -89,26 +90,26 @@ def _signals(df: pd.DataFrame, vn: "pd.DataFrame | None") -> np.ndarray:
     ma20, sd20 = cs.rolling(20, min_periods=16).mean(), cs.rolling(20, min_periods=16).std()
     squeeze = ((4 * sd20 / ma20).rolling(120, min_periods=60).rank(pct=True) < BB_SQUEEZE_PCT).to_numpy()
     st_l = _num(df, 'T2_ST_Trend') > 0
-    # S1 · Sóng mạnh
+    # S4 · Sóng mạnh
     t2 = _num(df, 'T2_SMA_Trend')
     adx_col = df['ADX_Color'].astype(str).str.upper().to_numpy() if 'ADX_Color' in df.columns else np.array([''] * n)
     oct_col = df['OCT_Color'].astype(str).str.upper().to_numpy() if 'OCT_Color' in df.columns else np.array([''] * n)
     cloud_top = np.fmax(_num(df, 'SpanA'), _num(df, 'SpanB'))
-    s1 = ((t2 > 0) & (_shift(t2) <= 0)
-          & np.isin(adx_col, ['GREEN', 'WHITE']) & (_num(df, 'DI_Plus') > _num(df, 'DI_Minus'))
+    wave = ((t2 > 0) & (_shift(t2) <= 0)
+            & np.isin(adx_col, ["GREEN", "WHITE"]) & (_num(df, "DI_Plus") > _num(df, "DI_Minus"))
           & (rs14 > 70) & (_num(df, 'HK_Trend') > 0) & (_num(df, 'SpanA') > _num(df, 'SpanB'))
           & (c > cloud_top) & np.isin(oct_col, ['#00FF00', '#008000']))
-    # N2 · Bứt phá nền chặt
-    n2 = _onset(_num(df, 'ADX') > 25) & (_num(df, 'MACD') > _num(df, 'MACD_Signal')) & vol_surge & squeeze
-    # S2 / N3 need the VNINDEX regime
-    s2 = n3 = np.zeros(n, bool)
+    # S1 · Bứt phá nền chặt
+    breakout = _onset(_num(df, 'ADX') > 25) & (_num(df, 'MACD') > _num(df, 'MACD_Signal')) & vol_surge & squeeze
+    # S3 (turn_base) / S2 (turn_vol) need the VNINDEX regime
+    turn_base = turn_vol = np.zeros(n, bool)
     if vn is not None:
         dates = pd.to_datetime(df['Date']).dt.normalize()
         vn_on = dates.map(vn['on']).fillna(False).to_numpy(bool)
         vn_recent = dates.map(vn['recent']).fillna(False).to_numpy(bool)
-        s2 = vn_recent & st_l & squeeze & (rs14 > 50)
-        n3 = vn_on & st_l & vol_surge & squeeze
-    for code, sig in zip(PRIORITY, (s2, n2, n3, s1)):
+        turn_base = vn_recent & st_l & squeeze & (rs14 > 50)
+        turn_vol = vn_on & st_l & vol_surge & squeeze
+    for code, sig in zip(PRIORITY, (wave, turn_base, turn_vol, breakout)):   # S4, S3, S2, S1
         main[np.asarray(sig, bool) & liq] = code
     return main
 
@@ -223,14 +224,14 @@ def superS_trades(df: pd.DataFrame, vn_df=None) -> list:
 
 def _combo_text(df: pd.DataFrame, t: int, code: str) -> str:
     g = lambda col: pd.to_numeric(df[col], errors='coerce').iloc[t] if col in df.columns else np.nan
-    if code == 'S1':
-        return (f"S1 · 2Trend SMA vừa chuyển L · ADX {str(df['ADX_Color'].iloc[t]).capitalize()} · DI+ {g('DI_Plus'):.0f} > DI− {g('DI_Minus'):.0f}"
+    if code == 'S4':
+        return (f"S4 · 2Trend SMA vừa chuyển L · ADX {str(df['ADX_Color'].iloc[t]).capitalize()} · DI+ {g('DI_Plus'):.0f} > DI− {g('DI_Minus'):.0f}"
                 f" · RS14 {g('RS14'):.0f} · Heikin trên NW · mây xanh, giá trên mây · Octopus xanh")
-    if code == 'S2':
-        return f"S2 · VNINDEX vừa quay lại xu hướng tăng · 2Trend SuperTrend L · Bollinger thắt chặt · RS14 {g('RS14'):.0f}"
-    if code == 'N2':
-        return f"N2 · ADX vừa vượt 25 ({g('ADX'):.0f}) · MACD > Signal · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
-    return "N3 · VNINDEX vào xu hướng tăng phiên này · 2Trend SuperTrend L · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
+    if code == 'S3':
+        return f"S3 · VNINDEX vừa quay lại xu hướng tăng · 2Trend SuperTrend L · Bollinger thắt chặt · RS14 {g('RS14'):.0f}"
+    if code == 'S1':
+        return f"S1 · ADX vừa vượt 25 ({g('ADX'):.0f}) · MACD > Signal · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
+    return "S2 · VNINDEX vào xu hướng tăng phiên này · 2Trend SuperTrend L · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
 
 
 def evaluate_superS(df: pd.DataFrame, vn_df=None, price_scale: float = 1000.0) -> "dict | None":
