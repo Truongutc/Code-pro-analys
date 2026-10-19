@@ -3663,7 +3663,7 @@
         <!-- Tab: Super (SuperS strategy) -->
         <div class="tab-content" id="super-tab">
             <section class="card">
-                <h3 class="card-title"><span>⭐ SuperS — Tín hiệu mua 10 phiên gần nhất</span></h3>
+                <h3 class="card-title"><span>⭐ SuperS — Tín hiệu mua 30 phiên gần nhất</span></h3>
                 <div class="super-rules">
                     <div><strong>Điều kiện chung:</strong> MA Vol10 &gt; 200.000 cp · mua giá mở cửa phiên liền sau tín hiệu (không mua nếu mở cửa tăng &gt; 6,5%) · <strong>đang giữ mã thì không mua thêm</strong> · 4 kiểu mua đánh số theo hiệu quả · trùng phiên ưu tiên S1 &gt; S2 &gt; S3 &gt; S4</div>
                     <div><strong>S1 · Bứt phá nền chặt:</strong> ADX vừa vượt 25 + MACD &gt; Signal + khối lượng &gt; 1,5× TB20 + Bollinger thắt chặt (độ rộng BB20 thuộc 20% thấp nhất 120 phiên) — 2022–2026: ~12 lệnh/năm, thắng 62%, +8,4%/lệnh</div>
@@ -5437,13 +5437,13 @@
 
         function renderSuperSTab() {
             if (!rawData) return;
-            [['superSSignalTable', 'SuperS', 'Không có tín hiệu mua SuperS trong 10 phiên gần nhất.']].forEach(([id, key, empty]) => {
+            [['superSSignalTable', 'SuperS', 'Không có tín hiệu mua SuperS trong 30 phiên gần nhất.']].forEach(([id, key, empty]) => {
                 const el = document.getElementById(id);
                 if (!el) return;
                 const list = (rawData.tickers_analysis || [])
                     .filter(t => t[key])
                     .map(t => ({t, s: t[key], ago: superSessionsAgo(t[key])}))
-                    .filter(x => x.ago !== null && x.ago <= 9)
+                    .filter(x => x.ago !== null && x.ago <= 29)
                     .sort((a, b) => a.ago - b.ago || a.s.setup.localeCompare(b.s.setup) || a.t.Ticker.localeCompare(b.t.Ticker));
                 el.innerHTML = list.length
                     ? SUPERS_HEAD + '<tbody>' + superSRows(list) + '</tbody>'
