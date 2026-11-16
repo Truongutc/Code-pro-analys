@@ -27,20 +27,55 @@
     <!-- Lightweight Charts (TradingView) for interactive OHLCV charts -->
     <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 
+    <script>
+        document.documentElement.setAttribute('data-theme', 'dark');   // giữ bảng màu tối quen thuộc
+    </script>
     <style>
         :root {
+            /* Light theme (default) */
+            --bg-color: #f4f6f9;
+            --panel-bg: #ffffff;
+            --panel-solid: #ffffff;
+            --border-color: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --ink: 17, 24, 39;
+            --accent-purple: #7c3aed;
+            --accent-teal: #0d9488;
+            --accent-green: #16a34a;
+            --accent-red: #dc2626;
+            --accent-orange: #d97706;
+            --accent-blue: #2563eb;
+            --brand: #16a34a;
+            --brand-soft: #dcfce7;
+            --sidebar-bg: #ffffff;
+            --topbar-bg: rgba(255, 255, 255, 0.92);
+            --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+            --chart-panel: #0b1220;
+            --glass-blur: blur(12px);
+            --glow-purple: transparent;
+            --glow-teal: transparent;
+        }
+        :root[data-theme="dark"] {
             --bg-color: #080b13;
             --panel-bg: rgba(13, 19, 33, 0.75);
+            --panel-solid: #0f1625;
             --border-color: rgba(255, 255, 255, 0.08);
             --text-primary: #f3f4f6;
             --text-secondary: #9ca3af;
+            --ink: 255, 255, 255;
             --accent-purple: #8b5cf6;
             --accent-teal: #14b8a6;
             --accent-green: #10b981;
             --accent-red: #ef4444;
             --accent-orange: #f59e0b;
             --accent-blue: #3b82f6;
-            --glass-blur: blur(16px);
+            --brand: #8b5cf6;
+            --brand-soft: rgba(139, 92, 246, 0.15);
+            --sidebar-bg: #0b111d;
+            --topbar-bg: rgba(8, 11, 19, 0.9);
+            --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.25);
+            --chart-panel: #000000;
             --glow-purple: rgba(139, 92, 246, 0.12);
             --glow-teal: rgba(20, 184, 166, 0.12);
         }
@@ -120,7 +155,7 @@
             padding: 4px 10px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(var(--ink), 0.05);
             text-decoration: none;
             transition: all 0.2s ease;
         }
@@ -214,7 +249,7 @@
             transition: padding 0.25s ease;
         }
         @media (max-width: 767px) {
-            body.header-compact header {
+            body.header-compact header:not(.topbar) {
                 padding: 8px 14px;
             }
             body.header-compact .header-right {
@@ -236,10 +271,10 @@
             font-size: 0.6rem;
             padding: 1px 4px;
             border-radius: 4px;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(var(--ink), 0.08);
             color: var(--text-secondary);
             -webkit-text-fill-color: var(--text-secondary);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(var(--ink), 0.06);
             font-family: 'Inter', sans-serif;
             font-weight: 400;
         }
@@ -339,7 +374,7 @@
                 height: 36px;
                 border-radius: 9px;
                 border: 1px solid var(--border-color);
-                background: rgba(255, 255, 255, 0.05);
+                background: rgba(var(--ink), 0.05);
                 flex-shrink: 0;
                 text-decoration: none;
                 transition: all 0.2s ease;
@@ -370,7 +405,7 @@
             text-align: center;
         }
         .menu-btn {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(var(--ink), 0.05);
             border: 1px solid var(--border-color);
             border-radius: 10px;
             color: var(--text-primary);
@@ -459,8 +494,8 @@
             }
             .menu-item {
                 width: auto !important;
-                background: rgba(255, 255, 255, 0.03) !important;
-                border: 1px solid rgba(255, 255, 255, 0.05) !important;
+                background: rgba(var(--ink), 0.03) !important;
+                border: 1px solid rgba(var(--ink), 0.05) !important;
                 border-radius: 8px !important;
                 padding: 6px 16px !important;
                 text-align: center !important;
@@ -547,7 +582,7 @@
         }
 
         .btn-sm {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(var(--ink), 0.05);
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
             padding: 4px 8px;
@@ -570,7 +605,7 @@
         }
 
         .ma-toggles button {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(var(--ink), 0.03);
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.7rem;
@@ -583,14 +618,14 @@
         .ma-toggles button.inactive {
             opacity: 0.3;
             background: transparent !important;
-            border-color: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(var(--ink), 0.08) !important;
             color: var(--text-secondary) !important;
         }
 
         #toggle-normal-ma10.active, #toggle-fs-ma10.active {
             border-color: #ffffff;
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            background: rgba(var(--ink), 0.1);
         }
 
         #toggle-normal-ma20.active, #toggle-fs-ma20.active {
@@ -625,10 +660,10 @@
             gap: 6px;
             font-size: 0.7rem;
             align-items: center;
-            background: rgba(255,255,255,0.05);
+            background: rgba(var(--ink),0.05);
             padding: 3px 6px;
             border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(var(--ink),0.08);
         }
         .chart-toggles-container label {
             display: flex;
@@ -684,7 +719,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.3rem;
             font-weight: 800;
-            color: white;
+            color: var(--text-primary);
         }
 
         .market-price-section {
@@ -711,8 +746,8 @@
         }
 
         .market-metric-box {
-            background: rgba(255, 255, 255, 0.015);
-            border: 1px solid rgba(255, 255, 255, 0.03);
+            background: rgba(var(--ink), 0.015);
+            border: 1px solid rgba(var(--ink), 0.03);
             border-radius: 10px;
             padding: 10px;
             display: flex;
@@ -772,7 +807,7 @@
 
         .search-input {
             width: 100%;
-            background: rgba(255, 255, 255, 0.035);
+            background: rgba(var(--ink), 0.035);
             border: 1px solid var(--border-color);
             padding: 12px 16px 12px 40px;
             border-radius: 12px;
@@ -822,7 +857,7 @@
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(var(--ink),0.03);
             transition: background 0.15s;
         }
         
@@ -844,7 +879,7 @@
         .s-ticker {
             font-family: 'Outfit', sans-serif;
             font-weight: 700;
-            color: white;
+            color: var(--text-primary);
         }
         
         .s-price {
@@ -882,7 +917,7 @@
         }
 
         .tab-btn {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(var(--ink), 0.03);
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
             padding: 8px 16px;
@@ -904,11 +939,11 @@
         }
 
         .badge-count {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(var(--ink), 0.15);
             font-size: 0.7rem;
             padding: 1px 5px;
             border-radius: 10px;
-            color: white;
+            color: var(--text-primary);
         }
 
         /* Grid results layout */
@@ -931,7 +966,7 @@
         }
 
         .ticker-card {
-            background: rgba(255, 255, 255, 0.015);
+            background: rgba(var(--ink), 0.015);
             border: 1px solid var(--border-color);
             border-radius: 14px;
             padding: 16px;
@@ -945,8 +980,8 @@
 
         .ticker-card:hover {
             transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.15);
-            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(var(--ink), 0.15);
+            background: rgba(var(--ink), 0.03);
         }
 
         .ticker-card-header {
@@ -959,7 +994,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.25rem;
             font-weight: 700;
-            color: white;
+            color: var(--text-primary);
         }
 
         .action-badge {
@@ -1028,10 +1063,10 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
-            background: rgba(255, 255, 255, 0.01);
+            background: rgba(var(--ink), 0.01);
             padding: 8px;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(var(--ink), 0.03);
             text-align: center;
         }
 
@@ -1094,7 +1129,7 @@
 
         .tag {
             font-size: 0.65rem;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(var(--ink), 0.05);
             padding: 2px 6px;
             border-radius: 4px;
             color: var(--text-secondary);
@@ -1146,7 +1181,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.8rem;
             font-weight: 800;
-            color: white;
+            color: var(--text-primary);
         }
         
         .stock-price-box {
@@ -1159,7 +1194,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.6rem;
             font-weight: 800;
-            color: white;
+            color: var(--text-primary);
         }
         
         .stock-vol {
@@ -1179,7 +1214,7 @@
             align-items: center;
             font-size: 0.85rem;
             color: var(--text-secondary);
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(var(--ink),0.03);
             padding-bottom: 8px;
         }
         
@@ -1245,11 +1280,11 @@
         .text-secondary { color: var(--text-secondary) !important; }
 
         .badge-text {
-            background: rgba(255,255,255,0.06);
+            background: rgba(var(--ink),0.06);
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.75rem;
-            color: white !important;
+            color: var(--text-primary) !important;
         }
 
         /* Valuation dial */
@@ -1298,8 +1333,8 @@
         }
 
         .accum-notes-box {
-            background: rgba(255, 255, 255, 0.01);
-            border: 1px solid rgba(255, 255, 255, 0.03);
+            background: rgba(var(--ink), 0.01);
+            border: 1px solid rgba(var(--ink), 0.03);
             border-radius: 10px;
             padding: 12px;
             font-size: 0.8rem;
@@ -1331,7 +1366,7 @@
             height: 16px;
             border-radius: 8px;
             overflow: hidden;
-            background: rgba(255,255,255,0.05);
+            background: rgba(var(--ink),0.05);
             margin: 4px 0;
         }
         .mcdx-segment {
@@ -1416,7 +1451,7 @@
             align-items: center;
         }
         .header-action-btn {
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(var(--ink), 0.06);
             border: 1px solid var(--border-color);
             border-radius: 10px;
             padding: 6px 12px;
@@ -1429,7 +1464,7 @@
         .header-action-btn:hover {
             background: rgba(139, 92, 246, 0.15);
             border-color: var(--accent-purple);
-            color: white;
+            color: var(--text-primary);
         }
         .gear-btn:hover {
             transform: rotate(45deg);
@@ -1485,7 +1520,7 @@
             }
         }
         .data-action-btn {
-            background: rgba(255,255,255,0.03);
+            background: rgba(var(--ink),0.03);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 14px 10px;
@@ -1567,7 +1602,7 @@
         .settings-field input,
         .settings-field textarea {
             width: 100%;
-            background: rgba(255,255,255,0.04);
+            background: rgba(var(--ink),0.04);
             border: 1px solid var(--border-color);
             border-radius: 10px;
             padding: 10px 14px;
@@ -1603,7 +1638,7 @@
         .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn-secondary {
             flex: 1;
-            background: rgba(255,255,255,0.06);
+            background: rgba(var(--ink),0.06);
             color: var(--text-secondary);
             border: 1px solid var(--border-color);
             border-radius: 10px;
@@ -1613,7 +1648,7 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+        .btn-secondary:hover { background: rgba(var(--ink),0.1); }
         .settings-msg {
             margin-top: 12px;
             font-size: 0.8rem;
@@ -1638,7 +1673,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.6rem;
             font-weight: 800;
-            color: white;
+            color: var(--text-primary);
         }
         .vnindex-summary-header .index-price {
             font-family: 'Outfit', sans-serif;
@@ -1658,7 +1693,7 @@
         .rating-bar-bg {
             height: 10px;
             border-radius: 5px;
-            background: rgba(255,255,255,0.08);
+            background: rgba(var(--ink),0.08);
             overflow: hidden;
         }
         .rating-bar-fill {
@@ -1716,14 +1751,14 @@
             }
             .chart-toggles-container label {
                 padding: 4px 6px;
-                background: rgba(255,255,255,0.03);
+                background: rgba(var(--ink),0.03);
                 border-radius: 4px;
-                border: 1px solid rgba(255,255,255,0.05);
+                border: 1px solid rgba(var(--ink),0.05);
             }
         }
 
         .analysis-card {
-            background: rgba(255,255,255,0.02);
+            background: rgba(var(--ink),0.02);
             border: 1px solid var(--border-color);
             border-radius: 14px;
             padding: 16px;
@@ -1740,7 +1775,7 @@
             justify-content: space-between;
             font-size: 0.82rem;
             padding: 6px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(var(--ink),0.03);
             color: var(--text-secondary);
         }
         .analysis-card .diag-row:last-child { border-bottom: none; }
@@ -1797,7 +1832,7 @@
         }
 
         .load-more-btn {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(var(--ink), 0.04);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
             padding: 12px;
@@ -1810,7 +1845,7 @@
         }
 
         .load-more-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(var(--ink), 0.08);
         }
 
         .loading-overlay {
@@ -1830,7 +1865,7 @@
         .spinner {
             width: 40px;
             height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(var(--ink), 0.1);
             border-radius: 50%;
             border-top-color: var(--accent-purple);
             animation: spin 1s ease-in-out infinite;
@@ -1866,7 +1901,7 @@
         }
         
         .filter-column {
-            background: rgba(255, 255, 255, 0.01);
+            background: rgba(var(--ink), 0.01);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 16px;
@@ -1880,7 +1915,7 @@
             font-size: 0.9rem;
             font-weight: 700;
             color: #fbbf24;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(var(--ink),0.06);
             padding-bottom: 8px;
             text-transform: uppercase;
         }
@@ -1903,11 +1938,11 @@
             border-radius: 4px;
         }
         .checkbox-list::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.1);
+            background: rgba(var(--ink),0.1);
             border-radius: 4px;
         }
         .checkbox-list::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.25);
+            background: rgba(var(--ink),0.25);
         }
         
         .filter-checkbox-row {
@@ -1921,14 +1956,14 @@
             border-radius: 6px;
             transition: all 0.15s ease;
             user-select: none;
-            background: rgba(255,255,255,0.01);
+            background: rgba(var(--ink),0.01);
             border: 1px solid transparent;
         }
         
         .filter-checkbox-row:hover {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(var(--ink), 0.04);
             color: var(--text-primary);
-            border-color: rgba(255,255,255,0.05);
+            border-color: rgba(var(--ink),0.05);
         }
         
         .filter-checkbox-row input[type="checkbox"] {
@@ -2014,7 +2049,7 @@
             transition: all 0.2s ease;
         }
         .market-summary-card:hover {
-            border-color: rgba(255, 255, 255, 0.15);
+            border-color: rgba(var(--ink), 0.15);
             transform: translateY(-2px);
         }
         .market-summary-card.active-index-card {
@@ -2059,7 +2094,7 @@
         /* Single chart cell */
         .chart-cell {
             background: #000000;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(var(--ink),0.08);
             border-radius: 14px;
             overflow: hidden;
             display: flex;
@@ -2077,8 +2112,8 @@
             justify-content: space-between;
             align-items: center;
             padding: 8px 12px;
-            background: rgba(255,255,255,0.025);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(var(--ink),0.025);
+            border-bottom: 1px solid rgba(var(--ink),0.05);
             flex-shrink: 0;
         }
         .chart-cell-label {
@@ -2091,8 +2126,8 @@
             gap: 5px;
         }
         .chart-expand-btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(var(--ink),0.05);
+            border: 1px solid rgba(var(--ink),0.1);
             color: var(--text-secondary);
             padding: 3px 9px;
             border-radius: 6px;
@@ -2105,7 +2140,7 @@
         .chart-expand-btn:hover {
             background: rgba(124,58,237,0.25);
             border-color: #7c3aed;
-            color: white;
+            color: var(--text-primary);
         }
         .chart-cell-body {
             flex: 1;
@@ -2114,8 +2149,8 @@
         }
         .chart-cell-evaluation {
             background: rgba(139, 92, 246, 0.03);
-            border-top: 1px dashed rgba(255, 255, 255, 0.06);
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+            border-top: 1px dashed rgba(var(--ink), 0.06);
+            border-bottom: 1px dashed rgba(var(--ink), 0.06);
             padding: 10px 14px;
             font-size: 0.78rem;
             color: #d1d5db;
@@ -2147,7 +2182,7 @@
             color: #9ca3af;
         }
         .chart-cell-evaluation .eval-row strong {
-            color: #ffffff;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
         }
@@ -2177,8 +2212,8 @@
             border: 1px solid rgba(245, 158, 11, 0.3);
         }
         .chart-cell-footer {
-            background: rgba(255, 255, 255, 0.015);
-            border-top: 1px solid rgba(255, 255, 255, 0.04);
+            background: rgba(var(--ink), 0.015);
+            border-top: 1px solid rgba(var(--ink), 0.04);
             padding: 10px 14px;
             font-size: 0.72rem;
             color: var(--text-secondary);
@@ -2189,7 +2224,7 @@
         /* LightweightCharts host divs */
         .lwc-host { width: 100%; }
         .lwc-host.main { height: 220px; }
-        .lwc-host.sub  { height: 95px;  border-top: 1px solid rgba(255,255,255,0.04); }
+        .lwc-host.sub  { height: 95px;  border-top: 1px solid rgba(var(--ink),0.04); }
 
         /* Pane stack inside a cell */
         .chart-pane-stack {
@@ -2201,14 +2236,14 @@
         .chart-pane-stack .lwc-host {
             border-radius: 0;
             border: none;
-            border-top: 1px solid rgba(255,255,255,0.04);
+            border-top: 1px solid rgba(var(--ink),0.04);
         }
         .chart-pane-stack .lwc-host:first-child { border-top: none; }
 
         /* Loading spinner inside a cell */
         .lwc-spinner {
             width: 26px; height: 26px;
-            border: 3px solid rgba(255,255,255,0.08);
+            border: 3px solid rgba(var(--ink),0.08);
             border-top-color: #14b8a6;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
@@ -2248,15 +2283,15 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.1rem;
             font-weight: 700;
-            color: white;
+            color: var(--text-primary);
             display: flex;
             align-items: center;
             gap: 10px;
         }
         .chart-fs-close {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.12);
-            color: white;
+            background: rgba(var(--ink),0.08);
+            border: 1px solid rgba(var(--ink),0.12);
+            color: var(--text-primary);
             padding: 7px 18px;
             border-radius: 8px;
             cursor: pointer;
@@ -2271,7 +2306,7 @@
             border-radius: 12px;
             overflow: hidden;
             position: relative;
-            border: 1px solid rgba(255,255,255,0.07);
+            border: 1px solid rgba(var(--ink),0.07);
         }
         #chartFsMount {
             width: 100%;
@@ -2280,7 +2315,7 @@
             flex-direction: column;
         }
         #chartFsMount .lwc-host.main { flex: 3; height: auto; }
-        #chartFsMount .lwc-host.sub  { flex: 1; height: auto; border-top: 1px solid rgba(255,255,255,0.04); }
+        #chartFsMount .lwc-host.sub  { flex: 1; height: auto; border-top: 1px solid rgba(var(--ink),0.04); }
 
         /* ----------------------------------------------------
            PORTFOLIO EVALUATION TAB STYLES
@@ -2318,7 +2353,7 @@
             font-weight: 500;
         }
         .port-input-field input {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(var(--ink), 0.03);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             color: var(--text-primary);
@@ -2331,7 +2366,7 @@
             outline: none;
             border-color: var(--accent-purple);
             box-shadow: 0 0 8px rgba(139, 92, 246, 0.3);
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(var(--ink), 0.06);
         }
         
         /* Stocks list inputs */
@@ -2362,7 +2397,7 @@
             position: relative;
         }
         .portfolio-stock-row input {
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(var(--ink), 0.02);
             border: 1px solid var(--border-color);
             border-radius: 6px;
             color: var(--text-primary);
@@ -2375,7 +2410,7 @@
             outline: none;
             border-color: var(--accent-purple);
             box-shadow: 0 0 6px rgba(139, 92, 246, 0.2);
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(var(--ink), 0.05);
         }
         .portfolio-stock-row input.ticker-input {
             font-weight: 700;
@@ -2446,7 +2481,7 @@
             gap: 12px;
         }
         .portfolio-summary-cards .summary-card {
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(var(--ink), 0.02);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 12px;
@@ -2515,7 +2550,7 @@
             text-align: left;
         }
         .portfolio-table th {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(var(--ink), 0.03);
             font-weight: 600;
             color: var(--text-secondary);
             padding: 10px 12px;
@@ -2531,7 +2566,7 @@
             border-bottom: none;
         }
         .portfolio-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.01);
+            background: rgba(var(--ink), 0.01);
         }
 
         /* Super tab */
@@ -2550,6 +2585,25 @@
         .super-table td.super-combo { white-space: normal; min-width: 280px; font-size: 0.85rem; color: var(--text-secondary); }
         .super-table .super-note { font-size: 0.82rem; }
         .super-table .super-tk { font-size: 1.05rem; }
+        @media (max-width: 700px) {
+            .stock-dashboard pre { padding: 10px !important; font-size: 0.72rem !important; line-height: 1.5 !important; }
+            .super-table thead { display: none; }
+            .super-table, .super-table tbody, .super-table tr, .super-table td { display: block; width: 100%; }
+            .super-table { min-width: 0 !important; }
+            .super-table tr { border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 12px; padding: 4px 0; background: var(--panel-bg); }
+            .super-table td { white-space: normal; padding: 7px 12px; border: none !important; display: block; text-align: left; box-sizing: border-box; }
+            .super-table td::before { content: attr(data-label); display: block; color: var(--text-secondary); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
+            .super-table tr { box-sizing: border-box; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .super-table td { width: auto; }
+            .super-table td.super-head-cell, .super-table td:nth-child(n+5) { grid-column: 1 / -1; }
+            .super-table td:nth-child(3), .super-table td:nth-child(4) { border-top: 1px dashed var(--border-color) !important; padding-left: 6px; }
+            .super-table td:nth-child(-n+4):not(.super-head-cell) { white-space: nowrap; font-size: 0.88rem; }
+            .super-table td + td:not(.super-combo) { border-top: 1px dashed var(--border-color) !important; }
+            .super-table td.super-head-cell { display: block; text-align: left; padding: 10px 12px; }
+            .super-table td.super-head-cell::before { content: none; }
+            .super-table td.super-head-cell > * { text-align: left; }
+            .super-table td.super-combo { min-width: 0; display: block; text-align: left; }
+        }
         .super-price { font-weight: 700; }
         .super-hit { color: var(--accent-green); font-weight: 600; }
         .super-hit-down { color: var(--accent-orange); font-weight: 600; }
@@ -2559,7 +2613,7 @@
             border-radius: 10px;
             font-size: 0.72rem;
             font-weight: 600;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(var(--ink), 0.08);
         }
         .super-badge.hold { background: rgba(16, 185, 129, 0.18); color: var(--accent-green); }
         .super-badge.wait { background: rgba(59, 130, 246, 0.18); color: #60a5fa; }
@@ -2573,7 +2627,7 @@
             padding: 12px 14px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(var(--ink), 0.02);
             font-size: 0.82rem;
             line-height: 1.6;
         }
@@ -2583,7 +2637,7 @@
             padding: 6px 8px;
             border-radius: 6px;
             border: 1px solid var(--border-color);
-            background: var(--bg-dark);
+            background: var(--panel-solid);
             color: var(--text-primary);
         }
 
@@ -2698,8 +2752,8 @@
             align-items: center;
             gap: 14px;
             padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(var(--ink), 0.02);
+            border: 1px solid rgba(var(--ink), 0.05);
             border-radius: 8px;
             text-decoration: none;
             color: var(--text-primary);
@@ -2718,7 +2772,7 @@
             width: 42px;
             height: 42px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(var(--ink), 0.05);
             color: var(--text-primary);
             transition: all 0.2s;
         }
@@ -2748,7 +2802,7 @@
             align-items: center;
             gap: 10px;
             padding: 20px;
-            background: rgba(255, 255, 255, 0.01);
+            background: rgba(var(--ink), 0.01);
             border-radius: 8px;
             border: 1px dashed var(--border-color);
         }
@@ -2861,7 +2915,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.25rem;
             font-weight: 700;
-            color: white;
+            color: var(--text-primary);
             margin: 0;
             display: flex;
             align-items: center;
@@ -2896,7 +2950,7 @@
             margin-top: 16px;
             border-radius: 10px;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(var(--ink), 0.08);
             background: #090d16;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
             display: flex;
@@ -2944,7 +2998,7 @@
             padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(var(--ink), 0.05);
         }
         .pwa-icon-img {
             width: 48px;
@@ -2961,7 +3015,7 @@
         .pwa-icon-name {
             font-size: 0.8rem;
             font-weight: 700;
-            color: white;
+            color: var(--text-primary);
         }
         .pwa-icon-desc {
             font-size: 0.7rem;
@@ -3030,7 +3084,7 @@
         }
         .whatif-subtab-btn:hover {
             color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(var(--ink), 0.05);
         }
         .whatif-subtab-btn.active {
             color: white;
@@ -3064,7 +3118,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(var(--ink),0.05);
             padding-bottom: 8px;
         }
         .state-vector-container {
@@ -3083,8 +3137,8 @@
             transition: all 0.2s ease;
         }
         .state-item:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            background: rgba(255, 255, 255, 0.02);
+            border-color: rgba(var(--ink), 0.15);
+            background: rgba(var(--ink), 0.02);
         }
         .state-label {
             font-size: 0.8rem;
@@ -3130,7 +3184,7 @@
         .scenario-path-title {
             font-size: 1.05rem;
             font-weight: 700;
-            color: white;
+            color: var(--text-primary);
             margin-bottom: 12px;
             display: flex;
             align-items: center;
@@ -3178,7 +3232,7 @@
             font-family: 'Outfit', sans-serif;
             font-size: 1.25rem;
             font-weight: 800;
-            color: white;
+            color: var(--text-primary);
         }
         .mc-stats-grid {
             display: grid;
@@ -3188,7 +3242,7 @@
         }
         .mc-bar-container {
             margin-top: 15px;
-            background: rgba(255,255,255,0.03);
+            background: rgba(var(--ink),0.03);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 16px;
@@ -3208,7 +3262,7 @@
         .mc-percentile-bar-outer {
             flex-grow: 1;
             height: 8px;
-            background: rgba(255,255,255,0.05);
+            background: rgba(var(--ink),0.05);
             border-radius: 4px;
             overflow: hidden;
             position: relative;
@@ -3225,7 +3279,141 @@
             width: 65px;
             text-align: right;
         }
-    </style>
+    
+        /* ===================================================================== */
+        /* ==== App shell (sidebar + topbar) & refreshed light/dark design ===== */
+        /* ===================================================================== */
+        body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; background-color: var(--bg-color); padding-bottom: 0; }
+        :root:not([data-theme="dark"]) body { background-image: none; }
+        .sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0; width: 248px; z-index: 300;
+            background: var(--sidebar-bg); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; transition: transform .25s ease;
+        }
+        .sidebar-brand {
+            display: flex; align-items: center; gap: 10px; padding: 18px 18px 14px; cursor: pointer; user-select: none;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-brand img { width: 34px; height: 34px; border-radius: 9px; }
+        .sidebar-brand .brand-name { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.08rem; color: var(--text-primary); line-height: 1.1; }
+        .sidebar-brand .brand-sub { font-size: .72rem; color: var(--text-secondary); font-weight: 500; }
+        .side-nav { flex: 1; overflow-y: auto; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+        .side-nav .nav-section { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+            color: var(--text-secondary); padding: 12px 12px 6px; opacity: .8; }
+        .side-nav .menu-item {
+            display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+            background: transparent; border: 0; border-radius: 10px; padding: 10px 12px; margin: 0;
+            color: var(--text-primary); font: 500 .92rem 'Inter', sans-serif; cursor: pointer; transition: background .15s, color .15s;
+        }
+        .side-nav .menu-item svg, .side-link svg { width: 19px; height: 19px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: .85; }
+        .side-nav .menu-item .nav-label { flex: 1; }
+        .side-nav .menu-item .nav-lock { width: 14px; height: 14px; opacity: .45; }
+        .side-nav .menu-item:hover { background: rgba(var(--ink), .05); }
+        .side-nav .menu-item.active { background: linear-gradient(135deg, var(--accent-purple) 0%, #6366f1 100%); color: #fff; box-shadow: 0 4px 12px rgba(139, 92, 246, .25); }
+        .side-nav .menu-item.active svg { opacity: 1; }
+        .side-nav .menu-item.active .nav-lock { opacity: .8; }
+        .side-footer { border-top: 1px solid var(--border-color); padding: 12px 10px 14px; display: flex; flex-direction: column; gap: 4px; }
+        .side-link { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 10px; color: var(--text-secondary);
+            text-decoration: none; font-size: .88rem; font-weight: 500; }
+        .side-link:hover { background: rgba(var(--ink), .05); color: var(--text-primary); }
+        .side-status { margin-top: 6px; padding: 10px 12px; border-radius: 10px; background: rgba(var(--ink), .035);
+            font-size: .72rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 4px; }
+        .side-status .badge-row { display: flex; align-items: center; gap: 6px; }
+        .sidebar-backdrop { display: none; }
+
+        .app-main { margin-left: 248px; min-height: 100vh; display: flex; flex-direction: column; }
+        .topbar {
+            position: sticky; top: 0; z-index: 200; height: 64px; display: flex; align-items: center; gap: 14px;
+            padding: 0 24px; background: var(--topbar-bg); border-bottom: 1px solid var(--border-color);
+            backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+        }
+        .topbar .icon-btn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--panel-solid);
+            display: inline-flex; align-items: center; justify-content: center; color: var(--text-primary); cursor: pointer; flex: none; }
+        .topbar .icon-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+        .topbar .icon-btn:hover { background: rgba(var(--ink), .05); }
+        #sidebarToggle { display: none; }
+        .topbar-title { display: flex; flex-direction: column; min-width: 0; }
+        .topbar-title #currentTabIcon { display: none; }
+        .topbar-title #currentTabLabel { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.12rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .topbar-search { flex: 1; max-width: 420px; position: relative; margin-left: 12px; }
+        .topbar-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; stroke: var(--text-secondary); fill: none; stroke-width: 2; }
+        .topbar-search input { width: 100%; height: 40px; border-radius: 10px; border: 1px solid var(--border-color); background: rgba(var(--ink), .035);
+            padding: 0 12px 0 38px; font: 500 .9rem 'Inter', sans-serif; color: var(--text-primary); outline: none; }
+        .topbar-search input:focus { border-color: var(--brand); background: var(--panel-solid); box-shadow: 0 0 0 3px rgba(139, 92, 246, .18); }
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+        .topbar-clock { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+        .topbar-clock .clock-row { display: flex; align-items: center; gap: 6px; font-size: .84rem; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+        .topbar-clock .clock-row svg { width: 15px; height: 15px; stroke: var(--text-secondary); fill: none; stroke-width: 2; }
+        .session-pill { font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: #fff; background: #6b7280; }
+        .session-pill.open { background: var(--accent-green); }
+        .session-pill.lunch { background: #d97706; }
+
+        main { max-width: 1440px; width: 100%; margin: 0 auto; padding: 24px; }
+        .card { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 14px; box-shadow: var(--shadow-card);
+            backdrop-filter: none; -webkit-backdrop-filter: none; }
+        .card-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.02rem; letter-spacing: -.01em; }
+        :root:not([data-theme="dark"]) .card:hover { border-color: #d1d5db; }
+
+        /* Tables: clean header, zebra-free rows with hairlines */
+        table thead th { font-weight: 600; color: var(--text-secondary); }
+        :root:not([data-theme="dark"]) table thead th { background: #f9fafb; }
+        :root:not([data-theme="dark"]) table tbody tr:hover td { background: #f9fafb; }
+
+        /* Charts keep their dark canvas: frame them as dark panels inside light cards */
+        :root:not([data-theme="dark"]) .tv-lightweight-charts { border-radius: 8px; overflow: hidden; }
+
+        /* Inputs & buttons in light mode */
+        :root:not([data-theme="dark"]) input, :root:not([data-theme="dark"]) select, :root:not([data-theme="dark"]) textarea { color: var(--text-primary); }
+        :root:not([data-theme="dark"]) .search-input { background: #fff; border-color: var(--border-color); color: var(--text-primary); }
+
+        /* Mobile: off-canvas sidebar */
+
+        /* ---- light theme: readable badges / accents (neon tones were made for dark backgrounds) ---- */
+        .side-nav .menu-item { justify-content: flex-start !important; text-align: left !important; }
+        .side-nav .menu-item:not(.active) { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+        .side-nav { scrollbar-width: none; }
+        .side-nav::-webkit-scrollbar { display: none; }
+        .side-nav .menu-item:hover { background: rgba(var(--ink), .05) !important; color: var(--text-primary) !important; }
+        .side-nav .menu-item.active, .side-nav .menu-item.active:hover { background: linear-gradient(135deg, var(--accent-purple) 0%, #6366f1 100%) !important; color: #fff !important; }
+        :root:not([data-theme="dark"]) .action-badge.buy, :root:not([data-theme="dark"]) .eval-badge-inline.bullish { color: #047857; background: #d1fae5; border-color: #a7f3d0; }
+        :root:not([data-theme="dark"]) .action-badge.strongly-buy { color: #6d28d9; background: #ede9fe; border-color: #ddd6fe; }
+        :root:not([data-theme="dark"]) .action-badge.no-trade { color: #0369a1; background: #e0f2fe; border-color: #bae6fd; }
+        :root:not([data-theme="dark"]) .action-badge.take-profit { color: #a16207; background: #fef9c3; border-color: #fde68a; }
+        :root:not([data-theme="dark"]) .action-badge.wait, :root:not([data-theme="dark"]) .eval-badge-inline.neutral { color: #b45309; background: #fef3c7; border-color: #fde68a; }
+        :root:not([data-theme="dark"]) .action-badge.sell, :root:not([data-theme="dark"]) .eval-badge-inline.bearish { color: #b91c1c; background: #fee2e2; border-color: #fecaca; }
+        :root:not([data-theme="dark"]) .filter-column-title, :root:not([data-theme="dark"]) .filter-header-title { color: #b45309 !important; }
+        :root:not([data-theme="dark"]) .super-setup { background: #dbeafe; color: #1d4ed8; }
+        :root:not([data-theme="dark"]) .btn-sm.active { color: #fff !important; }
+        :root:not([data-theme="dark"]) .text-green, :root:not([data-theme="dark"]) .super-up { color: #15803d; }
+        /* TOPRS heatmap cells carry their own dark colour fills: keep their text light */
+        :root:not([data-theme="dark"]) #toprs-tab td[style*="background"] { color: #fff; }
+        :root:not([data-theme="dark"]) .modal-content, :root:not([data-theme="dark"]) .password-modal-content { background: #fff; color: var(--text-primary); }
+
+        /* ---- light theme: chart line toggles (dark-chart neon -> readable tones) ---- */
+        :root:not([data-theme="dark"]) #toggle-normal-ma10.active, :root:not([data-theme="dark"]) #toggle-fs-ma10.active { border-color: #9ca3af; color: #374151; background: #f3f4f6; }
+        :root:not([data-theme="dark"]) #toggle-normal-ma20.active, :root:not([data-theme="dark"]) #toggle-fs-ma20.active { border-color: #06b6d4; color: #0e7490; background: #ecfeff; }
+        :root:not([data-theme="dark"]) #toggle-normal-ma50.active, :root:not([data-theme="dark"]) #toggle-fs-ma50.active { border-color: #ec4899; color: #be185d; background: #fdf2f8; }
+        :root:not([data-theme="dark"]) #toggle-normal-vnindex.active, :root:not([data-theme="dark"]) #toggle-fs-vnindex.active { border-color: #22c55e; color: #15803d; background: #f0fdf4; }
+        .side-nav .nav-section, .side-status, .side-status .badge-row { text-align: left; justify-content: flex-start; align-items: flex-start; }
+        .side-status .badge-row { align-items: center; }
+        @media (max-width: 960px) {
+            .sidebar { transform: translateX(-100%); box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+            body.sidebar-open .sidebar { transform: none; }
+            body.sidebar-open .sidebar-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 250; }
+            .app-main { margin-left: 0; }
+            #sidebarToggle { display: inline-flex; }
+            .topbar { padding: 0 12px; gap: 8px; height: 58px; }
+            .topbar-search { margin-left: 0; max-width: none; }
+            .topbar-title { display: none; }
+            .topbar-clock { display: none; }
+            main { padding: 14px 12px; }
+            .card { padding: 14px; border-radius: 12px; }
+            .card-title { flex-wrap: wrap; gap: 8px; }
+            .side-footer { padding: 8px 10px 10px; }
+            .side-status { display: none; }
+        }
+        @media (max-width: 480px) { .topbar-search input { font-size: 16px; } }
+</style>
 
 </head>
 <body>
@@ -3234,65 +3422,46 @@
         <div class="spinner"></div>
     </div>
 
-    <header>
-        <div class="header-container">
-            <div class="logo-section" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)'); window.scrollTo({top: 0, behavior: 'smooth'});" style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px;">
-                <img src="app_icon.png" alt="AIC PRO Logo" class="logo-img">
-                <h1>AIC = AI + cơm!</h1>
+    <aside class="sidebar" id="appSidebar">
+        <div class="sidebar-brand" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)'); window.scrollTo({top: 0, behavior: 'smooth'});">
+            <img src="app_icon.png" alt="AIC PRO Logo">
+            <div><div class="brand-name">AIC = AI + cơm!</div><div class="brand-sub">Hệ thống phân tích chứng khoán</div></div>
+        </div>
+        <nav class="side-nav menu-dropdown" id="menuContent">
+                <div class="nav-section">Phân tích</div>
+                <button class="menu-item active" data-tab="market-tab" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="nav-label">Thị trường (VNINDEX)</span></button>
+                <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span class="nav-label">Tra cứu Cổ phiếu</span><svg viewBox="0 0 24 24" class="nav-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
+                <button class="menu-item" data-tab="whatif-tab" onclick="selectMenuTab('whatif-tab', '🔮', 'What-If')"><svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg><span class="nav-label">What-If</span><svg viewBox="0 0 24 24" class="nav-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
+                <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Bộ lọc')"><svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg><span class="nav-label">Bộ lọc</span><svg viewBox="0 0 24 24" class="nav-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
+                <button class="menu-item" data-tab="toprs-tab" onclick="selectMenuTab('toprs-tab', '🏆', 'TOPRS')"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg><span class="nav-label">TOPRS</span></button>
+                <div class="nav-section">Chiến lược</div>
+                <button class="menu-item" data-tab="super-tab" onclick="selectMenuTab('super-tab', '🚀', 'Super')"><svg viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg><span class="nav-label">Super</span><svg viewBox="0 0 24 24" class="nav-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
+                <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Kiến nghị')"><svg viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><span class="nav-label">Kiến nghị</span><svg viewBox="0 0 24 24" class="nav-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
+                <div class="nav-section">Khác</div>
+                <button class="menu-item" data-tab="aicpro-tab" onclick="selectMenuTab('aicpro-tab', '⚡', 'AIC Pro')"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span class="nav-label">AIC Pro</span></button>
+                <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', 'ℹ️', 'Information')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><span class="nav-label">Information</span></button>
+        </nav>
+        <div class="side-footer">
+            <a href="https://aic-pro-fa.vercel.app/" target="_blank" rel="noopener" class="side-link" title="Đọc phân tích FA (Phân tích cơ bản)"><svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg><span>FA Pro</span></a>
+            <a href="https://aic-chart-nganh.vercel.app/" target="_blank" rel="noopener" class="side-link" title="Xem Biểu đồ Ngành"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg><span>Biểu đồ Ngành</span></a>
+            <div class="side-status update-badge">
+                <div class="badge-row"><span id="urlStatusDot" class="status-dot-indicator red" title="Trạng thái cURL Vietstock"></span><span id="urlStatusText">Đang kiểm tra...</span></div>
+                <div class="badge-row"><span id="vietstockStatusDot" class="status-dot-indicator red" title="Số lượng mã cập nhật thành công"></span><span id="vietstockStatusText">Đang kiểm tra...</span></div>
+                <div class="badge-row">Cập nhật: <span id="updateTimeText">Đang tải...</span></div>
             </div>
-            <div class="header-right">
-                <a href="https://aic-pro-fa.vercel.app/" target="_blank" rel="noopener" class="fa-pro-badge" title="Đọc phân tích FA (Phân tích cơ bản)">
-                    <img src="app_icon.png" alt="FA Pro" class="fa-pro-logo">
-                    <span>FA Pro</span>
-                </a>
-                <a href="https://aic-chart-nganh.vercel.app/" target="_blank" rel="noopener" class="fa-pro-badge" title="Xem Biểu đồ Ngành">
-                    <span class="nganh-emoji-icon">🏭</span>
-                    <span>Ngành</span>
-                </a>
-                <div class="update-badge">
-                    <div class="badge-row">
-                        <span id="urlStatusDot" class="status-dot-indicator red" title="Trạng thái cURL Vietstock"></span>
-                        <span id="urlStatusText">Đang kiểm tra...</span>
-                    </div>
-                    <div class="badge-row">
-                        <span id="vietstockStatusDot" class="status-dot-indicator red" title="Số lượng mã cập nhật thành công"></span>
-                        <span id="vietstockStatusText">Đang kiểm tra...</span>
-                    </div>
-                    <div class="badge-row">
-                        <span id="updateTimeText">Đang tải...</span>
-                    </div>
-                </div>
-            </div>
+        </div>
+    </aside>
+    <div class="sidebar-backdrop" onclick="document.body.classList.remove('sidebar-open')"></div>
+
+    <div class="app-main">
+    <header class="topbar">
+        <button class="icon-btn" id="sidebarToggle" onclick="document.body.classList.toggle('sidebar-open')" title="Menu"><svg viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
+        <div class="topbar-title"><span id="currentTabIcon">📊</span><span id="currentTabLabel">Thị trường (VNINDEX)</span></div>
+        <div class="topbar-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" id="topbarSearch" placeholder="Nhập mã cổ phiếu (VD: FPT, HPG)…" autocomplete="off" onkeydown="if(event.key==='Enter') topbarGoTicker()"></div>
+        <div class="topbar-right">
+            <div class="topbar-clock"><div class="clock-row"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span id="topbarClock">--</span></div><span id="sessionPill" class="session-pill">--</span></div>
         </div>
     </header>
-
-    <!-- Navigation Tabs -->
-    <nav class="tab-navigation">
-        <div class="menu-dropdown">
-            <button id="menuBtn" class="menu-btn" onclick="toggleMenuDropdown(event)">
-                <span id="currentTabIcon">📊</span> <span id="currentTabLabel">Thị trường (VNINDEX)</span> <span style="font-size: 0.75rem; margin-left: 4px; opacity: 0.7;">▼</span>
-            </button>
-            <div id="menuContent" class="menu-content">
-                <button class="menu-item active" data-tab="market-tab" onclick="selectMenuTab('market-tab', '📊', 'Thị trường (VNINDEX)')">📊 Thị trường (VNINDEX)</button>
-                <button class="menu-item" data-tab="lookup-tab" onclick="selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu')">🔍 Tra cứu<br>Cổ phiếu</button>
-                <button class="menu-item" data-tab="whatif-tab" onclick="selectMenuTab('whatif-tab', '🔮', 'What-If')">🔮 What-If</button>
-                <button class="menu-item" data-tab="filter-tab" onclick="selectMenuTab('filter-tab', '🎯', 'Bộ lọc')">🎯 Bộ lọc</button>
-                <button class="menu-item" data-tab="toprs-tab" onclick="selectMenuTab('toprs-tab', '🏆', 'TOPRS')">🏆 TOPRS</button>
-                <button class="menu-item" data-tab="super-tab" onclick="selectMenuTab('super-tab', '🚀', 'Super')">🚀 Super</button>
-                <button class="menu-item" data-tab="portfolio-tab" onclick="selectMenuTab('portfolio-tab', '💼', 'Kiến nghị')">💼 Kiến nghị</button>
-                <button class="menu-item" data-tab="aicpro-tab" onclick="selectMenuTab('aicpro-tab', '⚡', 'AIC Pro')">⚡ AIC Pro</button>
-                <button class="menu-item" data-tab="contact-tab" onclick="selectMenuTab('contact-tab', 'ℹ️', 'Information')">ℹ️ Information</button>
-            </div>
-        </div>
-        <div class="nav-quick-links">
-            <a href="https://aic-pro-fa.vercel.app/" target="_blank" rel="noopener" class="nav-quick-link" title="FA Pro">
-                <img src="app_icon.png" alt="FA Pro" class="nav-quick-icon">
-            </a>
-            <a href="https://aic-chart-nganh.vercel.app/" target="_blank" rel="noopener" class="nav-quick-link" title="Biểu đồ Ngành">
-                <span class="nganh-emoji-icon">🏭</span>
-            </a>
-        </div>
-    </nav>
 
     <main>
         <!-- Tab 1: Đánh giá thị trường -->
@@ -4227,6 +4396,7 @@
             </div>
         </div>
     </main>
+    </div><!-- /.app-main -->
 
     <!-- Popup Modal for Ticker Details -->
     <div id="tickerDetailsModal" class="modal">
@@ -4760,8 +4930,8 @@
                                     
                                     <!-- Ở giữa: EV tổng thể (chữ to màu trắng) -->
                                     <div style="text-align: center; flex: 1.5; border-left: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1);">
-                                        <div style="color: #fff; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; opacity: 0.7;">Kỳ vọng Chung</div>
-                                        <div style="color: #fff; font-size: 2.2rem; font-weight: 900; font-family: 'Outfit'; margin-top: 4px; letter-spacing: 0.5px;">
+                                        <div style="color: var(--text-primary); font-size: 0.8rem; font-weight: bold; text-transform: uppercase; opacity: 0.7;">Kỳ vọng Chung</div>
+                                        <div style="color: var(--text-primary); font-size: 2.2rem; font-weight: 900; font-family: 'Outfit'; margin-top: 4px; letter-spacing: 0.5px;">
                                             ${formatPrice(mean_target * 1000, isIndex)}
                                         </div>
                                         ${getDiffHtml(diff_target)}
@@ -4779,15 +4949,15 @@
 
                                 <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 15px; line-height: 1.45; text-align: center;">
                                     (Mức giá kỳ vọng EV được thống kê từ ${total} phiên tương đồng nhất lịch sử.
-                                    Trong đó, khả năng tăng giá chiếm <strong style="color: var(--accent-green);">${pct_above}%</strong> (mục tiêu P75 là <strong style="color: white;">${formatPrice(p75_price * 1000, isIndex)}</strong>),
-                                    và khả năng giảm giá chiếm <strong style="color: var(--accent-orange);">${pct_below}%</strong> (mục tiêu P25 là <strong style="color: white;">${formatPrice(p25_price * 1000, isIndex)}</strong>) )
+                                    Trong đó, khả năng tăng giá chiếm <strong style="color: var(--accent-green);">${pct_above}%</strong> (mục tiêu P75 là <strong style="color: var(--text-primary);">${formatPrice(p75_price * 1000, isIndex)}</strong>),
+                                    và khả năng giảm giá chiếm <strong style="color: var(--accent-orange);">${pct_below}%</strong> (mục tiêu P25 là <strong style="color: var(--text-primary);">${formatPrice(p25_price * 1000, isIndex)}</strong>) )
                                 </div>
                             </div>
 
                             <div class="target-proj-card" style="border-left: 4px solid var(--accent-green); text-align: left; padding: 18px;">
                                 <div class="target-proj-title" style="color: var(--accent-green); font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">📈 Kịch bản Tích cực (Lạc quan)</div>
                                 <div style="margin-top: 12px; display: flex; align-items: center; justify-content: space-between;">
-                                    <div>Mục tiêu: <strong style="color: white; font-size: 1.4rem; font-family: 'Outfit'; font-weight: 800;">${formatPrice(p75_price * 1000, isIndex)}</strong></div>
+                                    <div>Mục tiêu: <strong style="color: var(--text-primary); font-size: 1.4rem; font-family: 'Outfit'; font-weight: 800;">${formatPrice(p75_price * 1000, isIndex)}</strong></div>
                                     <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--accent-green); padding: 6px 12px; border-radius: 8px; text-align: center; min-width: 90px;">
                                         <span style="color: var(--text-secondary); font-size: 0.7rem; display: block; text-transform: uppercase; margin-bottom: 2px;">Khả năng</span>
                                         <strong style="color: var(--accent-green); font-size: 1.2rem; font-family: 'Outfit'; font-weight: 700;">${pct_above}%</strong>
@@ -4799,7 +4969,7 @@
                             <div class="target-proj-card" style="border-left: 4px solid var(--accent-orange); text-align: left; padding: 18px;">
                                 <div class="target-proj-title" style="color: var(--accent-orange); font-weight: 700; font-size: 0.85rem; text-transform: uppercase;">📉 Kịch bản Tiêu cực (Thận trọng)</div>
                                 <div style="margin-top: 12px; display: flex; align-items: center; justify-content: space-between;">
-                                    <div>Mục tiêu: <strong style="color: white; font-size: 1.4rem; font-family: 'Outfit'; font-weight: 800;">${formatPrice(p25_price * 1000, isIndex)}</strong></div>
+                                    <div>Mục tiêu: <strong style="color: var(--text-primary); font-size: 1.4rem; font-family: 'Outfit'; font-weight: 800;">${formatPrice(p25_price * 1000, isIndex)}</strong></div>
                                     <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid var(--accent-orange); padding: 6px 12px; border-radius: 8px; text-align: center; min-width: 90px;">
                                         <span style="color: var(--text-secondary); font-size: 0.7rem; display: block; text-transform: uppercase; margin-bottom: 2px;">Khả năng</span>
                                         <strong style="color: var(--accent-orange); font-size: 1.2rem; font-family: 'Outfit'; font-weight: 700;">${pct_below}%</strong>
@@ -5312,6 +5482,16 @@
             return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
         }
 
+        // Chữ tối trên ô màu nhạt, chữ sáng trên ô màu đậm (để số luôn dễ đọc)
+        function rsTextColor(bg) {
+            const m = bg.match(/\d+/g);
+            if (!m) return '#f3f4f6';
+            const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+            const [r, g, b] = m.map(Number).map(lin);
+            const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            return (L + 0.05) / 0.06 > 0.956 / (L + 0.05) ? '#0b1220' : '#f3f4f6';   // chọn màu chữ tương phản cao hơn
+        }
+
         function renderTopRSTables() {
             const tickerMap = new Map((rawData.tickers_analysis || []).map(t => [t.Ticker, t]));
             const dates = rawData.top_rs_dates || [];
@@ -5330,7 +5510,8 @@
                     const rsArr = (rec && rec.History && rec.History[rsKey]) || [];
                     const cells = dates.map((_, i) => {
                         const v = rsArr[i];
-                        return `<td style="background:${rsToColor(v)}" title="${sym} · ${dates[i]}: ${v ?? 'N/A'}">${v ?? ''}</td>`;
+                        const bg = rsToColor(v);
+                        return `<td style="background:${bg}; color:${rsTextColor(bg)}" title="${sym} · ${dates[i]}: ${v ?? 'N/A'}">${v ?? ''}</td>`;
                     }).join('');
                     return `<tr><th>${sym}</th>${cells}</tr>`;
                 }).join('');
@@ -5419,16 +5600,16 @@
 
         function superSRows(list) {
             return list.map(({t, s}) => `<tr>
-                    <td><strong class="super-tk">${t.Ticker}</strong> <span class="super-setup" title="${s.setup_name}">${s.setup}</span><div class="super-note">${s.setup_name}</div></td>
-                    <td>${s.signal_date}</td>
-                    <td>${s.buy_date || '<span class="super-note">phiên tới</span>'}</td>
-                    <td>${s.buy_price ? `<span class="super-price">${fmtSuperPrice(s.buy_price)}</span>` : `<span class="super-note">~${fmtSuperPrice(s.signal_close)}</span>`}</td>
-                    <td>${superSStopCell(s)}</td>
-                    <td>${superSProtectCell(s)}</td>
-                    <td>${superSKeepCell(s)}</td>
-                    <td>${superSTrailCell(s)}</td>
-                    <td>${superResultCell(s)}</td>
-                    <td class="super-combo">${s.combo}</td>
+                    <td class="super-head-cell"><strong class="super-tk">${t.Ticker}</strong> <span class="super-setup" title="${s.setup_name}">${s.setup}</span><div class="super-note">${s.setup_name}</div></td>
+                    <td data-label="Tín hiệu">${s.signal_date}</td>
+                    <td data-label="Ngày mua">${s.buy_date || '<span class="super-note">phiên tới</span>'}</td>
+                    <td data-label="Giá mua">${s.buy_price ? `<span class="super-price">${fmtSuperPrice(s.buy_price)}</span>` : `<span class="super-note">~${fmtSuperPrice(s.signal_close)}</span>`}</td>
+                    <td data-label="Cutloss / mức dừng">${superSStopCell(s)}</td>
+                    <td data-label="Chặn lãi">${superSProtectCell(s)}</td>
+                    <td data-label="Giữ 50% lãi">${superSKeepCell(s)}</td>
+                    <td data-label="Bám / Ôm sóng">${superSTrailCell(s)}</td>
+                    <td data-label="Trạng thái">${superResultCell(s)}</td>
+                    <td class="super-combo" data-label="Tổ hợp">${s.combo}</td>
                 </tr>`).join('');
         }
 
@@ -7413,11 +7594,11 @@
                     </div>
 
                     <div class="extra-stats">
-                        <span>Tỷ lệ R:R: <strong style="color: white">${t.RR}</strong></span>
+                        <span>Tỷ lệ R:R: <strong style="color: var(--text-primary)">${t.RR}</strong></span>
                         <div class="risk-rating">
                             <span>Rủi ro:</span>
                             <span class="risk-dot ${riskClass}"></span>
-                            <strong style="color: white">${t.RiskScore}/100</strong>
+                            <strong style="color: var(--text-primary)">${t.RiskScore}/100</strong>
                         </div>
                     </div>
 
@@ -9766,22 +9947,76 @@
     </script>
     <!-- Password Modal -->
     <div id="passwordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-        <div style="background: var(--bg-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; max-width: 360px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+        <div style="background: var(--panel-solid); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; max-width: 360px; box-sizing: border-box; margin: 0 16px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
             <div style="margin-bottom: 20px;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                 </svg>
             </div>
-            <h3 style="margin-top: 0; font-size: 1.25rem; margin-bottom: 10px; color: white;">Yêu cầu Mật khẩu</h3>
+            <h3 style="margin-top: 0; font-size: 1.25rem; margin-bottom: 10px; color: var(--text-primary);">Yêu cầu Mật khẩu</h3>
             <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px;">Vui lòng nhập mật khẩu hệ thống để sử dụng tính năng này.</p>
-            <input type="password" id="sysPasswordInput" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-dark); color: white; margin-bottom: 5px; font-size: 1rem; box-sizing: border-box;" placeholder="Nhập mật khẩu..." onkeypress="if(event.key === 'Enter') submitPassword()">
+            <input type="password" id="sysPasswordInput" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--panel-solid); color: var(--text-primary); margin-bottom: 5px; font-size: 1rem; box-sizing: border-box;" placeholder="Nhập mật khẩu..." onkeypress="if(event.key === 'Enter') submitPassword()">
             <p id="passwordErrorMsg" style="color: #ef4444; font-size: 0.85rem; margin-top: 5px; margin-bottom: 15px; display: none; text-align: left;">Mật khẩu không chính xác!</p>
             <div style="display: flex; gap: 10px; margin-top: 20px;">
-                <button class="btn" style="flex: 1; background: var(--bg-dark); border: 1px solid var(--border-color); color: white;" onclick="cancelPassword()">Hủy</button>
+                <button class="btn" style="flex: 1; background: var(--panel-solid); border: 1px solid var(--border-color); color: var(--text-primary);" onclick="cancelPassword()">Hủy</button>
                 <button class="btn btn-primary" style="flex: 1;" onclick="submitPassword()">Xác nhận</button>
             </div>
         </div>
     </div>
+    <script>
+        // ===== App shell: theme toggle, clock & session status, topbar ticker search, mobile sidebar =====
+        const THEME_ICONS = {
+            moon: '<svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
+            sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>'
+        };
+        function paintThemeButton() {
+            const btn = document.getElementById('themeToggle');
+            if (btn) btn.innerHTML = document.documentElement.getAttribute('data-theme') === 'dark' ? THEME_ICONS.sun : THEME_ICONS.moon;
+        }
+        function toggleTheme() {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('aic-theme', next); } catch (e) {}
+            paintThemeButton();
+        }
+        function updateClockAndSession() {
+            const now = new Date();
+            const vn = new Date(now.getTime() + (now.getTimezoneOffset() + 420) * 60000);   // UTC+7
+            const pad = n => String(n).padStart(2, '0');
+            const clock = document.getElementById('topbarClock');
+            if (clock) clock.textContent = `${pad(vn.getDate())}/${pad(vn.getMonth() + 1)}/${vn.getFullYear()} - ${pad(vn.getHours())}:${pad(vn.getMinutes())}:${pad(vn.getSeconds())}`;
+            const pill = document.getElementById('sessionPill');
+            if (!pill) return;
+            const m = vn.getHours() * 60 + vn.getMinutes(), wd = vn.getDay();
+            let txt = 'Đóng cửa', cls = '';
+            if (wd >= 1 && wd <= 5) {
+                if (m >= 540 && m < 690 || m >= 780 && m < 885) { txt = 'Đang giao dịch'; cls = 'open'; }
+                else if (m >= 690 && m < 780) { txt = 'Nghỉ trưa'; cls = 'lunch'; }
+                else if (m < 540) txt = 'Chưa mở cửa';
+            }
+            pill.textContent = txt;
+            pill.className = 'session-pill' + (cls ? ' ' + cls : '');
+        }
+        function topbarGoTicker() {
+            const inp = document.getElementById('topbarSearch');
+            const sym = (inp.value || '').trim().toUpperCase();
+            if (!sym) return;
+            const lk = document.getElementById('lookupSearchInput');
+            if (lk) lk.value = sym;
+            selectMenuTab('lookup-tab', '🔍', 'Tra cứu Cổ phiếu');
+            if (document.getElementById('lookup-tab').classList.contains('active') && typeof selectLookupTicker === 'function') {
+                try { selectLookupTicker(sym); } catch (e) { console.warn(e); }
+            }
+            inp.value = '';
+            inp.blur();
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            paintThemeButton();
+            updateClockAndSession();
+            setInterval(updateClockAndSession, 1000);
+            document.querySelectorAll('.side-nav .menu-item').forEach(b => b.addEventListener('click', () => document.body.classList.remove('sidebar-open')));
+        });
+    </script>
 </body>
 </html>
