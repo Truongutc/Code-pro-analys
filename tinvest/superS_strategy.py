@@ -1,6 +1,6 @@
 """
-SuperS strategy (MA khối lượng 10 phiên > 200.000 cp)
-=====================================================
+SuperS strategy (MA khối lượng 10 phiên > 200.000 cp + GTGD TB20 >= 10 tỷ đồng)
+================================================================================
 Bộ chính có 4 điểm mua, đánh số theo hiệu quả (lãi/lệnh) và thứ tự ưu tiên S1 > S2 > S3 > S4 khi trùng phiên.
 Cùng mã không mua thêm khi đang giữ lệnh. Mua giá mở cửa phiên liền sau tín hiệu (bỏ qua nếu mở cửa tăng > 6,5%).
 Chỉ bán từ T+3; tín hiệu bán / đóng cửa dưới mức dừng trước T+3 -> bán giá mở cửa phiên T+3.
@@ -28,6 +28,7 @@ import numpy as np
 import pandas as pd
 
 MIN_VOL_MA10 = 200_000
+MIN_VALUE_BN = 10.0              # giá trị giao dịch TB 20 phiên (tỷ đồng) tối thiểu — bỏ mã không mua được
 CUTLOSS = 0.10
 MAX_GAP_UP = 0.065
 MIN_HOLD = 3                     # chỉ bán từ phiên T+3
@@ -83,7 +84,9 @@ def _signals(df: pd.DataFrame, vn: "pd.DataFrame | None") -> np.ndarray:
     c, v = _num(df, 'Close'), _num(df, 'Volume')
     vs = pd.Series(v)
     volma10 = vs.rolling(10).mean().to_numpy()
-    liq = volma10 > MIN_VOL_MA10
+    scale = 1000.0 if np.nanmedian(c) < 1000 else 1.0          # giá theo nghìn đồng (CafeF/app) hoặc đồng
+    value20 = pd.Series(c * scale * v).rolling(20).mean().to_numpy() / 1e9
+    liq = (volma10 > MIN_VOL_MA10) & (value20 >= MIN_VALUE_BN)
     vol_surge = v > VOL_SURGE * vs.rolling(20).mean().to_numpy()
     rs14 = _num(df, 'RS14')
     cs = pd.Series(c)
