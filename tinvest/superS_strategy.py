@@ -1,7 +1,7 @@
 """
 SuperS strategy (MA khối lượng 10 phiên > 200.000 cp + GTGD TB20 >= 10 tỷ đồng)
 ================================================================================
-Bộ chính có 4 điểm mua, đánh số theo hiệu quả (lãi/lệnh) và thứ tự ưu tiên S1 > S2 > S3 > S4 khi trùng phiên.
+Bộ chính có 5 điểm mua, thứ tự ưu tiên S1 > S2 > S3 > S4 > S5 khi trùng phiên.
 Cùng mã không mua thêm khi đang giữ lệnh. Mua giá mở cửa phiên liền sau tín hiệu (bỏ qua nếu mở cửa tăng > 6,5%).
 Chỉ bán từ T+3; tín hiệu bán / đóng cửa dưới mức dừng trước T+3 -> bán giá mở cửa phiên T+3.
 
@@ -13,6 +13,8 @@ S3 · Thị trường quay lại + nền chặt: VNINDEX vừa vào xu hướng 
      + Bollinger thắt chặt + RS14 > 50
 S4 · Sóng mạnh: 2Trend SMA vừa chuyển L + ADX xanh/trắng + DI+ > DI- + RS14 > 70 + Heikin trên đường NW
      + mây Ichimoku xanh + giá đóng cửa trên mây + Octopus xanh (đậm hoặc nhạt)
+S5 · Cổ phiếu mạnh bị rũ: MFI(14) vừa cắt lên trên 30 sau khi xuống dưới 25 trong 5 phiên gần nhất
+     + RS52 > 80 + RS14 > 70
 
 Bán (cắt lỗ -10%):
   - Bình thường: giá từng chạm +7% -> chặn lãi +2%; khi giá đóng cửa cao nhất đã lãi >= +10% -> không để trả lại quá
@@ -35,14 +37,16 @@ MIN_HOLD = 3                     # chỉ bán từ phiên T+3
 VN_TURN_WINDOW = 3               # S2: VNINDEX vừa vào xu hướng tăng trong N phiên gần nhất
 BB_SQUEEZE_PCT = 0.20            # độ rộng BB thuộc 20% thấp nhất của 120 phiên
 VOL_SURGE = 1.5                  # khối lượng > 1,5 x TB20
+MFI_LEN, MFI_LOW, MFI_UP, MFI_LOOKBACK = 14, 25, 30, 5     # S5: MFI rũ (< 25) rồi hồi lên > 30
 
 SETUPS = {
     'S1': 'Bứt phá nền chặt',
     'S2': 'Thị trường quay lại + bùng khối lượng',
     'S3': 'Thị trường quay lại + nền chặt',
     'S4': 'Sóng mạnh',
+    'S5': 'Cổ phiếu mạnh bị rũ',
 }
-PRIORITY = ['S4', 'S3', 'S2', 'S1']          # later overrides earlier: S1 wins
+PRIORITY = ['S5', 'S4', 'S3', 'S2', 'S1']    # later overrides earlier: S1 wins
 EXIT = dict(protect_trigger=0.07, protect_lock=0.02, giveback_from=0.10, giveback=0.50, chandelier=4.0,
             ride_from=0.10, ride_floor=0.05)          # IF ôm sóng: lãi >= 10% & MA20 lên & giá > MA20 -> sàn +5%, bán khi < MA50
 
@@ -57,6 +61,17 @@ def _shift(a: np.ndarray, k: int = 1) -> np.ndarray:
 
 def _onset(state: np.ndarray) -> np.ndarray:
     return state & ~np.r_[False, state[:-1]]
+
+
+def mfi(df: pd.DataFrame, n: int = MFI_LEN) -> np.ndarray:
+    """Money Flow Index (typical price x volume)."""
+    h, l, c, v = (_num(df, x) for x in ['High', 'Low', 'Close', 'Volume'])
+    tp = (h + l + c) / 3
+    mf = tp * v
+    prev = _shift(tp)
+    pos = pd.Series(np.where(tp > prev, mf, 0.0)).rolling(n).sum().to_numpy()
+    neg = pd.Series(np.where(tp < prev, mf, 0.0)).rolling(n).sum().to_numpy()
+    return 100 - 100 / (1 + pos / (neg + 1e-9))
 
 
 def vn_uptrend(vn_df: "pd.DataFrame | None") -> "pd.DataFrame | None":
@@ -104,6 +119,10 @@ def _signals(df: pd.DataFrame, vn: "pd.DataFrame | None") -> np.ndarray:
           & (c > cloud_top) & np.isin(oct_col, ['#00FF00', '#008000']))
     # S1 · Bứt phá nền chặt
     breakout = _onset(_num(df, 'ADX') > 25) & (_num(df, 'MACD') > _num(df, 'MACD_Signal')) & vol_surge & squeeze
+    # S5 · Cổ phiếu mạnh bị rũ
+    m = mfi(df)
+    shakeout = (_onset(m > MFI_UP) & (pd.Series(m).rolling(MFI_LOOKBACK).min().to_numpy() < MFI_LOW)
+                & (_num(df, 'RS52') > 80) & (rs14 > 70))
     # S3 (turn_base) / S2 (turn_vol) need the VNINDEX regime
     turn_base = turn_vol = np.zeros(n, bool)
     if vn is not None:
@@ -112,7 +131,7 @@ def _signals(df: pd.DataFrame, vn: "pd.DataFrame | None") -> np.ndarray:
         vn_recent = dates.map(vn['recent']).fillna(False).to_numpy(bool)
         turn_base = vn_recent & st_l & squeeze & (rs14 > 50)
         turn_vol = vn_on & st_l & vol_surge & squeeze
-    for code, sig in zip(PRIORITY, (wave, turn_base, turn_vol, breakout)):   # S4, S3, S2, S1
+    for code, sig in zip(PRIORITY, (shakeout, wave, turn_base, turn_vol, breakout)):   # S5, S4, S3, S2, S1
         main[np.asarray(sig, bool) & liq] = code
     return main
 
@@ -232,6 +251,8 @@ def _combo_text(df: pd.DataFrame, t: int, code: str) -> str:
                 f" · RS14 {g('RS14'):.0f} · Heikin trên NW · mây xanh, giá trên mây · Octopus xanh")
     if code == 'S3':
         return f"S3 · VNINDEX vừa quay lại xu hướng tăng · 2Trend SuperTrend L · Bollinger thắt chặt · RS14 {g('RS14'):.0f}"
+    if code == 'S5':
+        return f"S5 · MFI vừa hồi lên trên {MFI_UP} sau khi rũ dưới {MFI_LOW} · RS52 {g('RS52'):.0f} · RS14 {g('RS14'):.0f}"
     if code == 'S1':
         return f"S1 · ADX vừa vượt 25 ({g('ADX'):.0f}) · MACD > Signal · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
     return "S2 · VNINDEX vào xu hướng tăng phiên này · 2Trend SuperTrend L · khối lượng > 1,5× TB20 · Bollinger thắt chặt"
